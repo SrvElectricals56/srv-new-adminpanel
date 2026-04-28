@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Store, CheckCircle, Zap, Clock, MapPin, Phone, Building2, Target, Check, Pencil, X, SlidersHorizontal, Calendar, Trash2 } from 'lucide-react';
 import { dealerApi } from '@/lib/api';
 import type { Dealer, MemberTier, UserStatus, AdminRole } from '@/lib/types';
@@ -29,14 +29,23 @@ const STATUS_CONFIG: Record<string, { bg: string; color: string; label: string }
 
 function ViewModal({ dealer, onClose, onEdit, permissions }: { dealer: Dealer; onClose: () => void; onEdit: () => void; permissions: any }) {
   const C = useThemePalette();
+  const mouseDownInside = React.useRef(false);
   const tier = TIER_CONFIG[dealer.tier] ?? TIER_CONFIG['Silver'];
   const status = STATUS_CONFIG[dealer.status] ?? STATUS_CONFIG['inactive'];
   const linkedElectricians: any[] = [];
   const progress = Math.min(100, (dealer.electricianCount / tier.max) * 100);
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: C.overlay, backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={onClose}>
-      <div style={{ background: C.card, borderRadius: 20, width: 600, maxWidth: '95vw', maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 25px 70px rgba(0,0,0,0.2)' }} onClick={e => e.stopPropagation()}>
+    <div
+      style={{ position: 'fixed', inset: 0, background: C.overlay, backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+      onMouseDown={() => { mouseDownInside.current = false; }}
+      onMouseUp={() => { if (!mouseDownInside.current) onClose(); }}
+    >
+      <div
+        style={{ background: C.card, borderRadius: 20, width: 600, maxWidth: '95vw', maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 25px 70px rgba(0,0,0,0.2)' }}
+        onMouseDown={e => { e.stopPropagation(); mouseDownInside.current = true; }}
+        onMouseUp={e => e.stopPropagation()}
+      >
         <div style={{ background: C.heroGradient, padding: '24px 28px', borderRadius: '20px 20px 0 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -134,6 +143,7 @@ function ViewModal({ dealer, onClose, onEdit, permissions }: { dealer: Dealer; o
 
 function EditModal({ dealer, onClose, onSave }: { dealer: Dealer | null; onClose: () => void; onSave: (d: Partial<Dealer>) => void }) {
   const C = useThemePalette();
+  const mouseDownInside = React.useRef(false);
   const inputStyle: React.CSSProperties = { width: '100%', padding: '9px 12px', border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 13.5, outline: 'none', background: C.surface, color: C.text, boxSizing: 'border-box' };
   const labelStyle: React.CSSProperties = { fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 5, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' };
   const isAdd = !dealer;
@@ -151,8 +161,16 @@ function EditModal({ dealer, onClose, onSave }: { dealer: Dealer | null; onClose
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: C.overlay, backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={onClose}>
-      <div style={{ background: C.card, borderRadius: 20, width: 640, maxWidth: '95vw', maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 25px 70px rgba(0,0,0,0.2)' }} onClick={e => e.stopPropagation()}>
+    <div
+      style={{ position: 'fixed', inset: 0, background: C.overlay, backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+      onMouseDown={() => { mouseDownInside.current = false; }}
+      onMouseUp={() => { if (!mouseDownInside.current) onClose(); }}
+    >
+      <div
+        style={{ background: C.card, borderRadius: 20, width: 640, maxWidth: '95vw', maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 25px 70px rgba(0,0,0,0.2)' }}
+        onMouseDown={e => { e.stopPropagation(); mouseDownInside.current = true; }}
+        onMouseUp={e => e.stopPropagation()}
+      >
         <div style={{ padding: '22px 28px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <div style={{ fontSize: 18, fontWeight: 800, color: C.text }}>{isAdd ? '➕ Add New Dealer' : `✏️ Edit — ${dealer?.name}`}</div>
@@ -248,6 +266,10 @@ function EditModal({ dealer, onClose, onSave }: { dealer: Dealer | null; onClose
               </select>
             </div>
             <div><label style={labelStyle}>Monthly Target (₹)</label><input style={inputStyle} type="number" value={form.monthlyTarget ?? ''} onChange={e => f('monthlyTarget', e.target.value === '' ? '' : +e.target.value)} placeholder="0" /></div>
+            <div><label style={labelStyle}>No. of Electricians</label><input style={inputStyle} type="number" min={0} value={form.electricianCount ?? ''} onChange={e => f('electricianCount', e.target.value === '' ? '' : +e.target.value)} placeholder="0" /></div>
+            {!isAdd && (
+              <div><label style={labelStyle}>Achieved Target (₹)</label><input style={inputStyle} type="number" value={form.achievedTarget ?? ''} onChange={e => f('achievedTarget', e.target.value === '' ? '' : +e.target.value)} placeholder="0" /></div>
+            )}
           </div>
 
           <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>

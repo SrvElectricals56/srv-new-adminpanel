@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { FileSpreadsheet, FileText, Archive, Download, RefreshCw } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { exportRowsToExcel } from '@/lib/excel';
@@ -90,9 +90,19 @@ export default function ExportModal({ show, onClose, title, getData, fileName }:
     { key: 'zip',   label: 'ZIP',   desc: 'Excel + CSV bundle', icon: '🗜️', color: '#7C3AED', bg: '#F5F3FF', bdr: '#C4B5FD' },
   ];
 
+  const mouseDownInside = React.useRef(false);
+
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={onClose}>
-      <div style={{ background: C.card, borderRadius: 20, width: 460, maxWidth: '95vw', boxShadow: '0 25px 70px rgba(0,0,0,0.25)', border: `1px solid ${C.border}` }} onClick={e => e.stopPropagation()}>
+    <div
+      style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+      onMouseDown={() => { mouseDownInside.current = false; }}
+      onMouseUp={() => { if (!mouseDownInside.current) onClose(); }}
+    >
+      <div
+        style={{ background: C.card, borderRadius: 20, width: 460, maxWidth: '95vw', boxShadow: '0 25px 70px rgba(0,0,0,0.25)', border: `1px solid ${C.border}` }}
+        onMouseDown={e => { e.stopPropagation(); mouseDownInside.current = true; }}
+        onMouseUp={e => e.stopPropagation()}
+      >
         {/* Header */}
         <div style={{ padding: '20px 24px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Users, Star, ScanLine, Wallet, Trash2, SlidersHorizontal, Calendar } from 'lucide-react';
 import { electricianApi, dealerApi } from '@/lib/api';
 import type { Electrician, MemberTier, UserStatus, AdminRole } from '@/lib/types';
@@ -28,11 +28,20 @@ const STATUS_CONFIG: Record<string, { bg: string; color: string; label: string }
 
 function ViewModal({ el, onClose, onEdit, permissions }: { el: Electrician; onClose: () => void; onEdit: () => void; permissions: any }) {
   const C = useThemePalette();
+  const mouseDownInside = React.useRef(false);
   const tier = TIER_CONFIG[el.tier];
   const status = STATUS_CONFIG[el.status];
   return (
-    <div style={{ position: 'fixed', inset: 0, background: C.overlay, backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={onClose}>
-      <div style={{ background: C.card, borderRadius: 20, width: 560, maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 70px rgba(0,0,0,0.2)' }} onClick={e => e.stopPropagation()}>
+    <div
+      style={{ position: 'fixed', inset: 0, background: C.overlay, backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+      onMouseDown={() => { mouseDownInside.current = false; }}
+      onMouseUp={() => { if (!mouseDownInside.current) onClose(); }}
+    >
+      <div
+        style={{ background: C.card, borderRadius: 20, width: 560, maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 70px rgba(0,0,0,0.2)' }}
+        onMouseDown={e => { e.stopPropagation(); mouseDownInside.current = true; }}
+        onMouseUp={e => e.stopPropagation()}
+      >
         {/* Header */}
         <div style={{ background: C.heroGradient, padding: '24px 28px', borderRadius: '20px 20px 0 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -105,6 +114,8 @@ function ViewModal({ el, onClose, onEdit, permissions }: { el: Electrician; onCl
 
 function EditModal({ el, onClose, onSave, dealers = [] }: { el: Electrician | null; onClose: () => void; onSave: (data: Partial<Electrician>) => void; dealers?: { id: string; name: string; dealerCode: string }[] }) {
   const C = useThemePalette();
+  // Track if mousedown started inside modal — prevents close on text-select drag
+  const mouseDownInside = React.useRef(false);
   const inputStyle: React.CSSProperties = {
     width: '100%', padding: '9px 12px', border: `1.5px solid ${C.border}`,
     borderRadius: 8, fontSize: 13.5, outline: 'none', background: C.surface,
@@ -155,8 +166,16 @@ function EditModal({ el, onClose, onSave, dealers = [] }: { el: Electrician | nu
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: C.overlay, backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={onClose}>
-      <div style={{ background: C.card, borderRadius: 20, width: 620, maxWidth: '95vw', maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 25px 70px rgba(0,0,0,0.2)' }} onClick={e => e.stopPropagation()}>
+    <div
+      style={{ position: 'fixed', inset: 0, background: C.overlay, backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+      onMouseDown={() => { mouseDownInside.current = false; }}
+      onMouseUp={() => { if (!mouseDownInside.current) onClose(); }}
+    >
+      <div
+        style={{ background: C.card, borderRadius: 20, width: 620, maxWidth: '95vw', maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 25px 70px rgba(0,0,0,0.2)' }}
+        onMouseDown={e => { e.stopPropagation(); mouseDownInside.current = true; }}
+        onMouseUp={e => e.stopPropagation()}
+      >
         <div style={{ padding: '22px 28px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <div style={{ fontSize: 18, fontWeight: 800, color: C.text }}>{isAdd ? '➕ Add New Electrician' : `✏️ Edit — ${el?.name}`}</div>
@@ -401,14 +420,12 @@ export default function Electricians({ role }: ElectriciansProps) {
   // Initial load
   useEffect(() => { loadData(1); loadTierCounts(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-refresh when tab becomes visible
+  // Auto-refresh when tab becomes visible (no interval — avoids glitch/lag)
   useEffect(() => {
     const onVisible = () => { if (document.visibilityState === 'visible') loadData(currentPage); };
     document.addEventListener('visibilitychange', onVisible);
-    const interval = setInterval(() => loadData(currentPage), 30000);
     return () => {
       document.removeEventListener('visibilitychange', onVisible);
-      clearInterval(interval);
     };
   }, [currentPage, loadData]);
   const [showFilterPopup, setShowFilterPopup] = useState(false);

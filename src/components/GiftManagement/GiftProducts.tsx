@@ -1,5 +1,5 @@
 'use client';
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Gift, Plus, Trash2, Upload, ImageIcon, Zap, Store, SlidersHorizontal, Search, Pencil } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { giftApi } from '@/lib/api';
@@ -21,6 +21,7 @@ function AddGiftModal({ type, onClose, onSave, C }: { type: 'electrician' | 'dea
   const [form, setForm] = useState({ name: '', image: '', pointsRequired: 500, stock: 10 });
   const [alertDialog, setAlertDialog] = useState<{ show: boolean; title: string; message: string; type: 'error' | 'success' | 'warning' | 'info' }>({ show: false, title: '', message: '', type: 'error' });
   const imgRef = useRef<HTMLInputElement>(null);
+  const mouseDownInside = React.useRef(false);
   const f = (k: string, v: any) => setForm(p => ({ ...p, [k]: v }));
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
@@ -31,9 +32,17 @@ function AddGiftModal({ type, onClose, onSave, C }: { type: 'electrician' | 'dea
   const inputStyle: React.CSSProperties = { width: '100%', padding: '10px 12px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 13, outline: 'none', background: C.inputBg, color: C.text, boxSizing: 'border-box' };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={onClose}>
+    <div
+      style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+      onMouseDown={() => { mouseDownInside.current = false; }}
+      onMouseUp={() => { if (!mouseDownInside.current) onClose(); }}
+    >
       <AlertDialog show={alertDialog.show} title={alertDialog.title} message={alertDialog.message} type={alertDialog.type} onClose={() => setAlertDialog({ ...alertDialog, show: false })} />
-      <div style={{ background: C.card, borderRadius: 20, width: 480, maxWidth: '95vw', boxShadow: '0 25px 70px rgba(0,0,0,0.25)', border: `1px solid ${C.border}` }} onClick={e => e.stopPropagation()}>
+      <div
+        style={{ background: C.card, borderRadius: 20, width: 480, maxWidth: '95vw', boxShadow: '0 25px 70px rgba(0,0,0,0.25)', border: `1px solid ${C.border}` }}
+        onMouseDown={e => { e.stopPropagation(); mouseDownInside.current = true; }}
+        onMouseUp={e => e.stopPropagation()}
+      >
         <div style={{ padding: '20px 24px', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <div style={{ fontSize: 17, fontWeight: 800, color: C.text }}>Add Gift Product</div>
@@ -90,6 +99,7 @@ function EditGiftModal({ gift, onClose, onSave, C }: { gift: GiftProduct; onClos
   const [form, setForm] = useState({ ...gift });
   const [alertDialog, setAlertDialog] = useState<{ show: boolean; title: string; message: string; type: 'error' | 'success' | 'warning' | 'info' }>({ show: false, title: '', message: '', type: 'error' });
   const imgRef = useRef<HTMLInputElement>(null);
+  const mouseDownInside = React.useRef(false);
   const f = (k: string, v: any) => setForm(p => ({ ...p, [k]: v }));
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
@@ -100,9 +110,17 @@ function EditGiftModal({ gift, onClose, onSave, C }: { gift: GiftProduct; onClos
   const inputStyle: React.CSSProperties = { width: '100%', padding: '10px 12px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 13, outline: 'none', background: C.inputBg, color: C.text, boxSizing: 'border-box' };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={onClose}>
+    <div
+      style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+      onMouseDown={() => { mouseDownInside.current = false; }}
+      onMouseUp={() => { if (!mouseDownInside.current) onClose(); }}
+    >
       <AlertDialog show={alertDialog.show} title={alertDialog.title} message={alertDialog.message} type={alertDialog.type} onClose={() => setAlertDialog({ ...alertDialog, show: false })} />
-      <div style={{ background: C.card, borderRadius: 20, width: 480, maxWidth: '95vw', boxShadow: '0 25px 70px rgba(0,0,0,0.25)', border: `1px solid ${C.border}` }} onClick={e => e.stopPropagation()}>
+      <div
+        style={{ background: C.card, borderRadius: 20, width: 480, maxWidth: '95vw', boxShadow: '0 25px 70px rgba(0,0,0,0.25)', border: `1px solid ${C.border}` }}
+        onMouseDown={e => { e.stopPropagation(); mouseDownInside.current = true; }}
+        onMouseUp={e => e.stopPropagation()}
+      >
         <div style={{ padding: '20px 24px', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <div style={{ fontSize: 17, fontWeight: 800, color: C.text }}>Edit Gift Product</div>

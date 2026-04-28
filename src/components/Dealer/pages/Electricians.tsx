@@ -463,15 +463,23 @@ export default function AssociatedElectricians() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [elecRes, dealRes] = await Promise.all([
-          electricianApi.getAll({ limit: '500' }),
-          dealerApi.getAll({ limit: '500' })
+        // Load dealers and get total electrician count in parallel
+        const [countRes, dealRes] = await Promise.all([
+          electricianApi.getAll({ limit: '1', page: '1' }),
+          dealerApi.getAll({ limit: '1000' }),
         ]);
+
         const dealData = Array.isArray(dealRes) ? dealRes : (dealRes as any).data ?? [];
         setDealers(dealData.map((d: any) => ({ id: d.id, name: d.name })));
-
-        const rawElecs = Array.isArray(elecRes) ? elecRes : (elecRes as any).data ?? [];
         const dealerMap = new Map(dealData.map((d: any) => [d.id, d.name]));
+
+        // Use actual total so this works no matter how many electricians exist
+        const total = Array.isArray(countRes) ? (countRes as any[]).length : (countRes as any).total ?? 50000;
+        const fetchLimit = Math.max(total, 50000);
+
+        const elecRes = await electricianApi.getAll({ limit: String(fetchLimit), page: '1' });
+        const rawElecs = Array.isArray(elecRes) ? elecRes : (elecRes as any).data ?? [];
+
         setElectricians(rawElecs.map((e: any) => ({
           ...e,
           dealerName: e.dealerName ?? e.dealer?.name ?? (e.dealerId ? dealerMap.get(e.dealerId) : null) ?? 'Unknown',

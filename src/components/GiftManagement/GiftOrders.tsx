@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShoppingBag, Zap, Store, Eye, Check, X, Package, SlidersHorizontal, Search } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { giftApi, redemptionApi } from '@/lib/api';
@@ -31,9 +31,18 @@ const STATUS_CONFIG: Record<OrderStatus, { bg: string; color: string; label: str
 
 function OrderDetailModal({ order, onClose, C }: { order: GiftOrder; onClose: () => void; C: any }) {
   const s = STATUS_CONFIG[order.status];
+  const mouseDownInside = React.useRef(false);
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={onClose}>
-      <div style={{ background: C.card, borderRadius: 20, width: 520, maxWidth: '95vw', boxShadow: '0 25px 70px rgba(0,0,0,0.25)', border: `1px solid ${C.border}` }} onClick={e => e.stopPropagation()}>
+    <div
+      style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+      onMouseDown={() => { mouseDownInside.current = false; }}
+      onMouseUp={() => { if (!mouseDownInside.current) onClose(); }}
+    >
+      <div
+        style={{ background: C.card, borderRadius: 20, width: 520, maxWidth: '95vw', boxShadow: '0 25px 70px rgba(0,0,0,0.25)', border: `1px solid ${C.border}` }}
+        onMouseDown={e => { e.stopPropagation(); mouseDownInside.current = true; }}
+        onMouseUp={e => e.stopPropagation()}
+      >
         <div style={{ padding: '20px 24px', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ fontSize: 17, fontWeight: 800, color: C.text }}>Order #{order.id} Details</div>
           <button onClick={onClose} style={{ background: C.bg, border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontSize: 16, color: C.muted }}>✕</button>
