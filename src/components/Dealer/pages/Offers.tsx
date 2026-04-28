@@ -7,6 +7,8 @@ import ExportModal from '@/components/Shared/ExportModal';
 import AlertDialog from '@/components/Shared/AlertDialog';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 
+const numberInputValue = (value: number | null | undefined) => value === 0 || value === null || value === undefined ? '' : value;
+
 interface DealerOffer {
   id: string;
   title: string;
@@ -139,7 +141,7 @@ export default function DealerOffers() {
                   <option value="all">All</option>
                 </select>
               </div>
-              <input type="number" placeholder="Bonus Points" value={form.bonusPoints ?? 0} onChange={e => setForm(p => ({ ...p, bonusPoints: Number(e.target.value) || 0 }))} style={{ padding: '10px 12px', border: `1px solid ${C.border}`, borderRadius: 8, background: C.surface, color: C.text, outline: 'none' }} />
+              <input type="number" placeholder="Bonus Points" value={numberInputValue(form.bonusPoints)} onChange={e => setForm(p => ({ ...p, bonusPoints: e.target.value === '' ? 0 : Number(e.target.value) }))} style={{ padding: '10px 12px', border: `1px solid ${C.border}`, borderRadius: 8, background: C.surface, color: C.text, outline: 'none' }} />
               <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
                 <button onClick={saveOffer} style={{ flex: 1, background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 8, padding: '10px', fontWeight: 700, cursor: 'pointer' }}>{editingOffer ? 'Save Changes' : 'Create Offer'}</button>
                 <button onClick={() => setShowForm(false)} style={{ background: C.bg, color: C.muted, border: 'none', borderRadius: 8, padding: '10px 14px', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>

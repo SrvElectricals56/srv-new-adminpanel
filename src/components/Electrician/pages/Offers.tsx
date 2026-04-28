@@ -8,6 +8,8 @@ import ExportModal from '@/components/Shared/ExportModal';
 import { exportRowsToExcel } from '@/lib/excel';
 import AlertDialog from '@/components/Shared/AlertDialog';
 
+const numberInputValue = (value: number | null | undefined) => value === 0 || value === null || value === undefined ? '' : value;
+
 interface Offer {
   id: string;
   title: string;
@@ -259,7 +261,7 @@ export default function ElectricianOffers() {
                 </div>
                 <div>
                   <label style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 4, display: 'block' }}>Bonus Points</label>
-                  <input type="number" value={form.bonusPoints ?? 0} onChange={e => setForm(f => ({ ...f, bonusPoints: Number(e.target.value) || 0 }))} placeholder="0" style={inputStyle} />
+                  <input type="number" value={numberInputValue(form.bonusPoints)} onChange={e => setForm(f => ({ ...f, bonusPoints: e.target.value === '' ? 0 : Number(e.target.value) }))} placeholder="0" style={inputStyle} />
                 </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>

@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Search, SlidersHorizontal, Eye, Upload, ArrowLeftRight, RotateCcw, Pencil, Trash2 } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
-import { financeApi } from '@/lib/api';
+import { financeApi, settingsApi } from '@/lib/api';
 import ExportModal from '@/components/Shared/ExportModal';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 import AlertDialog from '@/components/Shared/AlertDialog';
@@ -38,11 +38,14 @@ const REASON_OPTIONS = [
 
 const EMPTY_FORM = { fromUser: '', toUser: '', points: 0, reason: '', customReason: '' };
 const EMPTY_EDIT = { fromUser: '', toUser: '', points: 0, reason: '', customReason: '', status: 'pending' as Transfer['status'] };
+const numberInputValue = (value: number | null | undefined) => value === 0 || value === null || value === undefined ? '' : value;
+const DEFAULT_MIN_TRANSFER_POINTS = 100;
 
 export default function TransferPoints() {
   const C = useThemePalette();
   const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [minTransferPoints, setMinTransferPoints] = useState(DEFAULT_MIN_TRANSFER_POINTS);
   const [search, setSearch] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -69,7 +72,8 @@ export default function TransferPoints() {
         fromCode: t.fromCode ?? t.from_code ?? 'ADM',
         toName: t.toName ?? t.to_name ?? (t.description?.split(' to ')?.[1] ?? 'User'),
         toPhone: t.toPhone ?? t.to_phone ?? '—',
-        points: t.points ?? t.amount ?? 0,
+        // Ensure numeric so totals don't become string concatenations.
+        points: Number(t.points ?? t.amount ?? 0),
         date: (t.date ?? t.createdAt ?? t.created_at ?? new Date().toISOString()).slice(0, 10),
         reason: t.reason ?? t.description ?? '',
         status: t.status ?? 'completed',
@@ -82,6 +86,15 @@ export default function TransferPoints() {
   };
 
   useEffect(() => { loadTransfers(); }, []);
+
+  useEffect(() => {
+    settingsApi.getAll().then((rows: any[]) => {
+      const map: Record<string, string> = {};
+      (rows ?? []).forEach((r: any) => { map[r.key] = r.value; });
+      const parsed = Number(map['minTransferPoints'] ?? map['min_transfer_points']);
+      if (Number.isFinite(parsed) && parsed > 0) setMinTransferPoints(parsed);
+    }).catch(console.error);
+  }, []);
 
   const filtered = useMemo(() => {
     let list = transfers;
@@ -97,7 +110,7 @@ export default function TransferPoints() {
 
   const stats = useMemo(() => ({
     total: transfers.length,
-    totalPoints: transfers.filter(t => t.status !== 'reversed').reduce((s, t) => s + t.points, 0),
+    totalPoints: transfers.filter(t => t.status !== 'reversed').reduce((s, t) => s + Number(t.points || 0), 0),
     pending: transfers.filter(t => t.status === 'pending').length,
     completed: transfers.filter(t => t.status === 'completed').length,
   }), [transfers]);
@@ -144,6 +157,10 @@ export default function TransferPoints() {
       setAlertDialog({ show: true, title: 'Required Fields Missing', message: 'Please fill all required fields', type: 'error' });
       return;
     }
+    if (editForm.points < minTransferPoints) {
+      setAlertDialog({ show: true, title: 'Minimum Points', message: `Minimum ${minTransferPoints} points can be transferred.`, type: 'warning' });
+      return;
+    }
     const finalReason = editForm.reason === 'Other' ? editForm.customReason : editForm.reason;
     // Update local display state (wallet transactions are immutable records)
     setTransfers(prev => prev.map(t => t.id === editItem.id
@@ -156,6 +173,10 @@ export default function TransferPoints() {
   const handleManualTransfer = async () => {
     if (!form.fromUser.trim() || !form.toUser.trim() || form.points <= 0) {
       setAlertDialog({ show: true, title: 'Required Fields Missing', message: 'Please fill all required fields (From User, To User, Points)', type: 'error' });
+      return;
+    }
+    if (form.points < minTransferPoints) {
+      setAlertDialog({ show: true, title: 'Minimum Points', message: `Minimum ${minTransferPoints} points can be transferred.`, type: 'warning' });
       return;
     }
     const finalReason = form.reason === 'Other' ? form.customReason : form.reason;
@@ -355,7 +376,7 @@ export default function TransferPoints() {
               </div>
               <div>
                 <label style={labelStyle}>Points *</label>
-                <input type="number" value={form.points ?? 0} onChange={e => setForm(f => ({ ...f, points: Number(e.target.value) || 0 }))} placeholder="0" min={1} style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' as const }} />
+                <input type="number" value={numberInputValue(form.points)} onChange={e => setForm(f => ({ ...f, points: e.target.value === '' ? 0 : Number(e.target.value) }))} placeholder="0" min={minTransferPoints} style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' as const }} />
               </div>
               <div>
                 <label style={labelStyle}>Reason</label>
@@ -405,7 +426,7 @@ export default function TransferPoints() {
               </div>
               <div>
                 <label style={labelStyle}>Points *</label>
-                <input type="number" value={editForm.points ?? 0} onChange={e => setEditForm(f => ({ ...f, points: Number(e.target.value) || 0 }))} placeholder="0" min={1} style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' as const }} />
+                <input type="number" value={numberInputValue(editForm.points)} onChange={e => setEditForm(f => ({ ...f, points: e.target.value === '' ? 0 : Number(e.target.value) }))} placeholder="0" min={minTransferPoints} style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' as const }} />
               </div>
               <div>
                 <label style={labelStyle}>Reason</label>

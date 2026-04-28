@@ -26,8 +26,12 @@ function ProductModal({ product, onClose, onEdit, permissions }: { product: Prod
           <button onClick={onClose} style={{ background: C.bg, border: 'none', borderRadius: 10, width: 32, height: 32, cursor: 'pointer', fontSize: 16 }}>✕</button>
         </div>
         <div style={{ padding: 24 }}>
-          <div style={{ textAlign: 'center', marginBottom: 20, background: C.bg, borderRadius: 16, padding: 20 }}>
-            <img src={product.image} alt={product.name} style={{ width: 160, height: 160, objectFit: 'contain' }} />
+          <div style={{ textAlign: 'center', marginBottom: 20, background: C.bg, borderRadius: 16, padding: 20, minHeight: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {product.image ? (
+              <img src={product.image} alt={product.name} style={{ width: 160, height: 160, objectFit: 'contain' }} onError={e => { const t = e.currentTarget; t.style.display = 'none'; const ph = document.createElement('div'); ph.style.cssText = 'font-size:48px;'; ph.textContent = '📦'; t.parentElement?.appendChild(ph); }} />
+            ) : (
+              <div style={{ fontSize: 48 }}>📦</div>
+            )}
           </div>
           <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
             {product.badge && <span style={{ background: '#FFF0F0', color: C.red, fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20 }}>🏷️ {product.badge}</span>}
@@ -94,8 +98,8 @@ function EditModal({ product, onClose, onSave, onDelete }: { product: Product | 
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: C.overlay, backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={onClose}>
-      <div style={{ background: C.card, borderRadius: 20, width: 600, maxWidth: '95vw', maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 25px 70px rgba(0,0,0,0.2)' }} onClick={e => e.stopPropagation()}>
+    <div style={{ position: 'fixed', inset: 0, background: C.overlay, backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <div style={{ background: C.card, borderRadius: 20, width: 600, maxWidth: '95vw', maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 25px 70px rgba(0,0,0,0.2)' }}>
         <div style={{ padding: '22px 28px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <div style={{ fontSize: 18, fontWeight: 800, color: C.text }}>{isAdd ? '➕ Add New Product' : `✏️ Edit — ${product?.name}`}</div>
@@ -175,11 +179,38 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
   const [data, setData] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterCat, setFilterCat] = useState(initialCategory ?? 'All');
+  const [productStats, setProductStats] = useState({ total: 0, active: 0, totalScanned: 0, lowStock: 0 });
   
   // ── Server-side pagination state ──────────────────────────────────────────
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const PAGE_SIZE = 50;
+
+  const mapApiProduct = (p: Record<string, unknown>): Product => ({
+    id: String(p.id ?? ''),
+    name: String(p.name ?? ''),
+    sub: String(p.sub ?? p.description ?? ''),
+    category: String(p.category ?? 'Other'),
+    subCategory: String(p.subCategory ?? p.sub_category ?? ''),
+    image: String(p.image ?? p.imageUrl ?? ''),
+    points: Number(p.points ?? p.pointsValue ?? 0),
+    badge: String(p.badge ?? ''),
+    price: typeof p.price === 'number' ? `₹${p.price}` : String(p.price ?? ''),
+    mrp: typeof p.mrp === 'number' ? `₹${p.mrp}` : String(p.mrp ?? ''),
+    stock: Number(p.stock ?? 0),
+    totalScanned: Number(p.totalScanned ?? p.total_scanned ?? 0),
+    sku: String(p.sku ?? ''),
+    weight: String(p.weight ?? ''),
+    description: String(p.description ?? ''),
+    isActive: Boolean(p.isActive ?? p.is_active ?? true),
+  });
+
+  const buildProductStats = (products: Product[]) => ({
+    total: products.length,
+    active: products.filter((p) => p.isActive).length,
+    totalScanned: products.reduce((sum, p) => sum + (p.totalScanned || 0), 0),
+    lowStock: products.filter((p) => (p.stock || 0) < 500).length,
+  });
 
   const loadProducts = async (page = currentPage) => {
     try {
@@ -191,28 +222,24 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
       if (filterCat !== 'All') params.category = filterCat;
 
       const res = await productApi.getAll(params);
-      const products = Array.isArray(res) ? res : (res as any).data ?? [];
-      const total = Array.isArray(res) ? products.length : (res as any).total ?? products.length;
+      const products = (Array.isArray(res) ? res : (res as { data?: Record<string, unknown>[] }).data ?? []) as Record<string, unknown>[];
+      const total = Array.isArray(res) ? products.length : (res as { total?: number }).total ?? products.length;
       setTotalCount(total);
-      
-      setData(products.map((p: any) => ({
-        id: String(p.id),
-        name: p.name,
-        sub: p.sub ?? p.description ?? '',
-        category: p.category ?? 'Other',
-        subCategory: p.subCategory ?? p.sub_category ?? '',
-        image: p.image ?? '',
-        points: p.points ?? 0,
-        badge: p.badge ?? '',
-        price: p.price ?? '',
-        mrp: p.mrp ?? '',
-        stock: p.stock ?? 0,
-        totalScanned: p.totalScanned ?? p.total_scanned ?? 0,
-        sku: p.sku ?? '',
-        weight: p.weight ?? '',
-        description: p.description ?? '',
-        isActive: p.isActive ?? p.is_active ?? true,
-      })));
+
+      const mappedProducts = products.map(mapApiProduct);
+      setData(mappedProducts);
+
+      if (total > mappedProducts.length) {
+        const statsRes = await productApi.getAll({
+          limit: String(total),
+          page: '1',
+          ...(filterCat !== 'All' ? { category: filterCat } : {}),
+        });
+        const allProducts = ((Array.isArray(statsRes) ? statsRes : (statsRes as { data?: Record<string, unknown>[] }).data ?? []) as Record<string, unknown>[]).map(mapApiProduct);
+        setProductStats(buildProductStats(allProducts));
+      } else {
+        setProductStats(buildProductStats(mappedProducts));
+      }
     } catch (err) {
       console.error('Failed to load products:', err);
     } finally {
@@ -250,7 +277,7 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
 
   const filtered = data.filter((p: Product) => {
     const q = search.toLowerCase();
-    const matchSearch = p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q) || (p.sku || '').toLowerCase().includes(q) || (p.sub || '').toLowerCase().includes(q);
+    const matchSearch = p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q) || (p.sku || '').toLowerCase().includes(q) || (p.sku || '').replace(/^SRV-/i, '').toLowerCase().includes(q) || (p.sub || '').toLowerCase().includes(q);
     const matchCat = filterCat === 'All' || p.category === filterCat;
     const matchStatus = filterStatus === 'all' || (filterStatus === 'active' ? p.isActive : !p.isActive);
     const matchStock = filterStock === 'all' || (filterStock === 'low' ? p.stock < 500 : filterStock === 'out' ? p.stock === 0 : p.stock >= 500);
@@ -285,20 +312,23 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
       return;
     }
 
+    // Strip frontend-only fields that backend DTO doesn't accept
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { id: _id, totalScanned: _ts, subCategory: _sc, weight: _w, ...payload } = form as any;
+
     try {
       if (showAdd) {
-        await productApi.create(form);
-        setAlertDialog({ show: true, title: 'Success', message: 'Product added successfully!', type: 'success' });
+        await productApi.create(payload);
         setShowAdd(false);
+        await loadProducts(currentPage);
       } else if (editing) {
-        await productApi.update(editing.id, form);
-        setAlertDialog({ show: true, title: 'Success', message: 'Product updated successfully!', type: 'success' });
+        await productApi.update(editing.id, payload);
         setEditing(undefined);
+        await loadProducts(currentPage);
       }
-      await loadProducts(currentPage);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to save product:', err);
-      setAlertDialog({ show: true, title: 'Error', message: 'Failed to save product. Please try again.', type: 'error' });
+      setAlertDialog({ show: true, title: 'Error', message: err?.message || 'Failed to save product. Please try again.', type: 'error' });
     }
   };
 
@@ -364,10 +394,10 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 22 }}>
         {[
-          { label: 'Total Products', value: totalCount, Icon: Package, color: '#3B82F6', bg: '#EFF6FF' },
-          { label: 'Active', value: data.filter((p: Product) => p.isActive).length, Icon: CheckCircle, color: '#065F46', bg: '#D1FAE5' },
-          { label: 'Total Scanned', value: data.reduce((a: number, p: Product) => a + p.totalScanned, 0).toLocaleString('en-IN'), Icon: ScanLine, color: '#7C3AED', bg: '#F5F3FF' },
-          { label: 'Low Stock (<500)', value: data.filter((p: Product) => p.stock < 500).length, Icon: AlertTriangle, color: '#92400E', bg: '#FEF3C7' },
+          { label: 'Total Products', value: productStats.total || totalCount, Icon: Package, color: '#3B82F6', bg: '#EFF6FF' },
+          { label: 'Active', value: productStats.active, Icon: CheckCircle, color: '#065F46', bg: '#D1FAE5' },
+          { label: 'Total Scanned', value: productStats.totalScanned.toLocaleString('en-IN'), Icon: ScanLine, color: '#7C3AED', bg: '#F5F3FF' },
+          { label: 'Low Stock (<500)', value: productStats.lowStock, Icon: AlertTriangle, color: '#92400E', bg: '#FEF3C7' },
         ].map((s, i) => (
           <div key={i} style={{ background: C.card, borderRadius: 14, padding: '16px 18px', border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
             <div style={{ width: 42, height: 42, borderRadius: 12, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.color }}><s.Icon size={20} /></div>
@@ -459,7 +489,7 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
           )}
         </div>
 
-        <span style={{ fontSize: 13, color: C.muted, whiteSpace: 'nowrap' }}>{filtered.length} of {data.length}</span>
+        <span style={{ fontSize: 13, color: C.muted, whiteSpace: 'nowrap' }}>{filtered.length} of {totalCount} total</span>
       </div>
 
       <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
@@ -467,7 +497,7 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
           <thead>
             <tr style={{ background: C.surface, borderBottom: `1px solid ${C.border}` }}>
               {['Product','SKU Code','Category','Price','Points','Stock','Scanned','Status','Actions'].map(h => (
-                <th key={h} style={{ textAlign: 'left', padding: '12px 16px', fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+                <th key={h} style={{ textAlign: 'left', padding: h === 'SKU Code' ? '12px 8px 12px 12px' : '12px 16px', fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -480,7 +510,7 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <div style={{ width: 46, height: 46, borderRadius: 10, background: C.bg, overflow: 'hidden', flexShrink: 0 }}>
                       {p.image ? (
-                        <img src={p.image} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+                        <img src={p.image} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} onError={e => { const t = e.currentTarget; t.style.display = 'none'; const ph = t.parentElement; if (ph) { ph.style.display = 'flex'; ph.style.alignItems = 'center'; ph.style.justifyContent = 'center'; ph.style.fontSize = '20px'; ph.innerHTML = '📦'; } }} />
                       ) : (
                         <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, color: C.muted }}>📦</div>
                       )}
@@ -492,7 +522,7 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
                     </div>
                   </div>
                 </td>
-                <td style={{ padding: '12px 16px', fontSize: 12, color: C.muted, fontFamily: 'monospace' }}>{p.sku || '—'}</td>
+                <td style={{ padding: '12px 8px 12px 12px', fontSize: 12, color: C.muted, fontFamily: 'monospace', whiteSpace: 'nowrap' }}>{p.sku ? p.sku.replace(/^SRV-/, '') : '—'}</td>
                 <td style={{ padding: '12px 16px', fontSize: 12.5, color: C.muted }}>{p.category}</td>
                 <td style={{ padding: '12px 16px' }}>
                   <div style={{ fontSize: 14, fontWeight: 800, color: C.text }}>{p.price}</div>

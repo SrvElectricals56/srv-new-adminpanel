@@ -31,6 +31,7 @@ const EMPTY_FORM = {
   isActive: true,
   sortOrder: 1,
 };
+const numberInputValue = (value: number | null | undefined) => value === 0 || value === null || value === undefined ? '' : value;
 
 export default function ProductCategories({ onNavigate }: { onNavigate?: (page: string, category?: string) => void }) {
   const C = useThemePalette();
@@ -545,8 +546,8 @@ export default function ProductCategories({ onNavigate }: { onNavigate?: (page: 
                   <label style={labelStyle}>Sort Order</label>
                   <input
                     type="number"
-                    value={form.sortOrder}
-                    onChange={e => setForm(f => ({ ...f, sortOrder: Number(e.target.value) }))}
+                    value={numberInputValue(form.sortOrder)}
+                    onChange={e => setForm(f => ({ ...f, sortOrder: e.target.value === '' ? 0 : Number(e.target.value) }))}
                     min={1}
                     style={inputStyle}
                   />
@@ -555,8 +556,8 @@ export default function ProductCategories({ onNavigate }: { onNavigate?: (page: 
                   <label style={labelStyle}>Product Count</label>
                   <input
                     type="number"
-                    value={form.productCount}
-                    onChange={e => setForm(f => ({ ...f, productCount: Number(e.target.value) }))}
+                    value={numberInputValue(form.productCount)}
+                    onChange={e => setForm(f => ({ ...f, productCount: e.target.value === '' ? 0 : Number(e.target.value) }))}
                     min={0}
                     style={inputStyle}
                   />

@@ -18,6 +18,8 @@ function useSectionStyles() {
   return { C, inputStyle, labelStyle };
 }
 
+const numberInputValue = (value: number | string | undefined) => value === 0 || value === '' || value == null ? '' : value;
+
 /* ============ SCAN HISTORY ============ */
 export function ScanHistory() {
   const { C, inputStyle } = useSectionStyles();
@@ -369,7 +371,7 @@ export function Offers() {
               <div><label style={labelStyle}>Description</label><textarea style={{ ...inputStyle, resize: 'vertical', minHeight: 60 } as React.CSSProperties} value={form.description ?? ''} onChange={e => f('description', e.target.value)} /></div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <div><label style={labelStyle}>Discount/Tag *</label><input style={inputStyle} value={form.discount ?? ''} onChange={e => f('discount', e.target.value)} placeholder="e.g. 2x Points, 10% OFF" /></div>
-                <div><label style={labelStyle}>Bonus Points</label><input style={inputStyle} type="number" value={form.bonusPoints ?? ''} onChange={e => f('bonusPoints', e.target.value === '' ? '' : +e.target.value)} placeholder="0" /></div>
+                <div><label style={labelStyle}>Bonus Points</label><input style={inputStyle} type="number" value={numberInputValue(form.bonusPoints)} onChange={e => f('bonusPoints', e.target.value === '' ? 0 : +e.target.value)} placeholder="0" /></div>
                 <div><label style={labelStyle}>Valid From</label><input style={inputStyle} type="date" value={form.validFrom ?? ''} onChange={e => f('validFrom', e.target.value)} /></div>
                 <div><label style={labelStyle}>Valid To</label><input style={inputStyle} type="date" value={form.validTo ?? ''} onChange={e => f('validTo', e.target.value)} /></div>
                 <div><label style={labelStyle}>Target Audience</label>
@@ -542,8 +544,8 @@ export function PointsConfig() {
                         type="number"
                         min={0}
                         max={9999}
-                        value={p._points}
-                        onChange={e => updatePoints(p.id, Math.max(0, parseInt(e.target.value) || 0))}
+                        value={numberInputValue(p._points)}
+                        onChange={e => updatePoints(p.id, e.target.value === '' ? 0 : Math.max(0, Number(e.target.value)))}
                         style={{ ...inputStyle, width: 80, textAlign: 'center', fontWeight: 700, borderColor: changed ? '#F59E0B' : C.border }}
                       />
                     </td>
@@ -583,6 +585,13 @@ export function AppBanners() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<Partial<BannerItem>>({ title: '', imageUrl: '', targetRole: 'all', status: 'active', order: 1 });
   const f = (k: keyof BannerItem, v: unknown) => setForm(p => ({ ...p, [k]: v }));
+  const handleImageFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => f('imageUrl', String(reader.result ?? ''));
+    reader.readAsDataURL(file);
+  };
 
   const loadData = async () => {
     try {
@@ -599,6 +608,7 @@ export function AppBanners() {
       await bannerApi.create({ ...form, createdAt: new Date().toISOString().split('T')[0] });
       await loadData();
       setShowForm(false);
+      setForm({ title: '', imageUrl: '', targetRole: 'all', status: 'active', order: 1 });
     } catch (err) { console.error(err); }
   };
 
@@ -634,6 +644,10 @@ export function AppBanners() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
             <div style={{ gridColumn: '1/-1' }}><label style={labelStyle}>Banner Title *</label><input style={inputStyle} value={form.title ?? ''} onChange={e => f('title', e.target.value)} placeholder="Banner title" /></div>
             <div style={{ gridColumn: '1/-1' }}><label style={labelStyle}>Image URL *</label><input style={inputStyle} value={form.imageUrl ?? ''} onChange={e => f('imageUrl', e.target.value)} placeholder="https://..." /></div>
+            <div style={{ gridColumn: '1/-1' }}>
+              <label style={labelStyle}>Choose From Files</label>
+              <input type="file" accept="image/*" onChange={handleImageFile} style={{ ...inputStyle, padding: '6px 10px' }} />
+            </div>
             <div><label style={labelStyle}>Target Audience</label>
               <select style={inputStyle} value={form.targetRole ?? 'all'} onChange={e => f('targetRole', e.target.value)}>
                 <option value="all">Everyone</option>
@@ -641,7 +655,7 @@ export function AppBanners() {
                 <option value="dealer">Dealers Only</option>
               </select>
             </div>
-            <div><label style={labelStyle}>Display Order</label><input style={inputStyle} type="number" value={form.order ?? 1} onChange={e => f('order', +e.target.value)} /></div>
+            <div><label style={labelStyle}>Display Order</label><input style={inputStyle} type="number" value={numberInputValue(form.order)} onChange={e => f('order', e.target.value === '' ? 0 : Number(e.target.value))} /></div>
           </div>
           {form.imageUrl && (
             <div style={{ marginTop: 14, background: C.bg, borderRadius: 12, padding: 12, display: 'flex', justifyContent: 'center' }}>
@@ -1151,6 +1165,7 @@ export function Settings() {
       { key: 'maxPointsPerDay', label: 'Max Points Per Day (per user)', type: 'number', placeholder: '500' },
       { key: 'cashbackRate', label: 'Cashback Rate (pts per ₹1)', type: 'number', placeholder: '5' },
       { key: 'minRedemptionPoints', label: 'Minimum Redemption Points', type: 'number', placeholder: '500' },
+      { key: 'minTransferPoints', label: 'Min Transfer Points', type: 'number', placeholder: '100' },
     ]},
   ];
 
@@ -1175,7 +1190,7 @@ export function Settings() {
             {section.fields.map(field => (
               <div key={field.key} style={{ gridColumn: field.key === 'tagline' || field.key === 'supportEmail' ? '1/-1' : 'auto' }}>
                 <label style={labelStyle}>{field.label}</label>
-                <input style={inputStyle} type={field.type} value={(form as Record<string, unknown>)[field.key] as string} onChange={e => f(field.key as keyof typeof form, field.type === 'number' ? +e.target.value : e.target.value)} placeholder={field.placeholder} onFocus={e => (e.target as HTMLInputElement).style.borderColor = C.red} onBlur={e => (e.target as HTMLInputElement).style.borderColor = C.border} />
+                <input style={inputStyle} type={field.type} value={field.type === 'number' ? numberInputValue((form as Record<string, unknown>)[field.key] as number | string | undefined) : (form as Record<string, unknown>)[field.key] as string} onChange={e => f(field.key as keyof typeof form, field.type === 'number' ? (e.target.value === '' ? 0 : +e.target.value) : e.target.value)} placeholder={field.placeholder} onFocus={e => (e.target as HTMLInputElement).style.borderColor = C.red} onBlur={e => (e.target as HTMLInputElement).style.borderColor = C.border} />
               </div>
             ))}
           </div>

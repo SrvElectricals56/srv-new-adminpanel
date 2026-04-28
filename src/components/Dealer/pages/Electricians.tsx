@@ -20,6 +20,8 @@ const STATUS_CONFIG: Record<UserStatus, { bg: string; color: string; label: stri
   inactive: { bg: '#FEE2E2', color: '#991B1B', label: 'Inactive' },
 };
 
+const numberInputValue = (value: number | null | undefined) => value === 0 || value === null || value === undefined ? '' : value;
+
 function escapeXml(value: string) {
   return value
     .replace(/&/g, '&amp;')
@@ -227,6 +229,21 @@ function AddModal({ dealers = [], onClose, onSave }: { dealers?: {id: string; na
             }} placeholder="10-digit mobile" />
           </div>
 
+          <div style={{ gridColumn: '1/-1', fontSize: 13, fontWeight: 700, color: C.text, paddingBottom: 8, borderBottom: `1px solid ${C.border}` }}>🖼️ Profile Photo</div>
+          {form.profileImage && (
+            <div style={{ gridColumn: '1/-1', lineHeight: 0 }}>
+              <img src={form.profileImage} alt="" style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', display: 'block', border: `1px solid ${C.border}` }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+            </div>
+          )}
+          <div style={{ gridColumn: '1/-1' }}>
+            <label style={{ fontSize: 12, fontWeight: 700, color: C.muted, display: 'block', marginBottom: 6, textTransform: 'uppercase' }}>Profile Photo URL</label>
+            <input style={inputStyle} value={form.profileImage ?? ''} onChange={e => f('profileImage', e.target.value)} placeholder="https://..." />
+          </div>
+          <div style={{ gridColumn: '1/-1' }}>
+            <label style={{ fontSize: 12, fontWeight: 700, color: C.muted, display: 'block', marginBottom: 6, textTransform: 'uppercase' }}>Choose From Files</label>
+            <input type="file" accept="image/*" onChange={handleImageFile} style={{ ...inputStyle, padding: '6px 10px' }} />
+          </div>
+
           {/* Electrician Code */}
           <div style={{ gridColumn: '1/-1' }}>
             <label style={{ fontSize: 12, fontWeight: 700, color: C.muted, display: 'block', marginBottom: 6, textTransform: 'uppercase' }}>Electrician Code</label>
@@ -401,22 +418,22 @@ function EditModal({
 
           <div>
             <label style={{ fontSize: 12, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6, display: 'block' }}>Total Scans</label>
-            <input type="number" value={form.totalScans ?? 0} onChange={e => updateField('totalScans', Number(e.target.value) || 0)} placeholder="0" style={{ width: '100%', padding: '10px 12px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 14, background: C.surface, color: C.text, outline: 'none', boxSizing: 'border-box' }} />
+            <input type="number" value={numberInputValue(form.totalScans)} onChange={e => updateField('totalScans', e.target.value === '' ? 0 : Number(e.target.value))} placeholder="0" style={{ width: '100%', padding: '10px 12px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 14, background: C.surface, color: C.text, outline: 'none', boxSizing: 'border-box' }} />
           </div>
 
           <div>
             <label style={{ fontSize: 12, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6, display: 'block' }}>Total Points</label>
-            <input type="number" value={form.totalPoints ?? 0} onChange={e => updateField('totalPoints', Number(e.target.value) || 0)} placeholder="0" style={{ width: '100%', padding: '10px 12px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 14, background: C.surface, color: C.text, outline: 'none', boxSizing: 'border-box' }} />
+            <input type="number" value={numberInputValue(form.totalPoints)} onChange={e => updateField('totalPoints', e.target.value === '' ? 0 : Number(e.target.value))} placeholder="0" style={{ width: '100%', padding: '10px 12px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 14, background: C.surface, color: C.text, outline: 'none', boxSizing: 'border-box' }} />
           </div>
 
           <div>
             <label style={{ fontSize: 12, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6, display: 'block' }}>Wallet Balance</label>
-            <input type="number" value={form.walletBalance ?? 0} onChange={e => updateField('walletBalance', Number(e.target.value) || 0)} placeholder="0" style={{ width: '100%', padding: '10px 12px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 14, background: C.surface, color: C.text, outline: 'none', boxSizing: 'border-box' }} />
+            <input type="number" value={numberInputValue(form.walletBalance)} onChange={e => updateField('walletBalance', e.target.value === '' ? 0 : Number(e.target.value))} placeholder="0" style={{ width: '100%', padding: '10px 12px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 14, background: C.surface, color: C.text, outline: 'none', boxSizing: 'border-box' }} />
           </div>
 
           <div>
             <label style={{ fontSize: 12, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6, display: 'block' }}>Total Redemptions</label>
-            <input type="number" value={form.totalRedemptions ?? 0} onChange={e => updateField('totalRedemptions', Number(e.target.value) || 0)} placeholder="0" style={{ width: '100%', padding: '10px 12px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 14, background: C.surface, color: C.text, outline: 'none', boxSizing: 'border-box' }} />
+            <input type="number" value={numberInputValue(form.totalRedemptions)} onChange={e => updateField('totalRedemptions', e.target.value === '' ? 0 : Number(e.target.value))} placeholder="0" style={{ width: '100%', padding: '10px 12px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 14, background: C.surface, color: C.text, outline: 'none', boxSizing: 'border-box' }} />
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -514,22 +531,29 @@ export default function AssociatedElectricians() {
     const electricianData: Record<string, any> = {};
     if (updatedElectrician.name) electricianData.name = updatedElectrician.name;
     if (updatedElectrician.phone) electricianData.phone = updatedElectrician.phone;
+    if (updatedElectrician.email) electricianData.email = updatedElectrician.email;
     if (updatedElectrician.city) electricianData.city = updatedElectrician.city;
     if (updatedElectrician.state) electricianData.state = updatedElectrician.state;
     if (updatedElectrician.district) electricianData.district = updatedElectrician.district;
+    if (updatedElectrician.profileImage !== undefined) electricianData.profileImage = updatedElectrician.profileImage;
+    if (updatedElectrician.electricianCode) electricianData.electricianCode = updatedElectrician.electricianCode;
     if (updatedElectrician.tier) electricianData.tier = updatedElectrician.tier;
     if (updatedElectrician.status) electricianData.status = updatedElectrician.status;
     if (updatedElectrician.dealerId) electricianData.dealerId = updatedElectrician.dealerId;
     if (updatedElectrician.subCategory) electricianData.subCategory = updatedElectrician.subCategory;
     if (updatedElectrician.bankLinked !== undefined) electricianData.bankLinked = updatedElectrician.bankLinked;
-    if (updatedElectrician.upiId) electricianData.upiId = updatedElectrician.upiId;
+    if (updatedElectrician.upiId !== undefined) electricianData.upiId = updatedElectrician.upiId;
+    if (updatedElectrician.totalScans !== undefined) electricianData.totalScans = updatedElectrician.totalScans;
+    if (updatedElectrician.totalPoints !== undefined) electricianData.totalPoints = updatedElectrician.totalPoints;
+    if (updatedElectrician.walletBalance !== undefined) electricianData.walletBalance = updatedElectrician.walletBalance;
     
     try {
       await electricianApi.update(updatedElectrician.id, electricianData);
       setElectricians(prev => prev.map(item => item.id === updatedElectrician.id ? updatedElectrician : item));
+      setAlertDialog({ show: true, title: 'Success', message: 'Electrician updated successfully.', type: 'success' });
     } catch (err: any) {
       console.error('Failed to update electrician:', err);
-      alert(err.message || 'Failed to update electrician');
+      setAlertDialog({ show: true, title: 'Error', message: err.message || 'Failed to update electrician', type: 'error' });
     }
     setEditing(null);
   };
@@ -550,9 +574,15 @@ export default function AssociatedElectricians() {
     if (newE.city) electricianData.city = newE.city.trim();
     if (newE.state) electricianData.state = newE.state.trim();
     if (newE.district) electricianData.district = newE.district.trim();
+    if (newE.profileImage) electricianData.profileImage = newE.profileImage;
     if (newE.tier) electricianData.tier = newE.tier;
     if (newE.status) electricianData.status = newE.status;
     if (newE.subCategory) electricianData.subCategory = newE.subCategory;
+    if (newE.bankLinked !== undefined) electricianData.bankLinked = newE.bankLinked;
+    if (newE.upiId) electricianData.upiId = newE.upiId;
+    if (newE.totalScans !== undefined) electricianData.totalScans = newE.totalScans;
+    if (newE.totalPoints !== undefined) electricianData.totalPoints = newE.totalPoints;
+    if (newE.walletBalance !== undefined) electricianData.walletBalance = newE.walletBalance;
     if ((newE as any).electricianCode) electricianData.electricianCode = (newE as any).electricianCode;
 
     try {
@@ -560,9 +590,11 @@ export default function AssociatedElectricians() {
       // Resolve dealerName from dealers list
       const dealerName = dealers.find(d => d.id === created.dealerId)?.name ?? 'Unknown';
       setElectricians(prev => [{ ...created, dealerName, recentActivity: 'Just joined' }, ...prev]);
+      setAlertDialog({ show: true, title: 'Success', message: 'Electrician added successfully.', type: 'success' });
     } catch (err: any) {
       console.error('Failed to add electrician:', err);
-      alert(err.message || 'Failed to add electrician');
+      setAlertDialog({ show: true, title: 'Error', message: err.message || 'Failed to add electrician', type: 'error' });
+      return;
     }
     setShowAdd(false);
   };

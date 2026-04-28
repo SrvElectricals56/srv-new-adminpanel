@@ -17,6 +17,7 @@ interface ReferralRecord {
 }
 
 const INITIAL_CONFIG = { referrerBonus: 500, refereeBonus: 250, maxReferrals: 0, baseLinkUrl: 'https://srvelectricals.in/ref/' };
+const numberInputValue = (value: number | null | undefined) => value === 0 || value === null || value === undefined ? '' : value;
 
 export default function Referrals() {
   const C = useThemePalette();
@@ -206,18 +207,18 @@ export default function Referrals() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
               <div>
                 <label style={labelStyle}>Referrer Bonus Points</label>
-                <input type="number" value={config.referrerBonus ?? 0} onChange={e => setConfig(c => ({ ...c, referrerBonus: Number(e.target.value) || 0 }))} min={0} placeholder="0" style={inputStyle} />
+                <input type="number" value={numberInputValue(config.referrerBonus)} onChange={e => setConfig(c => ({ ...c, referrerBonus: e.target.value === '' ? 0 : Number(e.target.value) }))} min={0} placeholder="0" style={inputStyle} />
                 <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>Points given to the person who referred</div>
               </div>
               <div>
                 <label style={labelStyle}>Referee Bonus Points</label>
-                <input type="number" value={config.refereeBonus ?? 0} onChange={e => setConfig(c => ({ ...c, refereeBonus: Number(e.target.value) || 0 }))} min={0} placeholder="0" style={inputStyle} />
+                <input type="number" value={numberInputValue(config.refereeBonus)} onChange={e => setConfig(c => ({ ...c, refereeBonus: e.target.value === '' ? 0 : Number(e.target.value) }))} min={0} placeholder="0" style={inputStyle} />
                 <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>Points given to the new user who joined</div>
               </div>
             </div>
             <div>
               <label style={labelStyle}>Max Referrals Per User <span style={{ fontWeight: 400 }}>(0 = unlimited)</span></label>
-              <input type="number" value={config.maxReferrals ?? 0} onChange={e => setConfig(c => ({ ...c, maxReferrals: Number(e.target.value) || 0 }))} min={0} placeholder="0" style={inputStyle} />
+              <input type="number" value={numberInputValue(config.maxReferrals)} onChange={e => setConfig(c => ({ ...c, maxReferrals: e.target.value === '' ? 0 : Number(e.target.value) }))} min={0} placeholder="0" style={inputStyle} />
             </div>
             <div>
               <label style={labelStyle}>Referral Link Base URL</label>

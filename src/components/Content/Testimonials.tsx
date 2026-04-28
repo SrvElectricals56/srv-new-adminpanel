@@ -32,6 +32,7 @@ const EMPTY_FORM = {
   ringColor: '#6366F1', isActive: true, displayOrder: 1,
   userCategory: 'all' as UserCategory,
 };
+const numberInputValue = (value: number | null | undefined) => value === 0 || value === null || value === undefined ? '' : value;
 
 const TABS: { id: UserCategory; label: string; Icon: any; color: string; bg: string }[] = [
   { id: 'all', label: 'All Users', Icon: Users, color: '#7C3AED', bg: '#F5F3FF' },
@@ -305,11 +306,11 @@ export default function Testimonials() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
                   <label style={labelStyle}>Years Connected</label>
-                  <input type="number" value={form.yearsConnected} onChange={e => setForm(f => ({ ...f, yearsConnected: Number(e.target.value) }))} min={1} style={inputStyle} />
+                  <input type="number" value={numberInputValue(form.yearsConnected)} onChange={e => setForm(f => ({ ...f, yearsConnected: e.target.value === '' ? 0 : Number(e.target.value) }))} min={1} style={inputStyle} />
                 </div>
                 <div>
                   <label style={labelStyle}>Display Order</label>
-                  <input type="number" value={form.displayOrder} onChange={e => setForm(f => ({ ...f, displayOrder: Number(e.target.value) }))} min={1} style={inputStyle} />
+                  <input type="number" value={numberInputValue(form.displayOrder)} onChange={e => setForm(f => ({ ...f, displayOrder: e.target.value === '' ? 0 : Number(e.target.value) }))} min={1} style={inputStyle} />
                 </div>
               </div>
               <div>

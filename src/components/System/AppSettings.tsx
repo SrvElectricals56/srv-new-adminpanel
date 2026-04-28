@@ -14,6 +14,7 @@ interface AppConfig {
   // Points & Rewards
   maxPointsPerDay: number; minRedemptionPoints: number; pointsExpiry: number;
   cashbackRate: number; referrerBonus: number; refereeBonus: number;
+  minTransferPoints: number;
   // Tiers - Electrician
   silverMin: number; goldMin: number; platinumMin: number; diamondMin: number;
   // Tiers - Dealer
@@ -35,6 +36,7 @@ const INITIAL: AppConfig = {
   maintenanceMode: false, maintenanceMessage: 'App is under maintenance. Please try again later.',
   supportPhone: '+91 88376 84004', supportEmail: 'support@srvelectricals.com', whatsappNumber: '918837684004',
   maxPointsPerDay: 500, minRedemptionPoints: 500, pointsExpiry: 365, cashbackRate: 5, referrerBonus: 500, refereeBonus: 250,
+  minTransferPoints: 100,
   silverMin: 0, goldMin: 1001, platinumMin: 5001, diamondMin: 10001,
   dealerSilverMin: 0, dealerGoldMin: 11, dealerPlatinumMin: 26, dealerDiamondMin: 51,
   dealerCommissionRate: 5,
@@ -61,6 +63,9 @@ export default function AppSettings() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [notificationSent, setNotificationSent] = useState(false);
+  const numberInputValue = (value: number | string | undefined) => value === 0 || value === '' || value == null ? '' : value;
+  const parseNumberInput = (value: string) => value === '' ? '' : Number(value);
+  const normalizeNumberConfig = (value: unknown) => typeof value === 'number' ? value : Number(value || 0);
 
   // Load settings from API on mount
   useEffect(() => {
@@ -89,8 +94,16 @@ export default function AppSettings() {
   const handleSave = async () => {
     setSaving(true);
     try {
+      const normalizedConfig = Object.fromEntries(
+        Object.entries(config).map(([key, value]) => {
+          const initialValue = INITIAL[key as keyof AppConfig];
+          return [key, typeof initialValue === 'number' ? normalizeNumberConfig(value) : value];
+        }),
+      ) as AppConfig;
+
+      setConfig(normalizedConfig);
       await Promise.all(
-        Object.entries(config).map(([key, value]) =>
+        Object.entries(normalizedConfig).map(([key, value]) =>
           settingsApi.update(key, String(value))
         )
       );
@@ -272,13 +285,14 @@ export default function AppSettings() {
             <div style={{ display: 'grid', gap: 16 }}>
               <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 4 }}>⭐ Points & Rewards Config</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                <div><label style={lbl}>Max Points Per Day (per user)</label><input type="number" style={inp} value={config.maxPointsPerDay} onChange={e => f('maxPointsPerDay', +e.target.value)} /></div>
-                <div><label style={lbl}>Min Redemption Points</label><input type="number" style={inp} value={config.minRedemptionPoints} onChange={e => f('minRedemptionPoints', +e.target.value)} /></div>
-                <div><label style={lbl}>Points Expiry (days, 0=never)</label><input type="number" style={inp} value={config.pointsExpiry} onChange={e => f('pointsExpiry', +e.target.value)} /></div>
-                <div><label style={lbl}>Cashback Rate (pts per ₹1)</label><input type="number" style={inp} value={config.cashbackRate} onChange={e => f('cashbackRate', +e.target.value)} /></div>
-                <div><label style={lbl}>Referrer Bonus Points</label><input type="number" style={inp} value={config.referrerBonus} onChange={e => f('referrerBonus', +e.target.value)} /></div>
-                <div><label style={lbl}>Referee Bonus Points</label><input type="number" style={inp} value={config.refereeBonus} onChange={e => f('refereeBonus', +e.target.value)} /></div>
-                <div><label style={lbl}>Dealer Commission Rate (%)</label><input type="number" style={inp} value={config.dealerCommissionRate} onChange={e => f('dealerCommissionRate', +e.target.value)} /></div>
+                <div><label style={lbl}>Max Points Per Day (per user)</label><input type="number" style={inp} value={numberInputValue(config.maxPointsPerDay)} onChange={e => f('maxPointsPerDay', parseNumberInput(e.target.value))} /></div>
+                <div><label style={lbl}>Min Redemption Points</label><input type="number" style={inp} value={numberInputValue(config.minRedemptionPoints)} onChange={e => f('minRedemptionPoints', parseNumberInput(e.target.value))} /></div>
+                <div><label style={lbl}>Points Expiry (days, 0=never)</label><input type="number" style={inp} value={numberInputValue(config.pointsExpiry)} onChange={e => f('pointsExpiry', parseNumberInput(e.target.value))} /></div>
+                <div><label style={lbl}>Cashback Rate (pts per ₹1)</label><input type="number" style={inp} value={numberInputValue(config.cashbackRate)} onChange={e => f('cashbackRate', parseNumberInput(e.target.value))} /></div>
+                <div><label style={lbl}>Referrer Bonus Points</label><input type="number" style={inp} value={numberInputValue(config.referrerBonus)} onChange={e => f('referrerBonus', parseNumberInput(e.target.value))} /></div>
+                <div><label style={lbl}>Referee Bonus Points</label><input type="number" style={inp} value={numberInputValue(config.refereeBonus)} onChange={e => f('refereeBonus', parseNumberInput(e.target.value))} /></div>
+                <div><label style={lbl}>Min Transfer Points</label><input type="number" style={inp} value={numberInputValue(config.minTransferPoints)} onChange={e => f('minTransferPoints', parseNumberInput(e.target.value))} /></div>
+                <div><label style={lbl}>Dealer Commission Rate (%)</label><input type="number" style={inp} value={numberInputValue(config.dealerCommissionRate)} onChange={e => f('dealerCommissionRate', parseNumberInput(e.target.value))} /></div>
               </div>
             </div>
           )}
@@ -292,7 +306,7 @@ export default function AppSettings() {
                     <div key={key} style={{ background: C.bg, borderRadius: 10, padding: 14, border: `1px solid ${C.border}` }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 8 }}>{label}</div>
                       <label style={lbl}>Min Points</label>
-                      <input type="number" style={inp} value={(config as any)[key]} onChange={e => f(key as keyof AppConfig, +e.target.value)} />
+                      <input type="number" style={inp} value={numberInputValue((config as any)[key])} onChange={e => f(key as keyof AppConfig, parseNumberInput(e.target.value))} />
                     </div>
                   ))}
                 </div>
@@ -304,7 +318,7 @@ export default function AppSettings() {
                     <div key={key} style={{ background: C.bg, borderRadius: 10, padding: 14, border: `1px solid ${C.border}` }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 8 }}>{label}</div>
                       <label style={lbl}>Min Electricians</label>
-                      <input type="number" style={inp} value={(config as any)[key]} onChange={e => f(key as keyof AppConfig, +e.target.value)} />
+                      <input type="number" style={inp} value={numberInputValue((config as any)[key])} onChange={e => f(key as keyof AppConfig, parseNumberInput(e.target.value))} />
                     </div>
                   ))}
                 </div>
@@ -363,8 +377,8 @@ export default function AppSettings() {
                   <input 
                     type="number" 
                     style={inp} 
-                    value={config.rateUsMinScans} 
-                    onChange={e => f('rateUsMinScans', e.target.value === '' ? '' : parseInt(e.target.value))} 
+                    value={numberInputValue(config.rateUsMinScans)} 
+                    onChange={e => f('rateUsMinScans', parseNumberInput(e.target.value))} 
                   />
                   <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>User must complete this many scans before seeing the rating prompt</div>
                 </div>
@@ -374,8 +388,8 @@ export default function AppSettings() {
                   <input 
                     type="number" 
                     style={inp} 
-                    value={config.rateUsPromptDelay} 
-                    onChange={e => f('rateUsPromptDelay', e.target.value === '' ? '' : parseInt(e.target.value))} 
+                    value={numberInputValue(config.rateUsPromptDelay)} 
+                    onChange={e => f('rateUsPromptDelay', parseNumberInput(e.target.value))} 
                   />
                   <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>Days to wait before showing the prompt again if user dismisses it</div>
                 </div>

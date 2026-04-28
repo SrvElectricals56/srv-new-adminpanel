@@ -38,6 +38,7 @@ const ROLE_DEFAULT_PERMISSIONS: Record<AdminRole, string[]> = {
   staff: ['View Dashboard', 'Manage Electricians', 'View Reports'],
 };
 const EMPTY_FORM = { name: '', email: '', phone: '', role: 'staff' as AdminRole, password: '', confirmPassword: '', permissions: ROLE_DEFAULT_PERMISSIONS.staff };
+const numberInputValue = (value: number | null | undefined) => value === 0 || value === null || value === undefined ? '' : value;
 
 export default function AdminSettings() {
   const C = useThemePalette();
@@ -314,8 +315,8 @@ export default function AdminSettings() {
                   <input 
                     type="number" 
                     style={inp} 
-                    value={passwordPolicy.minLength} 
-                    onChange={e => setPasswordPolicy(p => ({ ...p, minLength: parseInt(e.target.value) || 8 }))} 
+                    value={numberInputValue(passwordPolicy.minLength)} 
+                    onChange={e => setPasswordPolicy(p => ({ ...p, minLength: e.target.value === '' ? 0 : parseInt(e.target.value, 10) }))} 
                     min={6}
                     max={32}
                   />
@@ -376,8 +377,8 @@ export default function AdminSettings() {
                   <input 
                     type="number" 
                     style={inp} 
-                    value={passwordPolicy.passwordExpiry} 
-                    onChange={e => setPasswordPolicy(p => ({ ...p, passwordExpiry: parseInt(e.target.value) || 90 }))} 
+                    value={numberInputValue(passwordPolicy.passwordExpiry)} 
+                    onChange={e => setPasswordPolicy(p => ({ ...p, passwordExpiry: e.target.value === '' ? 0 : parseInt(e.target.value, 10) }))} 
                     min={0}
                   />
                   <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>Force password change after this many days (0 = never expire)</div>
@@ -388,8 +389,8 @@ export default function AdminSettings() {
                   <input 
                     type="number" 
                     style={inp} 
-                    value={passwordPolicy.preventReuse} 
-                    onChange={e => setPasswordPolicy(p => ({ ...p, preventReuse: parseInt(e.target.value) || 5 }))} 
+                    value={numberInputValue(passwordPolicy.preventReuse)} 
+                    onChange={e => setPasswordPolicy(p => ({ ...p, preventReuse: e.target.value === '' ? 0 : parseInt(e.target.value, 10) }))} 
                     min={0}
                     max={10}
                   />
@@ -408,8 +409,8 @@ export default function AdminSettings() {
                   <input 
                     type="number" 
                     style={inp} 
-                    value={passwordPolicy.maxLoginAttempts} 
-                    onChange={e => setPasswordPolicy(p => ({ ...p, maxLoginAttempts: parseInt(e.target.value) || 5 }))} 
+                    value={numberInputValue(passwordPolicy.maxLoginAttempts)} 
+                    onChange={e => setPasswordPolicy(p => ({ ...p, maxLoginAttempts: e.target.value === '' ? 0 : parseInt(e.target.value, 10) }))} 
                     min={3}
                     max={10}
                   />
@@ -421,8 +422,8 @@ export default function AdminSettings() {
                   <input 
                     type="number" 
                     style={inp} 
-                    value={passwordPolicy.lockoutDuration} 
-                    onChange={e => setPasswordPolicy(p => ({ ...p, lockoutDuration: parseInt(e.target.value) || 30 }))} 
+                    value={numberInputValue(passwordPolicy.lockoutDuration)} 
+                    onChange={e => setPasswordPolicy(p => ({ ...p, lockoutDuration: e.target.value === '' ? 0 : parseInt(e.target.value, 10) }))} 
                     min={5}
                   />
                   <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>How long to lock the account (minimum 5 minutes)</div>

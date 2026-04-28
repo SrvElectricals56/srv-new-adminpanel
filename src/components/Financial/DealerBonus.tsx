@@ -6,9 +6,10 @@ import { useThemePalette } from '@/lib/theme';
 import { financeApi, settingsApi } from '@/lib/api';
 import ExportModal from '@/components/Shared/ExportModal';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
+import AlertDialog from '@/components/Shared/AlertDialog';
 
 interface BonusRecord {
-  id: number;
+  id: string;
   dealerName: string;
   dealerPhone: string;
   month: string;
@@ -20,6 +21,7 @@ interface BonusRecord {
 }
 
 const RATE = 5;
+const numberInputValue = (value: number | null | undefined) => value === 0 || value === null || value === undefined ? '' : value;
 
 export default function DealerBonus() {
   const C = useThemePalette();
@@ -29,15 +31,15 @@ export default function DealerBonus() {
   useEffect(() => {
     financeApi.getDealerBonus().then((res: any) => {
       const dealers = res?.dealers ?? [];
-      setBonuses(dealers.map((d: any, i: number) => ({
-        id: d.id ?? i + 1,
+      setBonuses(dealers.map((d: any) => ({
+        id: d.id,
         dealerName: d.name ?? 'Unknown',
         dealerPhone: d.phone ?? '—',
         month: new Date().toLocaleString('en-US', { month: 'long' }),
         year: new Date().getFullYear(),
         electriciansCount: d.electricianCount ?? 0,
-        totalRedeemed: d.achievedTarget ?? 0,
-        bonus: Math.round(d.bonusAmount ?? 0),
+        totalRedeemed: Number(d.achievedTarget ?? 0),
+        bonus: Math.round(Number(d.bonusAmount ?? 0)),
         status: (d.bonusStatus ?? 'pending') as BonusRecord['status'],
       })));
     }).catch(console.error).finally(() => setLoading(false));
@@ -47,12 +49,13 @@ export default function DealerBonus() {
   const [dealerFilter, setDealerFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showExport, setShowExport] = useState(false);
-  const [selected, setSelected] = useState<number[]>([]);
+  const [selected, setSelected] = useState<string[]>([]);
   const [bulkPay, setBulkPay] = useState(false);
-  const [markPaidId, setMarkPaidId] = useState<number | null>(null);
+  const [markPaidId, setMarkPaidId] = useState<string | null>(null);
   const [editRate, setEditRate] = useState(false);
   const [rateInput, setRateInput] = useState(String(RATE));
   const [rateSaving, setRateSaving] = useState(false);
+  const [alertDialog, setAlertDialog] = useState<{ show: boolean; title: string; message: string; type: 'error' | 'success' | 'warning' | 'info' }>({ show: false, title: '', message: '', type: 'success' });
 
   // Load bonus rate from settings on mount
   useEffect(() => {
@@ -66,14 +69,32 @@ export default function DealerBonus() {
   const handleSaveRate = async () => {
     setRateSaving(true);
     try {
-      await settingsApi.update('dealer_bonus_rate', rateInput);
+      const rate = Number(rateInput);
+      if (!Number.isFinite(rate) || rate < 0 || rate > 100) {
+        setAlertDialog({ show: true, title: 'Invalid Rate', message: 'Please enter a number between 0 and 100.', type: 'warning' });
+        return;
+      }
+      await settingsApi.update('dealer_bonus_rate', String(rate));
       setEditRate(false);
+      setAlertDialog({ show: true, title: 'Saved', message: 'Dealer bonus rate saved successfully.', type: 'success' });
     } catch (err) {
       console.error('Failed to save rate:', err);
+      const msg = err instanceof Error ? err.message : 'Failed to save dealer bonus rate.';
+      setAlertDialog({ show: true, title: 'Error', message: msg, type: 'error' });
     } finally {
       setRateSaving(false);
     }
   };
+
+  // Recalculate displayed bonus amounts whenever rate changes.
+  useEffect(() => {
+    const rate = Number(rateInput);
+    if (!Number.isFinite(rate) || rate < 0) return;
+    setBonuses(prev => prev.map((c) => {
+      const computed = Math.round(Number(c.totalRedeemed || 0) * rate / 100);
+      return c.bonus === computed ? c : { ...c, bonus: computed };
+    }));
+  }, [rateInput]);
   const [editItem, setEditItem] = useState<BonusRecord | null>(null);
   const [editForm, setEditForm] = useState({ dealerName: '', dealerPhone: '', month: 'January', year: 2025, electriciansCount: 0, totalRedeemed: 0, status: 'pending' as BonusRecord['status'] });
 
@@ -92,11 +113,11 @@ export default function DealerBonus() {
     pending: bonuses.filter(c => c.status === 'pending').reduce((s, c) => s + c.bonus, 0),
   }), [bonuses]);
 
-  const handleMarkPaid = async (id: number) => {
+  const handleMarkPaid = async (id: string) => {
     const bonus = bonuses.find(c => c.id === id);
     if (!bonus) return;
     try {
-      await financeApi.markDealerBonusPaid(String(id));
+      await financeApi.markDealerBonusPaid(id);
       setBonuses(prev => prev.map(c => c.id === id ? { ...c, status: 'paid' } : c));
     } catch (err) {
       console.error('Failed to mark bonus as paid:', err);
@@ -106,7 +127,7 @@ export default function DealerBonus() {
 
   const handleBulkPaid = async () => {
     try {
-      await financeApi.bulkMarkDealerBonusPaid(selected.map(String));
+      await financeApi.bulkMarkDealerBonusPaid(selected);
       setBonuses(prev => prev.map(c => selected.includes(c.id) ? { ...c, status: 'paid' } : c));
     } catch (err) {
       console.error('Failed to bulk mark bonuses as paid:', err);
@@ -114,7 +135,7 @@ export default function DealerBonus() {
     setSelected([]);
     setBulkPay(false);
   };
-  const toggleSelect = (id: number) => setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  const toggleSelect = (id: string) => setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   const toggleAll = () => setSelected(selected.length === filtered.length ? [] : filtered.map(c => c.id));
 
   const openEdit = (c: BonusRecord) => {
@@ -122,11 +143,23 @@ export default function DealerBonus() {
     setEditForm({ dealerName: c.dealerName, dealerPhone: c.dealerPhone, month: c.month, year: c.year, electriciansCount: c.electriciansCount, totalRedeemed: c.totalRedeemed, status: c.status });
   };
 
-  const handleEditSave = () => {
+  const handleEditSave = async () => {
     if (!editItem) return;
     const bonus = Math.round(editForm.totalRedeemed * Number(rateInput) / 100);
-    setBonuses(prev => prev.map(c => c.id === editItem.id ? { ...c, ...editForm, bonus } : c));
-    setEditItem(null);
+    try {
+      await financeApi.updateDealerBonus(editItem.id, {
+        achievedTarget: editForm.totalRedeemed,
+        electricianCount: editForm.electriciansCount,
+        bonusStatus: editForm.status,
+      });
+      setBonuses(prev => prev.map(c => c.id === editItem.id ? { ...c, ...editForm, bonus } : c));
+      setEditItem(null);
+      setAlertDialog({ show: true, title: 'Saved', message: 'Dealer bonus record updated successfully.', type: 'success' });
+    } catch (err) {
+      console.error('Failed to save bonus:', err);
+      const msg = err instanceof Error ? err.message : 'Failed to save changes.';
+      setAlertDialog({ show: true, title: 'Error', message: msg, type: 'error' });
+    }
   };
 
   const labelStyle = { fontSize: 12, fontWeight: 600 as const, color: C.muted, marginBottom: 5, display: 'block' as const };
@@ -309,15 +342,15 @@ export default function DealerBonus() {
                 </div>
                 <div>
                   <label style={labelStyle}>Year</label>
-                  <input type="number" value={editForm.year || ''} onChange={e => setEditForm(f => ({ ...f, year: Number(e.target.value) || new Date().getFullYear() }))} placeholder={String(new Date().getFullYear())} style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' as const }} />
+                  <input type="number" value={numberInputValue(editForm.year)} onChange={e => setEditForm(f => ({ ...f, year: e.target.value === '' ? 0 : Number(e.target.value) }))} placeholder={String(new Date().getFullYear())} style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' as const }} />
                 </div>
                 <div>
                   <label style={labelStyle}>Electricians Count</label>
-                  <input type="number" value={editForm.electriciansCount ?? ''} onChange={e => setEditForm(f => ({ ...f, electriciansCount: Number(e.target.value) || 0 }))} min={0} placeholder="0" style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' as const }} />
+                  <input type="number" value={numberInputValue(editForm.electriciansCount)} onChange={e => setEditForm(f => ({ ...f, electriciansCount: e.target.value === '' ? 0 : Number(e.target.value) }))} min={0} placeholder="0" style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' as const }} />
                 </div>
                 <div>
                   <label style={labelStyle}>Total Redeemed (₹)</label>
-                  <input type="number" value={editForm.totalRedeemed ?? ''} onChange={e => setEditForm(f => ({ ...f, totalRedeemed: Number(e.target.value) || 0 }))} min={0} placeholder="0" style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' as const }} />
+                  <input type="number" value={numberInputValue(editForm.totalRedeemed)} onChange={e => setEditForm(f => ({ ...f, totalRedeemed: e.target.value === '' ? 0 : Number(e.target.value) }))} min={0} placeholder="0" style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' as const }} />
                 </div>
               </div>
               <div style={{ padding: '12px 16px', background: 'rgba(21,128,61,0.08)', borderRadius: 10, border: '1px solid rgba(21,128,61,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -359,6 +392,14 @@ export default function DealerBonus() {
         onCancel={() => setBulkPay(false)}
         confirmText="Mark All Paid"
         type="success"
+      />
+
+      <AlertDialog
+        show={alertDialog.show}
+        title={alertDialog.title}
+        message={alertDialog.message}
+        type={alertDialog.type}
+        onClose={() => setAlertDialog((p) => ({ ...p, show: false }))}
       />
 
       <ExportModal

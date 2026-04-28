@@ -39,8 +39,15 @@ async function request<T>(
   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
 
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ message: res.statusText }));
-    throw new Error(err.message || `Request failed: ${res.status}`);
+    const rawText = await res.text().catch(() => '');
+    let message = res.statusText;
+    try {
+      const parsed = rawText ? JSON.parse(rawText) : null;
+      if (parsed?.message) message = parsed.message;
+    } catch {
+      if (rawText) message = rawText;
+    }
+    throw new Error(`[${res.status}] ${message || 'Request failed'}`);
   }
 
   // 204 No Content
@@ -264,6 +271,8 @@ export const financeApi = {
   transferDealerBonus: (body: object) => request<any>('/finance/dealer-bonus/transfer', { method: 'POST', body: JSON.stringify(body) }),
   markDealerBonusPaid: (dealerId: string) =>
     request<any>(`/finance/dealer-bonus/${dealerId}/mark-paid`, { method: 'PATCH' }),
+  updateDealerBonus: (dealerId: string, body: object) =>
+    request<any>(`/finance/dealer-bonus/${dealerId}`, { method: 'PATCH', body: JSON.stringify(body) }),
   bulkMarkDealerBonusPaid: (dealerIds: string[]) =>
     request<any>('/finance/dealer-bonus/bulk-mark-paid', { method: 'POST', body: JSON.stringify({ dealerIds }) }),
   getTransferPoints: () => request<any>('/finance/transfer-points'),

@@ -19,6 +19,7 @@ interface Banner {
 }
 
 const EMPTY_FORM = { title: '', imageUrl: '', bgColor: '#FFFFFF', resizeMode: 'contain' as 'cover' | 'contain', isActive: true, displayOrder: 1, targetRole: ['Both'] as ('Electrician' | 'Dealer' | 'Both')[] };
+const numberInputValue = (value: number | null | undefined) => value === 0 || value === null || value === undefined ? '' : value;
 
 export default function BannersPage() {
   const C = useThemePalette();
@@ -255,7 +256,7 @@ export default function BannersPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
                   <label style={labelStyle}>Display Order</label>
-                  <input type="number" value={form.displayOrder} onChange={e => setForm(f => ({ ...f, displayOrder: Number(e.target.value) }))} min={1} style={inputStyle} />
+                  <input type="number" value={numberInputValue(form.displayOrder)} onChange={e => setForm(f => ({ ...f, displayOrder: e.target.value === '' ? 0 : Number(e.target.value) }))} min={1} style={inputStyle} />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 20 }}>
                   <input type="checkbox" id="banner-active" checked={form.isActive} onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))} style={{ width: 16, height: 16, cursor: 'pointer', accentColor: C.red }} />
