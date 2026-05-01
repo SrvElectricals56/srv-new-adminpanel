@@ -434,8 +434,9 @@ export function Offers() {
 }
 
 /* ============ POINTS CONFIG ============ */
-export function PointsConfig() {
+export function PointsConfig({ role }: { role?: import('@/lib/types').AdminRole }) {
   const { C, inputStyle, labelStyle } = useSectionStyles();
+  const canEdit = role === 'super_admin' || role === 'admin';
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
@@ -459,6 +460,7 @@ export function PointsConfig() {
   };
 
   const savePoints = async (product: any) => {
+    if (!canEdit) return;
     setSaving(product.id);
     try {
       await productApi.update(product.id, { points: product._points });
@@ -563,17 +565,17 @@ export function PointsConfig() {
                     <td style={{ padding: '12px 16px' }}>
                       <button
                         onClick={() => savePoints(p)}
-                        disabled={saving === p.id || !changed}
+                        disabled={!canEdit || saving === p.id || !changed}
                         style={{
                           background: changed ? `linear-gradient(135deg, ${C.red}, ${C.redDark})` : C.border,
                           color: changed ? 'white' : C.muted,
                           border: 'none', borderRadius: 8, padding: '7px 16px',
                           fontSize: 12, fontWeight: 700,
-                          cursor: changed && saving !== p.id ? 'pointer' : 'not-allowed',
-                          opacity: saving === p.id ? 0.7 : 1,
+                          cursor: canEdit && changed && saving !== p.id ? 'pointer' : 'not-allowed',
                           whiteSpace: 'nowrap',
+                          opacity: !canEdit || saving === p.id ? 0.7 : 1,
                         }}>
-                        {saving === p.id ? '⏳ Saving...' : changed ? '💾 Save' : '✓ Saved'}
+                        {!canEdit ? 'View Only' : saving === p.id ? '⏳ Saving...' : changed ? '💾 Save' : '✓ Saved'}
                       </button>
                     </td>
                   </tr>

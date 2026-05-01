@@ -33,8 +33,13 @@ const EMPTY_FORM = {
 };
 const numberInputValue = (value: number | null | undefined) => value === 0 || value === null || value === undefined ? '' : value;
 
-export default function ProductCategories({ onNavigate }: { onNavigate?: (page: string, category?: string) => void }) {
+export default function ProductCategories({ role, onNavigate }: { role?: import('@/lib/types').AdminRole; onNavigate?: (page: string, category?: string) => void }) {
   const C = useThemePalette();
+  const isSuperAdmin = role === 'super_admin';
+  const isAdmin = role === 'admin';
+  const canCreate = isSuperAdmin;
+  const canEdit = isSuperAdmin || isAdmin;
+  const canDelete = isSuperAdmin;
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -315,7 +320,7 @@ export default function ProductCategories({ onNavigate }: { onNavigate?: (page: 
             border: 'none',
             background: C.red, color: '#fff',
             fontSize: 13, fontWeight: 600, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: 6,
+            display: canCreate ? 'flex' : 'none', alignItems: 'center', gap: 6,
           }}
         >
           <Plus size={14} /> Add Category
@@ -415,7 +420,7 @@ export default function ProductCategories({ onNavigate }: { onNavigate?: (page: 
               borderTop: `1px solid ${C.border}`,
               display: 'flex', gap: 8,
             }}>
-              <button
+              {canEdit && <button
                 onClick={() => openEdit(cat)}
                 title="Edit"
                 style={{
@@ -427,8 +432,8 @@ export default function ProductCategories({ onNavigate }: { onNavigate?: (page: 
                 }}
               >
                 <Pencil size={12} /> Edit
-              </button>
-              <button
+              </button>}
+              {canEdit && <button
                 onClick={() => handleToggle(cat.id)}
                 title={cat.isActive ? 'Disable' : 'Enable'}
                 style={{
@@ -442,8 +447,8 @@ export default function ProductCategories({ onNavigate }: { onNavigate?: (page: 
               >
                 {cat.isActive ? <ToggleRight size={13} /> : <ToggleLeft size={13} />}
                 {cat.isActive ? 'Disable' : 'Enable'}
-              </button>
-              <button
+              </button>}
+              {canDelete && <button
                 onClick={() => setDeleteId(cat.id)}
                 title="Delete"
                 style={{
@@ -455,7 +460,8 @@ export default function ProductCategories({ onNavigate }: { onNavigate?: (page: 
                 }}
               >
                 <Trash2 size={13} />
-              </button>
+              </button>}
+              {!canEdit && !canDelete && <span style={{ fontSize: 12, color: C.muted, fontStyle: 'italic', padding: '7px 0' }}>View Only</span>}
             </div>
           </div>
         ))}

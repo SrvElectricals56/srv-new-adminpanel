@@ -476,7 +476,7 @@ export default function Dealers({ role }: DealersProps) {
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
       {viewing && <ViewModal dealer={viewing} onClose={() => setViewing(null)} onEdit={() => { setEditing(viewing); setViewing(null); }} permissions={permissions} />}
-      {(editing !== undefined || showAdd) && <EditModal dealer={showAdd ? null : editing!} onClose={() => { setEditing(undefined); setShowAdd(false); }} onSave={handleSave} />}
+      {((editing !== undefined && permissions.canEdit) || (showAdd && permissions.canCreate)) && <EditModal dealer={showAdd ? null : editing!} onClose={() => { setEditing(undefined); setShowAdd(false); }} onSave={handleSave} />}
       <AlertDialog show={alertDialog.show} title={alertDialog.title} message={alertDialog.message} type={alertDialog.type} onClose={() => setAlertDialog({ ...alertDialog, show: false })} />
       {deleteConfirm.show && <ConfirmDialog show={deleteConfirm.show} title="Delete Dealer" message={`Are you sure you want to delete this dealer? This action cannot be undone.`} confirmText="Delete" type="danger" onConfirm={confirmDelete} onCancel={() => setDeleteConfirm({ show: false, id: null })} />}
 
@@ -680,8 +680,9 @@ export default function Dealers({ role }: DealersProps) {
                   <div style={{ fontSize: 12, color: C.muted, display: 'flex', alignItems: 'center', gap: 4 }}><Phone size={12} /> {d.phone}</div>
                   <div style={{ display: 'flex', gap: 6 }}>
                     <button onClick={() => setViewing(d)} style={{ background: '#EFF6FF', color: '#1D4ED8', border: 'none', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>View</button>
-                    <button onClick={() => setEditing(d)} style={{ background: '#FFF7ED', color: '#C2410C', border: 'none', borderRadius: 8, padding: '6px 11px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Edit</button>
-                    <button onClick={() => handleDelete(d.id)} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 8, padding: '6px 8px', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Trash2 size={13} /></button>
+                    {permissions.canEdit && <button onClick={() => setEditing(d)} style={{ background: '#FFF7ED', color: '#C2410C', border: 'none', borderRadius: 8, padding: '6px 11px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Edit</button>}
+                    {permissions.canDelete && <button onClick={() => handleDelete(d.id)} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 8, padding: '6px 8px', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Trash2 size={13} /></button>}
+                    {!permissions.canEdit && !permissions.canDelete && <span style={{ fontSize: 12, color: C.muted, fontStyle: 'italic' }}>View Only</span>}
                   </div>
                 </div>
               </div>
@@ -725,8 +726,9 @@ export default function Dealers({ role }: DealersProps) {
                     <td style={{ padding: '13px 16px' }}>
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button onClick={() => setViewing(d)} style={{ background: '#EFF6FF', color: '#1D4ED8', border: 'none', borderRadius: 7, padding: '6px 11px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>View</button>
-                        <button onClick={() => setEditing(d)} style={{ background: '#FFF7ED', color: '#C2410C', border: 'none', borderRadius: 7, padding: '6px 11px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Edit</button>
-                        <button onClick={() => handleDelete(d.id)} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 7, padding: '6px 8px', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Trash2 size={13} /></button>
+                        {permissions.canEdit && <button onClick={() => setEditing(d)} style={{ background: '#FFF7ED', color: '#C2410C', border: 'none', borderRadius: 7, padding: '6px 11px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Edit</button>}
+                        {permissions.canDelete && <button onClick={() => handleDelete(d.id)} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 7, padding: '6px 8px', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Trash2 size={13} /></button>}
+                        {!permissions.canEdit && !permissions.canDelete && <span style={{ fontSize: 11, color: C.muted, fontStyle: 'italic', padding: '6px 8px' }}>View Only</span>}
                       </div>
                     </td>
                   </tr>

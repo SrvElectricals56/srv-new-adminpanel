@@ -13,8 +13,9 @@ const DEFAULTS = {
   isActive: 'true',
 };
 
-export default function PromoSection() {
+export default function PromoSection({ role }: { role?: import('@/lib/types').AdminRole }) {
   const C = useThemePalette();
+  const canEdit = role === 'super_admin' || role === 'admin';
   const [form, setForm] = useState({ title: DEFAULTS.title, description: DEFAULTS.description, ctaText: DEFAULTS.ctaText, ctaLink: DEFAULTS.ctaLink, isActive: true });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -36,6 +37,7 @@ export default function PromoSection() {
   }, []);
 
   const handleSave = async () => {
+    if (!canEdit) return;
     setSaving(true);
     try {
       await Promise.all([
@@ -102,7 +104,7 @@ export default function PromoSection() {
                 <span style={{ fontSize: 12, color: C.muted, marginLeft: 4 }}>Show this promo section in the app</span>
               </div>
               {saved && <div style={{ padding: '10px', borderRadius: 8, background: 'rgba(34,197,94,0.15)', color: '#16A34A', fontSize: 13, fontWeight: 600, textAlign: 'center' }}>✓ Promo section saved!</div>}
-              <button onClick={handleSave} disabled={saving} style={{ padding: '11px', borderRadius: 9, border: 'none', background: saving ? C.muted : 'linear-gradient(135deg, #7C3AED, #1D4ED8)', color: '#fff', fontSize: 14, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              <button onClick={handleSave} disabled={!canEdit || saving} style={{ padding: '11px', borderRadius: 9, border: 'none', background: saving ? C.muted : 'linear-gradient(135deg, #7C3AED, #1D4ED8)', color: '#fff', fontSize: 14, fontWeight: 700, cursor: !canEdit || saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: canEdit ? 1 : 0.7 }}>
                 <Save size={15} /> {saving ? 'Saving...' : 'Save & Publish'}
               </button>
             </div>

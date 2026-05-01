@@ -48,8 +48,13 @@ const tierColors: Record<string, { bg: string; color: string }> = {
   Diamond: { bg: 'rgba(59,130,246,0.15)', color: '#1D4ED8' },
 };
 
-export default function Testimonials() {
+export default function Testimonials({ role }: { role?: import('@/lib/types').AdminRole }) {
   const C = useThemePalette();
+  const isSuperAdmin = role === 'super_admin';
+  const isAdmin = role === 'admin';
+  const canCreate = isSuperAdmin;
+  const canEdit = isSuperAdmin || isAdmin;
+  const canDelete = isSuperAdmin;
   const [activeTab, setActiveTab] = useState<UserCategory>('all');
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [loading, setLoading] = useState(true);
@@ -179,7 +184,7 @@ export default function Testimonials() {
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 1 }}>{s.label}</div>
             </div>
           ))}
-          <button onClick={openAdd} style={{ padding: '10px 20px', borderRadius: 9, border: 'none', background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <button onClick={openAdd} style={{ padding: '10px 20px', borderRadius: 9, border: 'none', background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: canCreate ? 'flex' : 'none', alignItems: 'center', gap: 6 }}>
             <Plus size={15} /> Add Testimonial
           </button>
         </div>
@@ -235,16 +240,17 @@ export default function Testimonials() {
                   </div>
                 )}
                 <div style={{ display: 'flex', gap: 8, borderTop: `1px solid ${C.border}`, paddingTop: 12 }}>
-                  <button onClick={() => openEdit(t)} style={{ flex: 1, padding: '7px 0', borderRadius: 7, border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+                  {canEdit && <button onClick={() => openEdit(t)} style={{ flex: 1, padding: '7px 0', borderRadius: 7, border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
                     <Pencil size={12} /> Edit
-                  </button>
-                  <button onClick={() => handleToggle(t.id)} style={{ flex: 1, padding: '7px 0', borderRadius: 7, border: `1px solid ${t.isActive ? 'rgba(239,68,68,0.3)' : 'rgba(34,197,94,0.3)'}`, background: t.isActive ? 'rgba(239,68,68,0.08)' : 'rgba(34,197,94,0.08)', color: t.isActive ? '#DC2626' : '#16A34A', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+                  </button>}
+                  {canEdit && <button onClick={() => handleToggle(t.id)} style={{ flex: 1, padding: '7px 0', borderRadius: 7, border: `1px solid ${t.isActive ? 'rgba(239,68,68,0.3)' : 'rgba(34,197,94,0.3)'}`, background: t.isActive ? 'rgba(239,68,68,0.08)' : 'rgba(34,197,94,0.08)', color: t.isActive ? '#DC2626' : '#16A34A', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
                     {t.isActive ? <ToggleRight size={13} /> : <ToggleLeft size={13} />}
                     {t.isActive ? 'Disable' : 'Enable'}
-                  </button>
-                  <button onClick={() => setDeleteId(t.id)} style={{ width: 34, height: 34, borderRadius: 7, border: `1px solid ${C.dangerBorder}`, background: C.dangerBg, color: C.dangerText, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  </button>}
+                  {canDelete && <button onClick={() => setDeleteId(t.id)} style={{ width: 34, height: 34, borderRadius: 7, border: `1px solid ${C.dangerBorder}`, background: C.dangerBg, color: C.dangerText, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Trash2 size={13} />
-                  </button>
+                  </button>}
+                  {!canEdit && !canDelete && <span style={{ fontSize: 12, color: C.muted, fontStyle: 'italic', padding: '7px 0' }}>View Only</span>}
                 </div>
               </div>
             </div>

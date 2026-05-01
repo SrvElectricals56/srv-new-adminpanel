@@ -20,9 +20,46 @@ interface Banner {
 
 const EMPTY_FORM = { title: '', imageUrl: '', bgColor: '#FFFFFF', resizeMode: 'contain' as 'cover' | 'contain', isActive: true, displayOrder: 1, targetRole: ['Both'] as ('Electrician' | 'Dealer' | 'Both')[] };
 const numberInputValue = (value: number | null | undefined) => value === 0 || value === null || value === undefined ? '' : value;
+const API_ORIGIN = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1').replace(/\/api\/v1\/?$/, '');
 
-export default function BannersPage() {
+function normalizeBannerImageUrl(value: string | null | undefined): string {
+  const raw = String(value ?? '').trim();
+  if (!raw) return '';
+
+  if (raw.startsWith('blob:') || raw.startsWith('data:')) {
+    return raw;
+  }
+
+  if (raw.startsWith('/uploads/')) {
+    return `${API_ORIGIN}${raw}`;
+  }
+
+  if (/^https?:\/\//i.test(raw)) {
+    try {
+      const url = new URL(raw);
+      if (url.pathname.startsWith('/uploads/')) {
+        return `${API_ORIGIN}${url.pathname}`;
+      }
+      return raw;
+    } catch {
+      return raw;
+    }
+  }
+
+  if (raw.includes('/uploads/')) {
+    return `${API_ORIGIN}${raw.slice(raw.indexOf('/uploads/'))}`;
+  }
+
+  return raw;
+}
+
+export default function BannersPage({ role }: { role?: import('@/lib/types').AdminRole }) {
   const C = useThemePalette();
+  const isSuperAdmin = role === 'super_admin';
+  const isAdmin = role === 'admin';
+  const canCreate = isSuperAdmin;
+  const canEdit = isSuperAdmin || isAdmin;
+  const canDelete = isSuperAdmin;
   const [banners, setBanners] = useState<Banner[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -39,7 +76,7 @@ export default function BannersPage() {
       setBanners(data.map((b: any) => ({
         id: b.id,
         title: b.title,
-        imageUrl: b.imageUrl ?? b.image_url ?? '',
+        imageUrl: normalizeBannerImageUrl(b.imageUrl ?? b.image_url ?? ''),
         bgColor: b.bgColor ?? b.bg_color ?? '#FFFFFF',
         resizeMode: b.resizeMode ?? b.resize_mode ?? 'cover',
         isActive: b.isActive ?? b.is_active ?? true,
@@ -62,7 +99,7 @@ export default function BannersPage() {
   }), [banners]);
 
   const openAdd = () => { setEditingId(null); setForm({ ...EMPTY_FORM, displayOrder: banners.length + 1 }); setShowModal(true); };
-  const openEdit = (b: Banner) => { setEditingId(b.id); setForm({ title: b.title, imageUrl: b.imageUrl, bgColor: b.bgColor, resizeMode: b.resizeMode, isActive: b.isActive, displayOrder: b.displayOrder, targetRole: [...b.targetRole] }); setShowModal(true); };
+  const openEdit = (b: Banner) => { setEditingId(b.id); setForm({ title: b.title, imageUrl: normalizeBannerImageUrl(b.imageUrl), bgColor: b.bgColor, resizeMode: b.resizeMode, isActive: b.isActive, displayOrder: b.displayOrder, targetRole: [...b.targetRole] }); setShowModal(true); };
 
   const handleSave = async () => {
     if (!form.title.trim()) {
@@ -71,10 +108,10 @@ export default function BannersPage() {
     }
     try {
       if (editingId !== null) {
-        await bannerApi.update(editingId, form);
+        await bannerApi.update(editingId, { ...form, imageUrl: normalizeBannerImageUrl(form.imageUrl) });
         setAlertDialog({ show: true, title: 'Success', message: 'Banner updated successfully!', type: 'success' });
       } else {
-        await bannerApi.create(form);
+        await bannerApi.create({ ...form, imageUrl: normalizeBannerImageUrl(form.imageUrl) });
         setAlertDialog({ show: true, title: 'Success', message: 'Banner added successfully!', type: 'success' });
       }
       await loadBanners();
@@ -142,7 +179,7 @@ export default function BannersPage() {
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 1 }}>{s.label}</div>
             </div>
           ))}
-          <button onClick={openAdd} style={{ padding: '10px 20px', borderRadius: 9, border: 'none', background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, backdropFilter: 'blur(4px)' }}>
+          <button onClick={openAdd} style={{ padding: '10px 20px', borderRadius: 9, border: 'none', background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: canCreate ? 'flex' : 'none', alignItems: 'center', gap: 6, backdropFilter: 'blur(4px)' }}>
             <Plus size={15} /> Add Banner
           </button>
         </div>
@@ -155,7 +192,14 @@ export default function BannersPage() {
             {/* Image Preview */}
             <div style={{ height: 160, background: banner.bgColor, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
               {banner.imageUrl ? (
-                <img src={banner.imageUrl} alt={banner.title} style={{ width: '100%', height: '100%', objectFit: banner.resizeMode }} />
+                <img
+                  src={normalizeBannerImageUrl(banner.imageUrl)}
+                  alt={banner.title}
+                  style={{ width: '100%', height: '100%', objectFit: banner.resizeMode }}
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).style.display = 'none';
+                  }}
+                />
               ) : (
                 <Image size={40} color="#CBD5E1" />
               )}
@@ -176,16 +220,17 @@ export default function BannersPage() {
             </div>
             {/* Actions */}
             <div style={{ padding: '10px 16px', borderTop: `1px solid ${C.border}`, display: 'flex', gap: 8 }}>
-              <button onClick={() => openEdit(banner)} style={{ flex: 1, padding: '7px 0', borderRadius: 7, border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+              {canEdit && <button onClick={() => openEdit(banner)} style={{ flex: 1, padding: '7px 0', borderRadius: 7, border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
                 <Pencil size={12} /> Edit
-              </button>
-              <button onClick={() => handleToggle(banner.id)} style={{ flex: 1, padding: '7px 0', borderRadius: 7, border: `1px solid ${banner.isActive ? 'rgba(239,68,68,0.3)' : 'rgba(34,197,94,0.3)'}`, background: banner.isActive ? 'rgba(239,68,68,0.08)' : 'rgba(34,197,94,0.08)', color: banner.isActive ? '#DC2626' : '#16A34A', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+              </button>}
+              {canEdit && <button onClick={() => handleToggle(banner.id)} style={{ flex: 1, padding: '7px 0', borderRadius: 7, border: `1px solid ${banner.isActive ? 'rgba(239,68,68,0.3)' : 'rgba(34,197,94,0.3)'}`, background: banner.isActive ? 'rgba(239,68,68,0.08)' : 'rgba(34,197,94,0.08)', color: banner.isActive ? '#DC2626' : '#16A34A', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
                 {banner.isActive ? <ToggleRight size={13} /> : <ToggleLeft size={13} />}
                 {banner.isActive ? 'Disable' : 'Enable'}
-              </button>
-              <button onClick={() => setDeleteId(banner.id)} style={{ width: 34, height: 34, borderRadius: 7, border: `1px solid ${C.dangerBorder}`, background: C.dangerBg, color: C.dangerText, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              </button>}
+              {canDelete && <button onClick={() => setDeleteId(banner.id)} style={{ width: 34, height: 34, borderRadius: 7, border: `1px solid ${C.dangerBorder}`, background: C.dangerBg, color: C.dangerText, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Trash2 size={13} />
-              </button>
+              </button>}
+              {!canEdit && !canDelete && <span style={{ fontSize: 12, color: C.muted, fontStyle: 'italic', padding: '7px 0' }}>View Only</span>}
             </div>
           </div>
         ))}
@@ -222,7 +267,7 @@ export default function BannersPage() {
                       try {
                         // Upload to server and get permanent URL
                         const uploadedUrl = await bannerApi.uploadImage(file);
-                        setForm(prev => ({ ...prev, imageUrl: uploadedUrl }));
+                        setForm(prev => ({ ...prev, imageUrl: normalizeBannerImageUrl(uploadedUrl) }));
                         URL.revokeObjectURL(localPreview);
                       } catch {
                         setAlertDialog({ show: true, title: 'Upload Failed', message: 'Image upload failed. Please use a direct URL instead.', type: 'error' });
@@ -234,7 +279,7 @@ export default function BannersPage() {
                 </div>
                 {form.imageUrl && (
                   <div style={{ marginTop: 8, borderRadius: 8, overflow: 'hidden', border: `1px solid ${C.border}`, height: 100, background: form.bgColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <img src={form.imageUrl} alt="preview" style={{ maxHeight: '100%', maxWidth: '100%', objectFit: form.resizeMode }} />
+                    <img src={normalizeBannerImageUrl(form.imageUrl)} alt="preview" style={{ maxHeight: '100%', maxWidth: '100%', objectFit: form.resizeMode }} />
                   </div>
                 )}
               </div>

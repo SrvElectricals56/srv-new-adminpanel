@@ -28,8 +28,9 @@ SRV Electricals is committed to protecting your personal information and your ri
 Email: privacy@srvelectricals.in
 Phone: +91 88376 84004`;
 
-export default function PrivacyPolicy() {
+export default function PrivacyPolicy({ role }: { role?: import('@/lib/types').AdminRole }) {
   const C = useThemePalette();
+  const canEdit = role === 'super_admin' || role === 'admin';
   const [content, setContent] = useState(DEFAULT_CONTENT);
   const [lastUpdated, setLastUpdated] = useState('');
   const [loading, setLoading] = useState(true);
@@ -108,8 +109,8 @@ export default function PrivacyPolicy() {
             </div>
             <div style={{ padding: '12px 20px', borderTop: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               {saved ? <div style={{ fontSize: 13, fontWeight: 600, color: '#16A34A' }}>✓ Published successfully!</div> : <div />}
-              <button onClick={handleSave} disabled={saving} style={{ padding: '10px 24px', borderRadius: 9, border: 'none', background: saving ? C.muted : 'linear-gradient(135deg, #1D4ED8, #1E40AF)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Save size={14} /> {saving ? 'Saving...' : 'Save & Publish'}
+              <button onClick={handleSave} disabled={saving || !canEdit} style={{ padding: '10px 24px', borderRadius: 9, border: 'none', background: (saving || !canEdit) ? C.muted : 'linear-gradient(135deg, #1D4ED8, #1E40AF)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: (saving || !canEdit) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Save size={14} /> {saving ? 'Saving...' : canEdit ? 'Save & Publish' : 'View Only'}
               </button>
             </div>
           </div>

@@ -47,8 +47,9 @@ const INITIAL: AppConfig = {
   defaultLanguage: 'English', forceUpdate: false,
 };
 
-export default function AppSettings() {
+export default function AppSettings({ role }: { role?: import('@/lib/types').AdminRole }) {
   const C = useThemePalette();
+  const canEdit = role === 'super_admin' || role === 'admin';
   const [config, setConfig] = useState<AppConfig>(INITIAL);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -92,6 +93,7 @@ export default function AppSettings() {
   const f = (k: keyof AppConfig, v: any) => setConfig(p => ({ ...p, [k]: v }));
 
   const handleSave = async () => {
+    if (!canEdit) return;
     setSaving(true);
     try {
       const normalizedConfig = Object.fromEntries(
@@ -170,7 +172,7 @@ export default function AppSettings() {
   const lbl: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: C.muted, display: 'block', marginBottom: 6, textTransform: 'uppercase' };
 
   const Toggle = ({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) => (
-    <button onClick={() => onChange(!value)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: value ? '#10B981' : C.muted, padding: 0 }}>
+    <button onClick={() => canEdit && onChange(!value)} disabled={!canEdit} style={{ background: 'none', border: 'none', cursor: canEdit ? 'pointer' : 'not-allowed', color: value ? '#10B981' : C.muted, padding: 0, opacity: canEdit ? 1 : 0.6 }}>
       {value ? <ToggleRight size={32} /> : <ToggleLeft size={32} />}
     </button>
   );
@@ -204,7 +206,7 @@ export default function AppSettings() {
             <div style={{ background: 'rgba(239,68,68,0.25)', borderRadius: 10, padding: '8px 14px', fontSize: 12, fontWeight: 700, color: '#FCA5A5' }}>⚠️ Maintenance Mode ON</div>
           )}
           <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: '8px 14px', fontSize: 12, color: 'rgba(255,255,255,0.8)' }}>v{config.appVersion}</div>
-          <button onClick={handleSave} disabled={saving || loading} style={{ background: saving ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.9)', color: '#7C3AED', border: 'none', borderRadius: 10, padding: '10px 20px', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <button onClick={handleSave} disabled={!canEdit || saving || loading} style={{ background: saving ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.9)', color: '#7C3AED', border: 'none', borderRadius: 10, padding: '10px 20px', fontSize: 13, fontWeight: 700, cursor: !canEdit || saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: canEdit ? 1 : 0.7 }}>
             <Save size={15} /> {saving ? 'Saving...' : 'Save All'}
           </button>
         </div>
@@ -581,7 +583,7 @@ export default function AppSettings() {
 
                 <button 
                   onClick={handleSendNotification}
-                  disabled={!notificationTitle || !notificationMessage || (notificationTarget === 'specific' && !selectedUser)}
+                  disabled={!canEdit || !notificationTitle || !notificationMessage || (notificationTarget === 'specific' && !selectedUser)}
                   style={{ 
                     background: (!notificationTitle || !notificationMessage || (notificationTarget === 'specific' && !selectedUser)) 
                       ? C.muted 
@@ -614,7 +616,7 @@ export default function AppSettings() {
           )}
 
           <div style={{ marginTop: 24, paddingTop: 20, borderTop: `1px solid ${C.border}` }}>
-            <button onClick={handleSave} disabled={saving || loading} style={{ background: saving ? C.muted : `linear-gradient(135deg, #7C3AED, #5B21B6)`, color: 'white', border: 'none', borderRadius: 12, padding: '13px 32px', fontSize: 14, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button onClick={handleSave} disabled={!canEdit || saving || loading} style={{ background: saving ? C.muted : `linear-gradient(135deg, #7C3AED, #5B21B6)`, color: 'white', border: 'none', borderRadius: 12, padding: '13px 32px', fontSize: 14, fontWeight: 700, cursor: !canEdit || saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 8, opacity: canEdit ? 1 : 0.7 }}>
               <Save size={16} /> {saving ? 'Saving...' : 'Save Settings'}
             </button>
           </div>

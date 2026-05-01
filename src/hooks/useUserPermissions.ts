@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { AdminRole } from '@/lib/types';
 
 interface ModulePermission {
@@ -40,88 +39,39 @@ const MODULE_MAP: Record<string, string> = {
   'commissions': 'Manage Commissions',
 };
 
-const DEFAULT_PERMISSIONS: Record<AdminRole, string[]> = {
-  super_admin: Object.values(MODULE_MAP),
-  admin: [],
-  staff: [],
-};
+const ALL_MODULES = Object.keys(MODULE_MAP);
 
-export function useUserPermissions(adminId: string | undefined, role: AdminRole): UserPermissions {
-  const [permissions, setPermissions] = useState<string[]>([]);
-  const [modulePermissions, setModulePermissions] = useState<ModulePermission[]>([]);
-  const [loading, setLoading] = useState(true);
+function getRoleModulePermission(role: AdminRole, module: string): ModulePermission {
+  if (role === 'super_admin') {
+    return { module, canView: true, canCreate: true, canEdit: true, canDelete: true, canExport: true };
+  }
 
-  useEffect(() => {
-    async function loadPermissions() {
-      if (!adminId) {
-        setLoading(false);
-        return;
-      }
-
-      // Super admin always has all permissions
-      if (role === 'super_admin') {
-        const allModules = Object.keys(MODULE_MAP).map(module => ({
-          module,
-          canView: true,
-          canCreate: true,
-          canEdit: true,
-          canDelete: true,
-          canExport: true,
-        }));
-        setModulePermissions(allModules);
-        setPermissions(Object.values(MODULE_MAP));
-        setLoading(false);
-        return;
-      }
-
-      try {
-        // Load custom permissions from database
-        const token = localStorage.getItem('srv_token'); // Fixed: use correct token key
-        const response = await fetch(`http://localhost:3001/api/v1/admins/${adminId}/permissions`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          
-          if (Array.isArray(data) && data.length > 0) {
-            // Use database permissions
-            setModulePermissions(data);
-            
-            // Convert to permission strings
-            const permStrings = data
-              .filter((p: ModulePermission) => p.canView || p.canCreate || p.canEdit || p.canDelete)
-              .map((p: ModulePermission) => MODULE_MAP[p.module])
-              .filter(Boolean);
-            
-            setPermissions(permStrings);
-          } else {
-            // No custom permissions, use defaults (empty for admin/staff)
-            setPermissions(DEFAULT_PERMISSIONS[role] || []);
-            setModulePermissions([]);
-          }
-        } else {
-          // Fallback to default permissions
-          setPermissions(DEFAULT_PERMISSIONS[role] || []);
-          setModulePermissions([]);
-        }
-      } catch (error) {
-        console.error('Failed to load permissions:', error);
-        // Fallback to default permissions
-        setPermissions(DEFAULT_PERMISSIONS[role] || []);
-        setModulePermissions([]);
-      } finally {
-        setLoading(false);
-      }
+  if (role === 'admin') {
+    if (module === 'settings') {
+      return { module, canView: false, canCreate: false, canEdit: false, canDelete: false, canExport: false };
     }
 
-    loadPermissions();
-  }, [adminId, role]);
+    if (module === 'qr_codes') {
+      return { module, canView: true, canCreate: true, canEdit: true, canDelete: false, canExport: true };
+    }
+
+    return { module, canView: true, canCreate: false, canEdit: true, canDelete: false, canExport: true };
+  }
+
+  return { module, canView: true, canCreate: false, canEdit: false, canDelete: false, canExport: true };
+}
+
+export function useUserPermissions(adminId: string | undefined, role: AdminRole): UserPermissions {
+  void adminId;
+
+  const modulePermissions = ALL_MODULES.map(module => getRoleModulePermission(role, module));
+  const permissions = modulePermissions
+    .filter(permission => permission.canView)
+    .map(permission => MODULE_MAP[permission.module])
+    .filter(Boolean);
+  const loading = false;
 
   const hasPermission = (permission: string): boolean => {
-    if (role === 'super_admin') return true;
     return permissions.includes(permission);
   };
 

@@ -19,8 +19,9 @@ interface ReferralRecord {
 const INITIAL_CONFIG = { referrerBonus: 500, refereeBonus: 250, maxReferrals: 0, baseLinkUrl: 'https://srvelectricals.in/ref/' };
 const numberInputValue = (value: number | null | undefined) => value === 0 || value === null || value === undefined ? '' : value;
 
-export default function Referrals() {
+export default function Referrals({ role }: { role?: import('@/lib/types').AdminRole }) {
   const C = useThemePalette();
+  const canEdit = role === 'super_admin' || role === 'admin';
   const [referrals, setReferrals] = useState<ReferralRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'codes' | 'config'>('codes');
@@ -90,6 +91,7 @@ export default function Referrals() {
   };
 
   const handleSaveConfig = async () => {
+    if (!canEdit) return;
     setConfigSaving(true);
     try {
       await Promise.all([
@@ -228,7 +230,7 @@ export default function Referrals() {
             {configSaved && (
               <div style={{ padding: '10px', borderRadius: 8, background: 'rgba(34,197,94,0.15)', color: '#16A34A', fontSize: 13, fontWeight: 600, textAlign: 'center' }}>✓ Configuration saved successfully!</div>
             )}
-            <button onClick={handleSaveConfig} disabled={configSaving} style={{ padding: '11px', borderRadius: 9, border: 'none', background: configSaving ? '#9CA3AF' : 'linear-gradient(135deg, #4338CA, #6366F1)', color: '#fff', fontSize: 14, fontWeight: 700, cursor: configSaving ? 'not-allowed' : 'pointer' }}>
+            <button onClick={handleSaveConfig} disabled={!canEdit || configSaving} style={{ padding: '11px', borderRadius: 9, border: 'none', background: configSaving ? '#9CA3AF' : 'linear-gradient(135deg, #4338CA, #6366F1)', color: '#fff', fontSize: 14, fontWeight: 700, cursor: !canEdit || configSaving ? 'not-allowed' : 'pointer', opacity: canEdit ? 1 : 0.7 }}>
               {configSaving ? 'Saving...' : 'Save Configuration'}
             </button>
           </div>

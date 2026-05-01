@@ -282,31 +282,31 @@ export default function Home() {
       case 'electricians': return <ElectricianHub role={role} defaultPage={electricianSubPage} onSubPageChange={(sp) => setElectricianSubPage(sp)} />;
       case 'dealers': return <DealerHub role={role} defaultPage={dealerSubPage} onSubPageChange={(sp) => setDealerSubPage(sp)} />;
       case 'products': return <Products role={role} initialCategory={productCategoryFilter} onCategoryUsed={() => setProductCategoryFilter(undefined)} />;
-      case 'product-categories': return <ProductCategories onNavigate={(page, category) => {
+      case 'product-categories': return <ProductCategories role={role} onNavigate={(page, category) => {
         if (page === 'products') {
           setActive('products');
           if (category) setProductCategoryFilter(category);
         }
       }} />;
-      case 'points-config': return <PointsConfig />;
+      case 'points-config': return <PointsConfig role={role} />;
       case 'qr-codes': return <QRCodes role={role} />;
       case 'qr-generator': return <QRCodeGenerator role={role} />;
-      case 'gift-products': return <GiftProducts />;
-      case 'gift-orders': return <GiftOrders />;
-      case 'notifications': return <NotificationsPage />;
-      case 'banners': return <Banners />;
-      case 'transfer-points': return <TransferPoints />;
-      case 'commissions': return <Commissions />;
-      case 'referrals': return <Referrals />;
-      case 'testimonials': return <Testimonials />;
-      case 'privacy-policy': return <PrivacyPolicy />;
-      case 'promo-section': return <PromoSection />;
+      case 'gift-products': return <GiftProducts role={role} />;
+      case 'gift-orders': return <GiftOrders role={role} />;
+      case 'notifications': return <NotificationsPage role={role} />;
+      case 'banners': return <Banners role={role} />;
+      case 'transfer-points': return <TransferPoints role={role} />;
+      case 'commissions': return <Commissions role={role} />;
+      case 'referrals': return <Referrals role={role} />;
+      case 'testimonials': return <Testimonials role={role} />;
+      case 'privacy-policy': return <PrivacyPolicy role={role} />;
+      case 'promo-section': return <PromoSection role={role} />;
       case 'enquiry-support': return <EnquirySupport />;
       case 'scans': return <ScanHistory />;
       case 'redemptions': return <Redemptions />;
       case 'reports': return <Reports />;
-      case 'admin-settings': return <AdminSettings />;
-      case 'app-settings': return <AppSettings />;
+      case 'admin-settings': return role === 'super_admin' ? <AdminSettings /> : <Dashboard role={role} adminName={adminName} onNavigate={handleNavigate} />;
+      case 'app-settings': return <AppSettings role={role} />;
       default: return <Dashboard role={role} adminName={adminName} onNavigate={handleNavigate} />;
     }
   };

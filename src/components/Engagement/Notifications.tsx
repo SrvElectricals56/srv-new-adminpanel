@@ -23,8 +23,13 @@ const EMPTY_FORM = {
   specificUserId: '', specificUserName: '',
 };
 
-export default function NotificationsPage() {
+export default function NotificationsPage({ role }: { role?: import('@/lib/types').AdminRole }) {
   const C = useThemePalette();
+  const isSuperAdmin = role === 'super_admin';
+  const isAdmin = role === 'admin';
+  const canCreate = isSuperAdmin;
+  const canEdit = isSuperAdmin || isAdmin;
+  const canDelete = isSuperAdmin;
   const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
   const [form, setForm] = useState(EMPTY_FORM);
   const [search, setSearch] = useState('');
@@ -199,9 +204,9 @@ export default function NotificationsPage() {
       </div>
 
       {/* Two-column layout */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: 20, alignItems: 'start' }}>
-        {/* LEFT: Send Form */}
-        <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, boxShadow: C.shadow, overflow: 'hidden' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: canCreate ? '1fr 1.5fr' : '1fr', gap: 20, alignItems: 'start' }}>
+        {/* LEFT: Send Form - only for super_admin */}
+        {canCreate && <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, boxShadow: C.shadow, overflow: 'hidden' }}>
           <div style={{ padding: '16px 20px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(29,78,216,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Send size={16} color="#1D4ED8" />
@@ -305,7 +310,7 @@ export default function NotificationsPage() {
               {sending ? '⏳ Sending...' : <><Send size={15} /> {form.scheduleMode === 'schedule' ? 'Schedule Notification' : 'Send Now'}</>}
             </button>
           </div>
-        </div>
+        </div>}
 
         {/* RIGHT: History Table */}
         <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, boxShadow: C.shadow, overflow: 'hidden' }}>
@@ -346,12 +351,12 @@ export default function NotificationsPage() {
                         <button onClick={() => setViewItem(n)} title="View" style={{ width: 28, height: 28, borderRadius: 6, border: `1px solid ${C.border}`, background: C.bg, color: C.muted, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           <Eye size={12} />
                         </button>
-                        <button onClick={() => openEdit(n)} title="Edit" style={{ width: 28, height: 28, borderRadius: 6, border: 'none', background: '#EFF6FF', color: '#1D4ED8', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {canEdit && <button onClick={() => openEdit(n)} title="Edit" style={{ width: 28, height: 28, borderRadius: 6, border: 'none', background: '#EFF6FF', color: '#1D4ED8', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           <Pencil size={12} />
-                        </button>
-                        <button onClick={() => setDeleteId(n.id)} title="Delete" style={{ width: 28, height: 28, borderRadius: 6, border: 'none', background: '#FEE2E2', color: '#991B1B', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        </button>}
+                        {canDelete && <button onClick={() => setDeleteId(n.id)} title="Delete" style={{ width: 28, height: 28, borderRadius: 6, border: 'none', background: '#FEE2E2', color: '#991B1B', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           <Trash2 size={12} />
-                        </button>
+                        </button>}
                       </div>
                     </td>
                   </tr>

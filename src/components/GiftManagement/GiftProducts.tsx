@@ -180,8 +180,13 @@ function EditGiftModal({ gift, onClose, onSave, C }: { gift: GiftProduct; onClos
   );
 }
 
-export default function GiftProducts() {
+export default function GiftProducts({ role }: { role?: import('@/lib/types').AdminRole }) {
   const C = useThemePalette();
+  const isSuperAdmin = role === 'super_admin';
+  const isAdmin = role === 'admin';
+  const canCreate = isSuperAdmin;
+  const canEdit = isSuperAdmin || isAdmin;
+  const canDelete = isSuperAdmin;
   const [gifts, setGifts] = useState<GiftProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'electrician' | 'dealer'>('electrician');
@@ -295,7 +300,7 @@ export default function GiftProducts() {
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={() => setShowExport(true)} style={{ background: C.card, color: C.text, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: '9px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>Export</button>
-          <button onClick={() => setShowAdd(true)} style={{ background: 'linear-gradient(135deg, #10B981, #059669)', color: 'white', border: 'none', borderRadius: 10, padding: '9px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}><Plus size={15} /> Add Gift</button>
+          {canCreate && <button onClick={() => setShowAdd(true)} style={{ background: 'linear-gradient(135deg, #10B981, #059669)', color: 'white', border: 'none', borderRadius: 10, padding: '9px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}><Plus size={15} /> Add Gift</button>}
         </div>
       </div>
 
@@ -381,12 +386,13 @@ export default function GiftProducts() {
                 </td>
                 <td style={{ padding: '14px 16px' }}>
                   <div style={{ display: 'flex', gap: 6 }}>
-                    <button onClick={() => setEditGift(g)} style={{ background: '#EFF6FF', color: '#1D4ED8', border: 'none', borderRadius: 8, width: 34, height: 34, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {canEdit && <button onClick={() => setEditGift(g)} style={{ background: '#EFF6FF', color: '#1D4ED8', border: 'none', borderRadius: 8, width: 34, height: 34, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Pencil size={15} />
-                    </button>
-                    <button onClick={() => setConfirmState({ show: true, id: g.id })} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 8, width: 34, height: 34, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    </button>}
+                    {canDelete && <button onClick={() => setConfirmState({ show: true, id: g.id })} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 8, width: 34, height: 34, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Trash2 size={15} />
-                    </button>
+                    </button>}
+                    {!canEdit && !canDelete && <span style={{ fontSize: 12, color: C.muted, fontStyle: 'italic' }}>View Only</span>}
                   </div>
                 </td>
               </tr>

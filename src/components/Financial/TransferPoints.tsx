@@ -41,8 +41,13 @@ const EMPTY_EDIT = { fromUser: '', toUser: '', points: 0, reason: '', customReas
 const numberInputValue = (value: number | null | undefined) => value === 0 || value === null || value === undefined ? '' : value;
 const DEFAULT_MIN_TRANSFER_POINTS = 100;
 
-export default function TransferPoints() {
+export default function TransferPoints({ role }: { role?: import('@/lib/types').AdminRole }) {
   const C = useThemePalette();
+  const isSuperAdmin = role === 'super_admin';
+  const isAdmin = role === 'admin';
+  const canCreate = isSuperAdmin;
+  const canEdit = isSuperAdmin || isAdmin;
+  const canDelete = isSuperAdmin;
   const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [loading, setLoading] = useState(true);
   const [minTransferPoints, setMinTransferPoints] = useState(DEFAULT_MIN_TRANSFER_POINTS);
@@ -229,12 +234,12 @@ export default function TransferPoints() {
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 1 }}>{s.label}</div>
             </div>
           ))}
-          <button onClick={() => setShowTransferModal(true)} style={{ padding: '10px 18px', borderRadius: 9, border: 'none', background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+          {canCreate && <button onClick={() => setShowTransferModal(true)} style={{ padding: '10px 18px', borderRadius: 9, border: 'none', background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
             <ArrowLeftRight size={14} /> Manual Transfer
-          </button>
-          <button onClick={() => setShowTransferModal(true)} style={{ padding: '10px 18px', borderRadius: 9, border: 'none', background: 'rgba(255,255,255,0.3)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+          </button>}
+          {canCreate && <button onClick={() => setShowTransferModal(true)} style={{ padding: '10px 18px', borderRadius: 9, border: 'none', background: 'rgba(255,255,255,0.3)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
             + Add New Transfer
-          </button>
+          </button>}
         </div>
       </div>
 
@@ -303,17 +308,17 @@ export default function TransferPoints() {
                       <button onClick={() => setViewItem(t)} title="View" style={{ width: 30, height: 30, borderRadius: 7, border: `1px solid ${C.border}`, background: C.bg, color: C.muted, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Eye size={13} />
                       </button>
-                      <button onClick={() => openEdit(t)} title="Edit" style={{ width: 30, height: 30, borderRadius: 7, border: 'none', background: '#EFF6FF', color: '#1D4ED8', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {canEdit && <button onClick={() => openEdit(t)} title="Edit" style={{ width: 30, height: 30, borderRadius: 7, border: 'none', background: '#EFF6FF', color: '#1D4ED8', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Pencil size={13} />
-                      </button>
-                      {t.status === 'completed' && (
+                      </button>}
+                      {canDelete && t.status === 'completed' && (
                         <button onClick={() => setReverseId(t.id)} title="Reverse" style={{ width: 30, height: 30, borderRadius: 7, border: 'none', background: 'rgba(239,68,68,0.12)', color: '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           <RotateCcw size={13} />
                         </button>
                       )}
-                      <button onClick={() => setDeleteId(t.id)} title="Delete" style={{ width: 30, height: 30, borderRadius: 7, border: 'none', background: '#FEE2E2', color: '#991B1B', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {canDelete && <button onClick={() => setDeleteId(t.id)} title="Delete" style={{ width: 30, height: 30, borderRadius: 7, border: 'none', background: '#FEE2E2', color: '#991B1B', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Trash2 size={13} />
-                      </button>
+                      </button>}
                     </div>
                   </td>
                 </tr>

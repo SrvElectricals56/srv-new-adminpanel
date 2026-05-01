@@ -23,8 +23,11 @@ interface BonusRecord {
 const RATE = 5;
 const numberInputValue = (value: number | null | undefined) => value === 0 || value === null || value === undefined ? '' : value;
 
-export default function DealerBonus() {
+export default function DealerBonus({ role }: { role?: import('@/lib/types').AdminRole }) {
   const C = useThemePalette();
+  const isSuperAdmin = role === 'super_admin';
+  const isAdmin = role === 'admin';
+  const canEdit = isSuperAdmin || isAdmin;
   const [bonuses, setBonuses] = useState<BonusRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -271,14 +274,14 @@ export default function DealerBonus() {
                   <td style={{ padding: '12px 16px' }}>{statusBadge(c.status)}</td>
                   <td style={{ padding: '12px 16px' }}>
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                      {c.status === 'pending' && (
+                      {canEdit && c.status === 'pending' && (
                         <button onClick={() => setMarkPaidId(c.id)} style={{ padding: '6px 12px', borderRadius: 7, border: 'none', background: 'rgba(34,197,94,0.15)', color: '#16A34A', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
                           <Check size={12} /> Mark Paid
                         </button>
                       )}
-                      <button onClick={() => openEdit(c)} title="Edit" style={{ width: 30, height: 30, borderRadius: 7, border: 'none', background: '#EFF6FF', color: '#1D4ED8', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      {canEdit && <button onClick={() => openEdit(c)} title="Edit" style={{ width: 30, height: 30, borderRadius: 7, border: 'none', background: '#EFF6FF', color: '#1D4ED8', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         <Pencil size={13} />
-                      </button>
+                      </button>}
                     </div>
                   </td>
                 </tr>

@@ -77,8 +77,11 @@ function OrderDetailModal({ order, onClose, C }: { order: GiftOrder; onClose: ()
   );
 }
 
-export default function GiftOrders() {
+export default function GiftOrders({ role }: { role?: import('@/lib/types').AdminRole }) {
   const C = useThemePalette();
+  const isSuperAdmin = role === 'super_admin';
+  const isAdmin = role === 'admin';
+  const canEdit = isSuperAdmin || isAdmin;
   const [orders, setOrders] = useState<GiftOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'electrician' | 'dealer'>('electrician');
@@ -267,7 +270,7 @@ export default function GiftOrders() {
                   <td style={{ padding: '14px 16px' }}>
                     <div style={{ display: 'flex', gap: 6 }}>
                       <button onClick={() => setSelectedOrder(order)} title="View" style={{ background: '#EFF6FF', color: '#1D4ED8', border: 'none', borderRadius: 7, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Eye size={14} /></button>
-                      {order.status === 'pending' && (
+                      {canEdit && order.status === 'pending' && (
                         <>
                           <button onClick={() => setConfirmState({ show: true, id: order.id, action: 'approve' })} title="Approve" style={{ background: '#D1FAE5', color: '#065F46', border: 'none', borderRadius: 7, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Check size={14} /></button>
                           <button onClick={() => setConfirmState({ show: true, id: order.id, action: 'reject' })} title="Reject" style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 7, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={14} /></button>
