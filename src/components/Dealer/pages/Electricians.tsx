@@ -148,7 +148,7 @@ function ViewModal({ electrician, onClose }: { electrician: Electrician; onClose
   );
 }
 
-function AddModal({ dealers = [], onClose, onSave }: { dealers?: {id: string; name: string}[]; onClose: () => void; onSave: (e: Electrician) => void }) {
+function AddModal({ dealers = [], onClose, onSave }: { dealers?: {id: string; name: string; dealerCode?: string}[]; onClose: () => void; onSave: (e: Electrician) => void }) {
   const C = useThemePalette();
   const [alertDialog, setAlertDialog] = useState<{ show: boolean; title: string; message: string; type: 'error' | 'success' | 'warning' | 'info' }>({ show: false, title: '', message: '', type: 'error' });
   
@@ -157,6 +157,7 @@ function AddModal({ dealers = [], onClose, onSave }: { dealers?: {id: string; na
     return {
       name: '', phone: '', city: '', state: '', district: '', 
       dealerId: initialDealer?.id ?? '', dealerName: initialDealer?.name ?? '',
+      electricianCode: '',
       tier: 'Silver' as MemberTier, status: 'active' as UserStatus, bankLinked: false, upiId: '',
       totalPoints: 0, totalScans: 0, walletBalance: 0, totalRedemptions: 0,
       recentActivity: 'Just joined', joinedDate: new Date().toISOString().split('T')[0],
@@ -177,15 +178,9 @@ function AddModal({ dealers = [], onClose, onSave }: { dealers?: {id: string; na
     }
   }, [dealers]);
 
-  // Auto-generate code
-  const generateCode = () => {
-    const STATE_CODES: Record<string, string> = { 'Punjab': 'PB', 'Haryana': 'HR', 'Delhi': 'DL', 'Rajasthan': 'RJ', 'Uttar Pradesh': 'UP', 'Gujarat': 'GJ', 'Maharashtra': 'MH' };
-    const sc = STATE_CODES[form.state ?? ''] ?? (form.state ?? 'XX').substring(0, 2).toUpperCase();
-    return `${sc}${String(Math.floor(Math.random() * 90000) + 10000)}-${String(Math.floor(Math.random() * 900) + 100).padStart(3, '0')}`;
-  };
-
-  const [code, setCode] = useState(() => generateCode());
   const f = (k: keyof Electrician, v: any) => setForm(p => ({ ...p, [k]: v }));
+  const selectedDealer = dealers.find(d => d.id === form.dealerId);
+  const autoCodePreview = selectedDealer?.dealerCode ? `${selectedDealer.dealerCode}-001` : 'Auto-assigned by server';
   const inputStyle: React.CSSProperties = { width: '100%', padding: '10px 12px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 13, outline: 'none', background: C.surface, color: C.text, boxSizing: 'border-box' };
 
   const handleSave = () => {
@@ -197,7 +192,7 @@ function AddModal({ dealers = [], onClose, onSave }: { dealers?: {id: string; na
       setAlertDialog({ show: true, title: 'Invalid Phone Number', message: 'Phone number must be exactly 10 digits', type: 'error' });
       return;
     }
-    onSave({ ...form as Electrician, id: `e${Date.now()}`, electricianCode: code });
+    onSave({ ...form as Electrician, id: `e${Date.now()}`, electricianCode: form.electricianCode?.trim() ?? '' });
   };
 
   const handleImageFile = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -257,8 +252,17 @@ function AddModal({ dealers = [], onClose, onSave }: { dealers?: {id: string; na
           <div style={{ gridColumn: '1/-1' }}>
             <label style={{ fontSize: 12, fontWeight: 700, color: C.muted, display: 'block', marginBottom: 6, textTransform: 'uppercase' }}>Electrician Code</label>
             <div style={{ display: 'flex', gap: 8 }}>
-              <input style={{ ...inputStyle, flex: 1, fontFamily: 'monospace', fontWeight: 700, background: C.bg }} value={code} readOnly />
-              <button onClick={() => setCode(generateCode())} style={{ padding: '0 14px', background: C.red, color: 'white', border: 'none', borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>🔄 Generate</button>
+              <input
+                style={{ ...inputStyle, flex: 1, fontFamily: 'monospace', fontWeight: 700, background: C.bg }}
+                value={form.electricianCode ?? ''}
+                onChange={e => f('electricianCode', e.target.value.toUpperCase())}
+                placeholder={autoCodePreview}
+              />
+            </div>
+            <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>
+              {selectedDealer?.dealerCode
+                ? `Leave blank to auto-assign the next serial like ${autoCodePreview}. You can also type a custom code manually.`
+                : 'Leave blank for backend auto-assignment, or type a custom code manually.'}
             </div>
           </div>
 

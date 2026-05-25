@@ -129,37 +129,19 @@ function EditModal({ el, onClose, onSave, dealers = [] }: { el: Electrician | nu
   };
   const isAdd = !el;
 
-  // Auto-generate unique electrician code using state prefix
-  const generateCode = () => {
-    const STATE_CODES: Record<string, string> = {
-      'Punjab': 'PB', 'Haryana': 'HR', 'Delhi': 'DL', 'Rajasthan': 'RJ',
-      'Uttar Pradesh': 'UP', 'Gujarat': 'GJ', 'Maharashtra': 'MH',
-      'Madhya Pradesh': 'MP', 'Bihar': 'BR', 'West Bengal': 'WB',
-      'Tamil Nadu': 'TN', 'Karnataka': 'KA', 'Telangana': 'TG',
-      'Andhra Pradesh': 'AP', 'Kerala': 'KL', 'Odisha': 'OD',
-    };
-    const stateCode = STATE_CODES[form.state ?? ''] ?? (form.state ?? 'XX').substring(0, 2).toUpperCase();
-    const cityCode = String(Math.floor(Math.random() * 90000) + 10000);
-    const seq = String(Math.floor(Math.random() * 900) + 100).padStart(3, '0');
-    return `${stateCode}${cityCode}-${seq}`;
-  };
-
   const [form, setForm] = useState<Partial<Electrician>>(() => {
     if (el) return el;
-    // Auto-generate code on first render for new electrician
-    const stateCode = 'XX';
-    const cityCode = String(Math.floor(Math.random() * 90000) + 10000);
-    const seq = String(Math.floor(Math.random() * 900) + 100).padStart(3, '0');
-    const autoCode = `${stateCode}${cityCode}-${seq}`;
     return {
       name: '', profileImage: '', phone: '', email: '', city: '', state: '', district: '',
-      electricianCode: autoCode,
+      electricianCode: '',
       tier: 'Silver', status: 'active', dealerId: '', dealerName: '', bankLinked: false,
       upiId: '', walletBalance: 0, totalPoints: 0, totalScans: 0, totalRedemptions: 0,
       recentActivity: 'Just joined', joinedDate: new Date().toISOString().split('T')[0],
     };
   });
   const f = (k: keyof Electrician, v: unknown) => setForm(p => ({ ...p, [k]: v }));
+  const selectedDealer = dealers.find(d => d.id === form.dealerId);
+  const autoCodePreview = selectedDealer ? `${selectedDealer.dealerCode}-001` : 'Auto-assigned by server';
   const handleImageFile = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -230,15 +212,17 @@ function EditModal({ el, onClose, onSave, dealers = [] }: { el: Electrician | nu
               <div style={{ display: 'flex', gap: 8 }}>
                 <input
                   style={{ ...inputStyle, flex: 1, background: C.bg, color: C.text, fontFamily: 'monospace', fontWeight: 700 }}
-                  value={isAdd ? (form.dealerId ? `${dealers.find(d => d.id === form.dealerId)?.dealerCode ?? '??????'}-###` : 'Auto-generated') : (form.electricianCode ?? '')}
-                  readOnly
-                  placeholder="Auto-generated"
+                  value={form.electricianCode ?? ''}
+                  onChange={e => f('electricianCode', e.target.value.toUpperCase())}
+                  placeholder={autoCodePreview}
                 />
               </div>
               <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>
                 {isAdd
-                  ? (form.dealerId ? `Will be: ${dealers.find(d => d.id === form.dealerId)?.dealerCode}-001, 002... (auto-assigned by server)` : 'Select a dealer to auto-generate code in format DDDDDD-EEE')
-                  : 'Electrician code (read-only)'}
+                  ? (selectedDealer
+                    ? `Leave blank to auto-assign the next serial like ${autoCodePreview}. You can also type a custom code manually.`
+                    : 'Select a dealer, then leave this blank for auto-assignment or type a custom code manually.')
+                  : 'You can change this code manually, or leave it unchanged.'}
               </div>
             </div>
             <div>
@@ -495,6 +479,7 @@ export default function Electricians({ role }: ElectriciansProps) {
       setAlertDialog({ show: true, title: 'Invalid Phone Number', message: 'Phone number must be exactly 10 digits', type: 'error' });
       return;
     }
+    const electricianCode = form.electricianCode?.trim();
     const electricianData = {
       name: form.name,
       phone: form.phone,
@@ -502,9 +487,8 @@ export default function Electricians({ role }: ElectriciansProps) {
       city: form.city,
       state: form.state,
       district: form.district,
-      // For new electricians, don't send electricianCode — backend auto-generates it
-      // as {dealerCode}-{serial}. For edits, preserve existing code.
-      ...(showAdd ? {} : { electricianCode: form.electricianCode }),
+      // Backend auto-generates the next serial when this field is blank.
+      ...(electricianCode ? { electricianCode } : {}),
       tier: form.tier,
       status: form.status,
       dealerId: form.dealerId && form.dealerId.trim() !== '' ? form.dealerId : undefined,
