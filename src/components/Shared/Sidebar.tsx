@@ -226,8 +226,10 @@ export default function Sidebar({ active, onNavigate, onCollapseChange, role, ad
               </div>
             )}
             {group.items.filter(item => {
-              // admin-settings only visible to super_admin
-              if (item.id === 'admin-settings') return role === 'super_admin';
+              // These items only visible to super_admin
+              if (['admin-settings', 'app-settings', 'app-page-controls', 'app-icons'].includes(item.id)) {
+                return role === 'super_admin';
+              }
               return true;
             }).map((item) => {
               const isActive = active === item.id;

@@ -319,9 +319,9 @@ export default function Home() {
       case 'redemptions': return <Redemptions />;
       case 'reports': return <Reports />;
       case 'admin-settings': return role === 'super_admin' ? <AdminSettings /> : <Dashboard role={role} adminName={adminName} onNavigate={handleNavigate} />;
-      case 'app-settings': return <AppSettings role={role} />;
-      case 'app-page-controls': return <AppPageControls role={role} />;
-      case 'app-icons': return <AppIcons role={role} />;
+      case 'app-settings': return role === 'super_admin' ? <AppSettings role={role} /> : <Dashboard role={role} adminName={adminName} onNavigate={handleNavigate} />;
+      case 'app-page-controls': return role === 'super_admin' ? <AppPageControls role={role} /> : <Dashboard role={role} adminName={adminName} onNavigate={handleNavigate} />;
+      case 'app-icons': return role === 'super_admin' ? <AppIcons role={role} /> : <Dashboard role={role} adminName={adminName} onNavigate={handleNavigate} />;
       default: return <Dashboard role={role} adminName={adminName} onNavigate={handleNavigate} />;
     }
   };

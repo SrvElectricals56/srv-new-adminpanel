@@ -44,6 +44,7 @@ type PlayItem = {
   category: string;
   displayOrder: number;
   isActive: boolean;
+  targetRoles?: string[];
   viewCount: number;
   createdAt: string;
 };
@@ -99,13 +100,53 @@ const CATEGORIES = [
   { id: 'tips', label: '💡 Helpful Tips', desc: 'Buying help & highlights' },
 ];
 
+const ROLE_OPTIONS = [
+  { id: 'all', label: 'Everyone' },
+  { id: 'user', label: 'Customer' },
+  { id: 'dealer', label: 'Dealer' },
+  { id: 'electrician', label: 'Electrician' },
+  { id: 'counterboy', label: 'Counter Boy' },
+];
+
+const INDIVIDUAL_ROLE_IDS = ROLE_OPTIONS.filter((option) => option.id !== 'all').map((option) => option.id);
+
 const EMPTY_FORM = {
   title: '', description: '', videoUrl: '', thumbnailUrl: '',
-  category: 'reels', displayOrder: 0, isActive: true,
+  category: 'reels', displayOrder: 0, isActive: true, targetRoles: ['user'],
 };
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Request failed';
+}
+
+function createEmptyForm() {
+  return {
+    ...EMPTY_FORM,
+    targetRoles: [...EMPTY_FORM.targetRoles],
+  };
+}
+
+function getRoleLabel(role: string) {
+  if (role === 'all') {
+    return 'Everyone';
+  }
+  return ROLE_OPTIONS.find((option) => option.id === role)?.label ?? role;
+}
+
+function normalizeTargetRoles(targetRoles?: string[]) {
+  const roles = Array.from(
+    new Set((targetRoles ?? []).filter((role) => INDIVIDUAL_ROLE_IDS.includes(role)))
+  );
+  return roles;
+}
+
+function hasAllRoles(targetRoles?: string[]) {
+  const roles = normalizeTargetRoles(targetRoles);
+  return INDIVIDUAL_ROLE_IDS.every((role) => roles.includes(role));
+}
+
+function getAudienceBadges(targetRoles?: string[]) {
+  return hasAllRoles(targetRoles) ? ['all'] : normalizeTargetRoles(targetRoles);
 }
 
 // ── Video uploader component ──────────────────────────────────────────────────
@@ -212,7 +253,7 @@ export default function UploadPlays({ role }: { role?: string }) {
 
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
-  const [form, setForm] = useState({ ...EMPTY_FORM });
+  const [form, setForm] = useState(createEmptyForm());
   const [videoInputMode, setVideoInputMode] = useState<'url' | 'upload'>('url');
 
   const [viewersModal, setViewersModal] = useState<{ play: PlayItem; data: ViewersModalData | null } | null>(null);
@@ -223,6 +264,7 @@ export default function UploadPlays({ role }: { role?: string }) {
   const [replyingCommentId, setReplyingCommentId] = useState<string | null>(null);
 
   const [filterCat, setFilterCat] = useState('all');
+  const [audienceFilter, setAudienceFilter] = useState('all');
 
   const load = async () => {
     setLoading(true);
@@ -250,7 +292,7 @@ export default function UploadPlays({ role }: { role?: string }) {
 
   const openCreate = () => {
     setEditId(null);
-    setForm({ ...EMPTY_FORM });
+    setForm(createEmptyForm());
     setVideoInputMode('url');
     setShowForm(true);
   };
@@ -265,6 +307,7 @@ export default function UploadPlays({ role }: { role?: string }) {
       category: play.category,
       displayOrder: play.displayOrder,
       isActive: play.isActive,
+      targetRoles: normalizeTargetRoles(play.targetRoles?.length ? play.targetRoles : ['user']),
     });
     // Auto-detect if it's an uploaded file or URL
     setVideoInputMode(play.videoUrl?.includes('/uploads/videos/') ? 'upload' : 'url');
@@ -274,6 +317,10 @@ export default function UploadPlays({ role }: { role?: string }) {
   const handleSave = async () => {
     if (!form.title.trim() || !form.videoUrl.trim()) {
       setError('Title and Video URL are required.');
+      return;
+    }
+    if (!form.targetRoles.length) {
+      setError('Select at least one profile audience.');
       return;
     }
     setSaving(true);
@@ -369,6 +416,27 @@ export default function UploadPlays({ role }: { role?: string }) {
     setForm((p) => ({ ...p, [k]: v }));
   };
 
+  const toggleTargetRole = (roleId: string) => {
+    setForm((current) => {
+      if (roleId === 'all') {
+        return {
+          ...current,
+          targetRoles: hasAllRoles(current.targetRoles) ? [] : [...INDIVIDUAL_ROLE_IDS],
+        };
+      }
+
+      const currentRoles = normalizeTargetRoles(current.targetRoles);
+      const nextRoles = currentRoles.includes(roleId)
+        ? currentRoles.filter((role) => role !== roleId)
+        : [...currentRoles, roleId];
+
+      return {
+        ...current,
+        targetRoles: normalizeTargetRoles(nextRoles),
+      };
+    });
+  };
+
   const inp: React.CSSProperties = {
     width: '100%', padding: '10px 12px', border: `1.5px solid ${C.border}`,
     borderRadius: 10, fontSize: 13, outline: 'none', background: C.inputBg,
@@ -379,7 +447,14 @@ export default function UploadPlays({ role }: { role?: string }) {
     marginBottom: 6, textTransform: 'uppercase',
   };
 
-  const filtered = filterCat === 'all' ? plays : plays.filter(p => p.category === filterCat);
+  const filtered = plays.filter((play) => {
+    const categoryMatch = filterCat === 'all' || play.category === filterCat;
+    const audienceMatch =
+      audienceFilter === 'all' ||
+      normalizeTargetRoles(play.targetRoles?.length ? play.targetRoles : ['user']).includes(audienceFilter);
+
+    return categoryMatch && audienceMatch;
+  });
 
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1200 }}>
@@ -391,7 +466,7 @@ export default function UploadPlays({ role }: { role?: string }) {
           </div>
           <div>
             <div style={{ fontSize: 20, fontWeight: 800, color: '#fff' }}>Upload Plays</div>
-            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', marginTop: 2 }}>Manage videos shown in the Customer app Play section</div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', marginTop: 2 }}>Upload role-based videos and decide which profile audience can watch each play</div>
           </div>
         </div>
         {canEdit && (
@@ -431,6 +506,30 @@ export default function UploadPlays({ role }: { role?: string }) {
         </div>
       )}
 
+      <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
+        {ROLE_OPTIONS.map((roleOption) => {
+          const active = audienceFilter === roleOption.id;
+          return (
+            <button
+              key={roleOption.id}
+              onClick={() => setAudienceFilter(roleOption.id)}
+              style={{
+                padding: '9px 15px',
+                borderRadius: 999,
+                border: `1.5px solid ${active ? '#0F766E' : C.border}`,
+                background: active ? '#CCFBF1' : C.card,
+                color: active ? '#0F766E' : C.text,
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              {roleOption.label}
+            </button>
+          );
+        })}
+      </div>
+
       {/* Category filter */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
         {[{ id: 'all', label: '📋 All' }, ...CATEGORIES].map(cat => (
@@ -448,7 +547,7 @@ export default function UploadPlays({ role }: { role?: string }) {
         <div style={{ textAlign: 'center', padding: 60, background: C.card, borderRadius: 16, border: `1px solid ${C.border}` }}>
           <div style={{ fontSize: 48, marginBottom: 12 }}>🎬</div>
           <div style={{ fontSize: 16, fontWeight: 700, color: C.text }}>No videos yet</div>
-          <div style={{ fontSize: 13, color: C.muted, marginTop: 4 }}>Click Add Video to upload the first play</div>
+          <div style={{ fontSize: 13, color: C.muted, marginTop: 4 }}>Click Add Video to upload the first role-based play</div>
         </div>
       ) : (
         <div style={{ display: 'grid', gap: 14 }}>
@@ -477,6 +576,13 @@ export default function UploadPlays({ role }: { role?: string }) {
                 {play.description && (
                   <div style={{ fontSize: 12, color: C.muted, marginBottom: 6, lineHeight: 1.5 }}>{play.description}</div>
                 )}
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+                  {getAudienceBadges(play.targetRoles?.length ? play.targetRoles : ['user']).map((role) => (
+                    <span key={role} style={{ fontSize: 10, fontWeight: 700, padding: '4px 9px', borderRadius: 999, background: '#E0F2FE', color: '#0F4C81' }}>
+                      {getRoleLabel(role)}
+                    </span>
+                  ))}
+                </div>
                 <div style={{ fontSize: 11, color: C.muted, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
                   <span>👁️ {play.viewCount} views</span>
                   <span>📅 {new Date(play.createdAt).toLocaleDateString()}</span>
@@ -576,6 +682,39 @@ export default function UploadPlays({ role }: { role?: string }) {
                 <select style={inp} value={form.category} onChange={e => f('category', e.target.value)}>
                   {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label} — {c.desc}</option>)}
                 </select>
+              </div>
+              <div>
+                <label style={lbl}>Visible For</label>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {ROLE_OPTIONS.map((role) => {
+                    const selected =
+                      role.id === 'all'
+                        ? hasAllRoles(form.targetRoles)
+                        : form.targetRoles.includes(role.id);
+                    return (
+                      <button
+                        key={role.id}
+                        type="button"
+                        onClick={() => toggleTargetRole(role.id)}
+                        style={{
+                          padding: '9px 14px',
+                          borderRadius: 999,
+                          border: `1.5px solid ${selected ? '#1D4ED8' : C.border}`,
+                          background: selected ? '#DBEAFE' : C.bg,
+                          color: selected ? '#1D4ED8' : C.text,
+                          fontSize: 12,
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {role.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div style={{ fontSize: 11, color: C.muted, marginTop: 6 }}>
+                  Only selected profile users will see this play in their app.
+                </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
