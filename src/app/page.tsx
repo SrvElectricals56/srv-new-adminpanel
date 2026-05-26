@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import Image from 'next/image';
-import { Search, Bell, LayoutDashboard, Zap, Store, Package, Star, ScanLine, Gift, Tag, BarChart2, Shield, Smartphone, UserCheck, Users, LogOut, FileSpreadsheet, Sun, Moon, QrCode, ArrowLeftRight, Percent, Image as ImageIcon, MessageSquare, FileText, Megaphone, ClipboardList, Play } from 'lucide-react';
+import { Search, Bell, LayoutDashboard, Zap, Store, Package, Star, ScanLine, Gift, Tag, BarChart2, Shield, Smartphone, UserCheck, Users, LogOut, FileSpreadsheet, Sun, Moon, QrCode, ArrowLeftRight, Percent, Image as ImageIcon, MessageSquare, FileText, ClipboardList, Play } from 'lucide-react';
 import { useTheme, useThemePalette } from '@/lib/theme';
 import Sidebar from '@/components/Shared/Sidebar';
 import Dashboard from '@/components/Overview/Dashboard';
@@ -20,7 +20,6 @@ import Commissions from '@/components/Financial/DealerBonus';
 import Referrals from '@/components/Engagement/Referrals';
 import Testimonials from '@/components/Content/Testimonials';
 import PrivacyPolicy from '@/components/Content/PrivacyPolicy';
-import PromoSection from '@/components/Content/PromoSection';
 import UploadPlays from '@/components/Content/UploadPlays';
 import EnquirySupport from '@/components/Support/EnquirySupport';
 import Login from '@/components/Shared/Login';
@@ -66,7 +65,6 @@ const PAGE_LABELS: Record<string, { title: string; Icon: React.ElementType }> = 
   'referrals': { title: 'Referrals', Icon: Users },
   'testimonials': { title: 'Testimonials', Icon: MessageSquare },
   'privacy-policy': { title: 'Privacy Policy', Icon: FileText },
-  'promo-section': { title: 'Promo Section', Icon: Megaphone },
   'enquiry-support': { title: 'Enquiry Support', Icon: MessageSquare },
   scans: { title: 'Scan History', Icon: ScanLine },
   redemptions: { title: 'Redemptions', Icon: Gift },
@@ -313,7 +311,6 @@ export default function Home() {
       case 'testimonials': return <Testimonials role={role} />;
       case 'upload-plays': return <UploadPlays role={role} />;
       case 'privacy-policy': return <PrivacyPolicy role={role} />;
-      case 'promo-section': return <PromoSection role={role} />;
       case 'enquiry-support': return <EnquirySupport />;
       case 'scans': return <ScanHistory />;
       case 'redemptions': return <Redemptions />;

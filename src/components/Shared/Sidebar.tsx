@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Zap, Store, Package, Star, Tag,
   BarChart2, QrCode, Gift, Bell, Users,
   ChevronLeft, ChevronRight, ArrowLeftRight, Percent,
-  Image as ImageIcon, MessageSquare, FileText, Megaphone,
+  Image as ImageIcon, MessageSquare, FileText,
   UserCheck, ClipboardList, Shield, Smartphone, Play, AppWindow,
 } from 'lucide-react';
 
@@ -69,7 +69,6 @@ const NAV_GROUPS = [
       { id: 'testimonials', label: 'Testimonials', Icon: MessageSquare },
       { id: 'upload-plays', label: 'Upload Plays', Icon: Play },
       { id: 'privacy-policy', label: 'Privacy Policy', Icon: FileText },
-      { id: 'promo-section', label: 'Promo Section', Icon: Megaphone },
     ]
   },
   {
