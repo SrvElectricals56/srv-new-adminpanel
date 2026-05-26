@@ -18,24 +18,47 @@ export default function ElectricianWallet() {
       try {
         const res = await walletApi.getTransactions({ userRole: 'electrician', limit: '500' });
         const txns = Array.isArray(res) ? res : (res as any).data ?? [];
-        
-        // Fetch user details for each transaction
-        const enrichedTxns = await Promise.all(
-          txns.map(async (t: any) => {
-            try {
-              const userData = await electricianApi.getOne(t.userId);
-              return {
-                ...t,
-                userName: userData.name || userData.fullName || 'N/A',
-                userPhone: userData.phone || userData.mobile || 'N/A',
-                userCode: userData.electricianCode || userData.code || 'N/A'
-              };
-            } catch (err) {
-              console.error('Error fetching user:', err);
-            }
-            return { ...t, userName: 'N/A', userPhone: 'N/A', userCode: 'N/A' };
-          })
+
+        const uniqueUserIds: string[] = Array.from(
+          new Set(
+            txns
+              .map((t: any) => String(t.userId ?? '').trim())
+              .filter(Boolean),
+          ),
         );
+
+        const userEntries = await Promise.all(
+          uniqueUserIds.map(async (userId) => {
+            try {
+              const userData = await electricianApi.getOne(userId);
+              return [
+                userId,
+                {
+                  userName: userData.name || userData.fullName || 'N/A',
+                  userPhone: userData.phone || userData.mobile || 'N/A',
+                  userCode: userData.electricianCode || userData.code || 'N/A',
+                },
+              ] as const;
+            } catch {
+              // Wallet history can contain orphaned rows for deleted/missing users.
+              return [
+                userId,
+                { userName: 'N/A', userPhone: 'N/A', userCode: 'N/A' },
+              ] as const;
+            }
+          }),
+        );
+
+        const userMap = new Map(userEntries);
+
+        const enrichedTxns = txns.map((t: any) => ({
+          ...t,
+          ...(userMap.get(String(t.userId ?? '').trim()) ?? {
+            userName: 'N/A',
+            userPhone: 'N/A',
+            userCode: 'N/A',
+          }),
+        }));
         
         setTransactions(enrichedTxns);
       } catch (err) {

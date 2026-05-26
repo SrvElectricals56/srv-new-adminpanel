@@ -1,7 +1,7 @@
 'use client';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Eye, Pencil, RefreshCw, ScanLine, Search, Trash2, Wallet } from 'lucide-react';
-import { counterboyApi, dealerApi } from '@/lib/api';
+import { counterboyApi } from '@/lib/api';
 import type { AdminRole, CounterBoy, MemberTier, UserStatus } from '@/lib/types';
 import { useAppContext } from '@/lib/appContext';
 import { useThemePalette } from '@/lib/theme';
@@ -93,9 +93,6 @@ function ViewModal({ counterBoy, onClose, onEdit, canEdit }: { counterBoy: Count
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 18 }}>
             {[
-              { label: 'Dealer', value: counterBoy.dealerName || '-' },
-              { label: 'Dealer Code', value: counterBoy.dealerCode || '-' },
-              { label: 'Dealer Phone', value: counterBoy.dealerPhone || '-' },
               { label: 'Email', value: counterBoy.email || '-' },
               { label: 'City', value: counterBoy.city || '-' },
               { label: 'District', value: counterBoy.district || '-' },
@@ -136,12 +133,10 @@ function ViewModal({ counterBoy, onClose, onEdit, canEdit }: { counterBoy: Count
 
 function EditModal({
   counterBoy,
-  dealers,
   onClose,
   onSave,
 }: {
   counterBoy: CounterBoy | null;
-  dealers: { id: string; name: string; dealerCode?: string }[];
   onClose: () => void;
   onSave: (data: CounterBoyForm) => void;
 }) {
@@ -152,10 +147,7 @@ function EditModal({
     name: '',
     phone: '',
     email: '',
-    counterboyCode: 'Auto-generated',
-    dealerId: '',
-    dealerName: '',
-    dealerPhone: '',
+    counterboyCode: '',
     city: '',
     district: '',
     state: '',
@@ -194,7 +186,7 @@ function EditModal({
         <div style={{ padding: '22px 28px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <div style={{ fontSize: 18, fontWeight: 800, color: C.text }}>{isAdd ? 'Add Counter Boy' : 'Edit Counter Boy'}</div>
-            <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{isAdd ? 'Create a new counter boy and link the account to a dealer' : 'Update counter boy profile, dealer link, scans and banking details'}</div>
+            <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{isAdd ? 'Create a new independent counter boy account' : 'Update counter boy profile, scans and banking details'}</div>
           </div>
           <button onClick={onClose} style={{ background: C.bg, border: 'none', borderRadius: 10, width: 34, height: 34, cursor: 'pointer', fontSize: 16 }}>x</button>
         </div>
@@ -224,33 +216,12 @@ function EditModal({
           </div>
           <div>
             <label style={labelStyle}>Counter Boy Code</label>
-            <input style={{ ...inputStyle, background: C.bg }} value={form.counterboyCode ?? 'Auto-generated'} readOnly />
-          </div>
-          <div>
-            <label style={labelStyle}>Dealer</label>
-            <select
+            <input
               style={inputStyle}
-              value={form.dealerId ?? ''}
-              onChange={e => {
-                const selectedDealer = dealers.find(dealer => dealer.id === e.target.value);
-                setForm(prev => ({
-                  ...prev,
-                  dealerId: e.target.value,
-                  dealerName: selectedDealer?.name ?? '',
-                }));
-              }}
-            >
-              <option value="">Select dealer</option>
-              {dealers.map(dealer => (
-                <option key={dealer.id} value={dealer.id}>
-                  {dealer.name}{dealer.dealerCode ? ` (${dealer.dealerCode})` : ''}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label style={labelStyle}>Dealer Phone</label>
-            <input style={inputStyle} value={form.dealerPhone ?? ''} onChange={e => setField('dealerPhone', e.target.value.replace(/\D/g, '').slice(0, 10))} />
+              value={form.counterboyCode ?? ''}
+              onChange={e => setField('counterboyCode', e.target.value)}
+              placeholder="Leave blank for auto-generated"
+            />
           </div>
           <div>
             <label style={labelStyle}>City</label>
@@ -358,7 +329,6 @@ export default function AllCounterBoys({ role }: AllCounterBoysProps) {
   const [viewing, setViewing] = useState<CounterBoy | null>(null);
   const [editing, setEditing] = useState<CounterBoy | null>(null);
   const [showAdd, setShowAdd] = useState(false);
-  const [dealers, setDealers] = useState<{ id: string; name: string; dealerCode?: string }[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<CounterBoy | null>(null);
   const [alert, setAlert] = useState<{ show: boolean; type: 'success' | 'error'; title: string; message: string }>({ show: false, type: 'success', title: '', message: '' });
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -401,16 +371,6 @@ export default function AllCounterBoys({ role }: AllCounterBoysProps) {
     return () => window.clearTimeout(timer);
   }, [load, loadStats]);
 
-  useEffect(() => {
-    const loadDealers = async () => {
-      try {
-        const res = await dealerApi.getAll({ page: '1', limit: '500' });
-        setDealers(res.data ?? []);
-      } catch {}
-    };
-    loadDealers();
-  }, []);
-
   const loadOne = async (id: string, mode: 'view' | 'edit') => {
     try {
       const data = await counterboyApi.getOne(id);
@@ -440,10 +400,26 @@ export default function AllCounterBoys({ role }: AllCounterBoysProps) {
 
     try {
       const isEditing = Boolean(editing);
-      if (editing) {
-        await counterboyApi.update(editing.id, form);
+      const payload = { ...form } as CounterBoyForm & {
+        dealerId?: string;
+        dealerName?: string;
+        dealerPhone?: string;
+        dealerCode?: string;
+      };
+      const counterboyCode = payload.counterboyCode?.trim();
+      delete payload.dealerId;
+      delete payload.dealerName;
+      delete payload.dealerPhone;
+      delete payload.dealerCode;
+      if (counterboyCode) {
+        payload.counterboyCode = counterboyCode;
       } else {
-        await counterboyApi.create(form);
+        delete payload.counterboyCode;
+      }
+      if (editing) {
+        await counterboyApi.update(editing.id, payload);
+      } else {
+        await counterboyApi.create(payload);
       }
       setEditing(null);
       setShowAdd(false);
@@ -475,8 +451,8 @@ export default function AllCounterBoys({ role }: AllCounterBoysProps) {
   return (
     <div style={{ padding: 32, background: C.bg, minHeight: '100vh' }}>
       {viewing && <ViewModal counterBoy={viewing} onClose={() => setViewing(null)} onEdit={() => { setEditing(viewing); setViewing(null); }} canEdit={canEdit} />}
-      {editing && <EditModal counterBoy={editing} dealers={dealers} onClose={() => setEditing(null)} onSave={handleSave} />}
-      {showAdd && <EditModal counterBoy={null} dealers={dealers} onClose={() => setShowAdd(false)} onSave={handleSave} />}
+      {editing && <EditModal counterBoy={editing} onClose={() => setEditing(null)} onSave={handleSave} />}
+      {showAdd && <EditModal counterBoy={null} onClose={() => setShowAdd(false)} onSave={handleSave} />}
       {alert.show && (
         <AlertDialog
           show={alert.show}
@@ -508,8 +484,6 @@ export default function AllCounterBoys({ role }: AllCounterBoysProps) {
           Phone: counterBoy.phone,
           Email: counterBoy.email || '',
           Code: counterBoy.counterboyCode,
-          Dealer: counterBoy.dealerName || '',
-          DealerCode: counterBoy.dealerCode || '',
           City: counterBoy.city || '',
           State: counterBoy.state || '',
           Scans: counterBoy.totalScans ?? 0,
@@ -603,7 +577,7 @@ export default function AllCounterBoys({ role }: AllCounterBoysProps) {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: C.bg, borderBottom: `1px solid ${C.border}` }}>
-                {['Counter Boy', 'Code', 'Dealer', 'Location', 'Scans', 'Points', 'Wallet', 'Status', 'Joined', 'Actions'].map(header => (
+                {['Counter Boy', 'Code', 'Location', 'Scans', 'Points', 'Wallet', 'Status', 'Joined', 'Actions'].map(header => (
                   <th key={header} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: 0.5, whiteSpace: 'nowrap' }}>{header}</th>
                 ))}
               </tr>
@@ -629,7 +603,6 @@ export default function AllCounterBoys({ role }: AllCounterBoysProps) {
                       </div>
                     </td>
                     <td style={{ padding: '14px 16px', fontSize: 12, color: C.muted, fontFamily: 'monospace' }}>{counterBoy.counterboyCode}</td>
-                    <td style={{ padding: '14px 16px', fontSize: 12, color: C.muted }}>{counterBoy.dealerName || '-'}</td>
                     <td style={{ padding: '14px 16px', fontSize: 12, color: C.muted }}>{[counterBoy.city, counterBoy.state].filter(Boolean).join(', ') || '-'}</td>
                     <td style={{ padding: '14px 16px', fontSize: 13, fontWeight: 700, color: '#3B82F6' }}>{(counterBoy.totalScans ?? 0).toLocaleString('en-IN')}</td>
                     <td style={{ padding: '14px 16px', fontSize: 13, fontWeight: 700, color: '#F59E0B' }}>{(counterBoy.totalPoints ?? 0).toLocaleString('en-IN')}</td>

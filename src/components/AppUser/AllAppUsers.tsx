@@ -142,7 +142,7 @@ function EditModal({ user, onClose, onSave }: { user: AppUser | null; onClose: (
     name: '',
     phone: '',
     email: '',
-    userCode: 'Auto-generated',
+    userCode: '',
     city: '',
     district: '',
     state: '',
@@ -210,7 +210,12 @@ function EditModal({ user, onClose, onSave }: { user: AppUser | null; onClose: (
           </div>
           <div>
             <label style={labelStyle}>User Code</label>
-            <input style={{ ...inputStyle, background: C.bg }} value={form.userCode ?? 'Auto-generated'} readOnly />
+            <input
+              style={inputStyle}
+              value={form.userCode ?? ''}
+              onChange={e => setField('userCode', e.target.value)}
+              placeholder="Leave blank for auto-generated"
+            />
           </div>
           <div>
             <label style={labelStyle}>City</label>
@@ -389,10 +394,17 @@ export default function AllAppUsers({ role }: AllAppUsersProps) {
 
     try {
       const isEditing = Boolean(editing);
-      if (editing) {
-        await appUserApi.update(editing.id, form);
+      const payload = { ...form };
+      const userCode = payload.userCode?.trim();
+      if (userCode) {
+        payload.userCode = userCode;
       } else {
-        await appUserApi.create(form);
+        delete payload.userCode;
+      }
+      if (editing) {
+        await appUserApi.update(editing.id, payload);
+      } else {
+        await appUserApi.create(payload);
       }
       setEditing(null);
       setShowAdd(false);
