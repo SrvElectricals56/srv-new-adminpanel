@@ -183,6 +183,8 @@ export function Redemptions() {
                 <div style={{ fontSize: 15, fontWeight: 700, color: C.text }}>{r.userName || r.userId}</div>
                 <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{r.type} · <span style={{ fontWeight: 700, color: '#92400E' }}>{r.points} pts</span> {r.amount ? `→ ₹${r.amount}` : ''}</div>
                 {r.upiId && <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>UPI: {r.upiId}</div>}
+                {r.accountHolderName && <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>Account Holder: {r.accountHolderName}</div>}
+                {r.bankAccount && <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>Bank: {r.bankAccount}{r.ifsc ? ` (${r.ifsc})` : ''}</div>}
               </div>
               <div style={{ textAlign: 'right', flexShrink: 0 }}>
                 <span style={{ background: st.bg, color: st.color, fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 20 }}>{r.status}</span>
@@ -1180,7 +1182,7 @@ export function Reports() {
 export function Settings() {
   const { C, inputStyle, labelStyle } = useSectionStyles();
   const [saved, setSaved] = useState(false);
-  const [form, setForm] = useState({ appName: 'SRV Electricals', tagline: 'Power Your Rewards', supportPhone: '+91 88376 84004', supportEmail: 'support@srvelectricals.com', whatsapp: '918837684004', maxPointsPerDay: 500, cashbackRate: 5, minRedemptionPoints: 500 });
+  const [form, setForm] = useState({ appName: 'SRV Electricals', tagline: 'Power Your Rewards', supportPhone: '+91 88376 84004', supportEmail: 'info@srvelectricals.com', whatsapp: '918837684004', maxPointsPerDay: 500, cashbackRate: 5, minRedemptionPoints: 500 });
   const f = (k: keyof typeof form, v: unknown) => setForm(p => ({ ...p, [k]: v }));
   const handleSave = async () => {
     try {
@@ -1201,7 +1203,7 @@ export function Settings() {
     ]},
     { title: '📞 Support Contact', fields: [
       { key: 'supportPhone', label: 'Support Phone', type: 'text', placeholder: '+91 88376 84004' },
-      { key: 'supportEmail', label: 'Support Email', type: 'email', placeholder: 'support@srvelectricals.com' },
+      { key: 'supportEmail', label: 'Support Email', type: 'email', placeholder: 'info@srvelectricals.com' },
       { key: 'whatsapp', label: 'WhatsApp Number', type: 'text', placeholder: '918837684004' },
     ]},
     { title: '⭐ Points & Rewards', fields: [

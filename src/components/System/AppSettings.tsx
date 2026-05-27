@@ -38,7 +38,7 @@ interface AppConfig {
 const INITIAL: AppConfig = {
   appName: 'SRV Electricals', tagline: 'Power Your Rewards', appVersion: '2.1.0', minAppVersion: '2.0.0',
   maintenanceMode: false, maintenanceMessage: 'App is under maintenance. Please try again later.',
-  supportPhone: '+91 88376 84004', supportEmail: 'support@srvelectricals.com', whatsappNumber: '918837684004',
+  supportPhone: '+91 88376 84004', supportEmail: 'info@srvelectricals.com', whatsappNumber: '918837684004',
   maxPointsPerDay: 500, minRedemptionPoints: 500, pointsExpiry: 365, cashbackRate: 5, referrerBonus: 500, refereeBonus: 250,
   minTransferPoints: 100,
   silverMin: 0, goldMin: 1001, platinumMin: 5001, diamondMin: 10001,
