@@ -127,6 +127,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [hydrateProducts]);
 
+  useEffect(() => {
+    const handleAuthExpired = () => {
+      setAuth({ isLoggedIn: false, role: 'staff', adminName: '', adminId: null });
+      setProducts([]);
+      setPointsConfig([]);
+    };
+
+    window.addEventListener('srv-auth-expired', handleAuthExpired);
+    return () => window.removeEventListener('srv-auth-expired', handleAuthExpired);
+  }, []);
+
+  useEffect(() => {
+    if (!auth.isLoggedIn) return;
+
+    const validateSession = () => {
+      authApi.profile().catch(() => removeToken());
+    };
+
+    const intervalId = window.setInterval(validateSession, 10_000);
+    window.addEventListener('focus', validateSession);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', validateSession);
+    };
+  }, [auth.isLoggedIn]);
+
   const login = async (email: string, password: string) => {
     const res = await authApi.login(email, password);
     setToken(res.accessToken);

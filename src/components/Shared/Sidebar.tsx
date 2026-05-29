@@ -94,12 +94,13 @@ const NAV_GROUPS = [
 interface SidebarProps {
   active: string;
   onNavigate: (id: string) => void;
+  onPreload?: (id: string) => void;
   onCollapseChange?: (collapsed: boolean) => void;
   role?: string;
   adminName?: string;
 }
 
-export default function Sidebar({ active, onNavigate, onCollapseChange, role, adminName }: SidebarProps) {
+export default function Sidebar({ active, onNavigate, onPreload, onCollapseChange, role, adminName }: SidebarProps) {
   const P = useThemePalette();
   const [collapsed, setCollapsed] = useState(false);
 
@@ -239,6 +240,7 @@ export default function Sidebar({ active, onNavigate, onCollapseChange, role, ad
                 <button
                   key={item.id}
                   onClick={() => onNavigate(item.id)}
+                  onFocus={() => onPreload?.(item.id)}
                   title={collapsed ? item.label : undefined}
                   style={{
                     width: '100%',
@@ -259,7 +261,7 @@ export default function Sidebar({ active, onNavigate, onCollapseChange, role, ad
                     boxShadow: isActive ? '0 4px 14px rgba(29,78,216,0.35)' : 'none',
                     whiteSpace: 'nowrap',
                   }}
-onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.07)'; }}
+onMouseEnter={e => { onPreload?.(item.id); if (!isActive) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.07)'; }}
 onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
                 >
                   <Icon size={18} style={{ flexShrink: 0 }} />

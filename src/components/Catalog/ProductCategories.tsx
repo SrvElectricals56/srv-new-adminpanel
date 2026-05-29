@@ -1,7 +1,7 @@
 ﻿'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { Tag, Plus, Pencil, Trash2, Search, ImageIcon, FileSpreadsheet, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Tag, Plus, Pencil, Trash2, Search, ImageIcon, FileSpreadsheet, ToggleLeft, ToggleRight, Upload } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { productApi, productCategoryApi } from '@/lib/api';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';

@@ -10,16 +10,22 @@ export const getToken = (): string | null =>
 export const getRefreshToken = (): string | null =>
   typeof window !== 'undefined' ? localStorage.getItem('srv_refresh_token') : null;
 
-export const setToken = (token: string) =>
+export const setToken = (token: string) => {
+  clearApiCache();
   localStorage.setItem('srv_token', token);
+};
 
 export const setRefreshToken = (token: string) =>
   localStorage.setItem('srv_refresh_token', token);
 
 export const removeToken = () => {
+  clearApiCache();
   localStorage.removeItem('srv_token');
   localStorage.removeItem('srv_refresh_token');
   localStorage.removeItem('srv_admin');
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('srv-auth-expired'));
+  }
 };
 
 export const getStoredAdmin = () => {
@@ -32,6 +38,38 @@ export const setStoredAdmin = (admin: object) =>
   localStorage.setItem('srv_admin', JSON.stringify(admin));
 
 let refreshPromise: Promise<string | null> | null = null;
+
+type CacheEntry = {
+  expiresAt: number;
+  value: unknown;
+};
+
+const GET_CACHE_TTL_MS = 45_000;
+const responseCache = new Map<string, CacheEntry>();
+const inflightRequests = new Map<string, Promise<unknown>>();
+
+export const clearApiCache = (pathPrefix?: string) => {
+  if (!pathPrefix) {
+    responseCache.clear();
+    inflightRequests.clear();
+    return;
+  }
+
+  for (const key of responseCache.keys()) {
+    if (key.includes(` ${pathPrefix}`)) responseCache.delete(key);
+  }
+  for (const key of inflightRequests.keys()) {
+    if (key.includes(` ${pathPrefix}`)) inflightRequests.delete(key);
+  }
+};
+
+function getRequestCacheKey(path: string, token: string | null) {
+  return `GET ${path} ${token ? token.slice(0, 24) : 'public'}`;
+}
+
+function shouldCacheGet(path: string) {
+  return path !== '/auth/profile';
+}
 
 async function refreshAccessToken(): Promise<string | null> {
   const refreshToken = getRefreshToken();
@@ -80,38 +118,71 @@ async function request<T>(
   retried = false
 ): Promise<T> {
   const token = getToken();
+  const method = String(options.method ?? 'GET').toUpperCase();
+  const cacheKey = method === 'GET' ? getRequestCacheKey(path, token) : '';
+
+  if (method === 'GET' && shouldCacheGet(path)) {
+    const cached = responseCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.value as T;
+    }
+
+    const inflight = inflightRequests.get(cacheKey);
+    if (inflight) {
+      return inflight as Promise<T>;
+    }
+  }
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string>),
   };
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+  const run = (async () => {
+    const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
 
-  if (res.status === 401 && !retried && path !== '/auth/login' && path !== '/auth/refresh') {
-    const nextToken = await refreshAccessToken();
-    if (nextToken) {
-      return request<T>(path, options, true);
+    if (res.status === 401 && !retried && path !== '/auth/login' && path !== '/auth/refresh') {
+      const nextToken = await refreshAccessToken();
+      if (nextToken) {
+        return request<T>(path, options, true);
+      }
     }
+
+    if (!res.ok) {
+      const rawText = await res.text().catch(() => '');
+      let message = res.statusText;
+      try {
+        const parsed = rawText ? JSON.parse(rawText) : null;
+        if (parsed?.message) message = parsed.message;
+      } catch {
+        if (rawText) message = rawText;
+      }
+      throw new Error(`[${res.status}] ${message || 'Request failed'}`);
+    }
+
+    if (res.status === 204) return undefined as T;
+    const text = await res.text();
+    const data = text ? JSON.parse(text) as T : undefined as T;
+
+    if (method === 'GET' && shouldCacheGet(path)) {
+      responseCache.set(cacheKey, {
+        expiresAt: Date.now() + GET_CACHE_TTL_MS,
+        value: data,
+      });
+    } else if (method !== 'GET') {
+      clearApiCache();
+    }
+
+    return data;
+  })();
+
+  if (method === 'GET' && shouldCacheGet(path)) {
+    inflightRequests.set(cacheKey, run);
+    run.finally(() => inflightRequests.delete(cacheKey)).catch(() => undefined);
   }
 
-  if (!res.ok) {
-    const rawText = await res.text().catch(() => '');
-    let message = res.statusText;
-    try {
-      const parsed = rawText ? JSON.parse(rawText) : null;
-      if (parsed?.message) message = parsed.message;
-    } catch {
-      if (rawText) message = rawText;
-    }
-    throw new Error(`[${res.status}] ${message || 'Request failed'}`);
-  }
-
-  // 204 No Content — or any response with empty body
-  if (res.status === 204) return undefined as T;
-  const text = await res.text();
-  if (!text) return undefined as T;
-  return JSON.parse(text) as T;
+  return run;
 }
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────

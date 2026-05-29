@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { ShoppingCart, Trash2, Package, Search } from 'lucide-react';
+import { ShoppingCart, Trash2, Package, Search, FileSpreadsheet } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import ExportModal from '@/components/Shared/ExportModal';
 

@@ -1,5 +1,5 @@
 'use client';
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useEffect, useState, useTransition } from 'react';
 import Image from 'next/image';
 import { Search, Bell, LayoutDashboard, Activity, Zap, Store, Package, Star, ScanLine, Gift, Tag, BarChart2, Shield, Smartphone, UserCheck, Users, LogOut, FileSpreadsheet, Sun, Moon, QrCode, ArrowLeftRight, Percent, Image as ImageIcon, MessageSquare, FileText, ClipboardList, Play } from 'lucide-react';
 import { useTheme, useThemePalette } from '@/lib/theme';
@@ -41,6 +41,62 @@ const PointsConfig       = lazy(() => import('@/components/System/Sections').the
 const Reports            = lazy(() => import('@/components/System/Sections').then(m => ({ default: m.Reports })));
 const ScanHistory        = lazy(() => import('@/components/System/Sections').then(m => ({ default: m.ScanHistory })));
 const Redemptions        = lazy(() => import('@/components/System/Sections').then(m => ({ default: m.Redemptions })));
+
+const preloadPageChunk = (id: string) => {
+  switch (id) {
+    case 'dashboard': return import('@/components/Overview/Dashboard');
+    case 'pro-active-inactive': return import('@/components/Overview/ProActiveInactiveHub');
+    case 'electricians': return import('@/components/Electrician/ElectricianHub');
+    case 'dealers': return import('@/components/Dealer/DealerHub');
+    case 'app-users': return import('@/components/AppUser/AppUserHub');
+    case 'counterboys': return import('@/components/CounterBoy/CounterBoyHub');
+    case 'products': return import('@/components/Catalog/Products');
+    case 'product-categories': return import('@/components/Catalog/ProductCategories');
+    case 'qr-hub': return import('@/components/QRManagement/QRHub');
+    case 'qr-codes': return import('@/components/QRManagement/QRCodes');
+    case 'qr-generator': return import('@/components/QRManagement/QRCodeGenerator');
+    case 'gift-products': return import('@/components/GiftManagement/GiftProducts');
+    case 'gift-orders': return import('@/components/GiftManagement/GiftOrders');
+    case 'notifications': return import('@/components/Engagement/Notifications');
+    case 'banners': return import('@/components/Content/Banners');
+    case 'transfer-points': return import('@/components/Financial/TransferPoints');
+    case 'commissions': return import('@/components/Financial/DealerBonus');
+    case 'referrals': return import('@/components/Engagement/Referrals');
+    case 'testimonials': return import('@/components/Content/Testimonials');
+    case 'privacy-policy': return import('@/components/Content/PrivacyPolicy');
+    case 'upload-plays': return import('@/components/Content/UploadPlays');
+    case 'enquiry-support': return import('@/components/Support/EnquirySupport');
+    case 'admin-settings': return import('@/components/System/AdminSettings');
+    case 'app-settings': return import('@/components/System/AppSettings');
+    case 'app-page-controls': return import('@/components/System/AppPageControls');
+    case 'app-icons': return import('@/components/System/AppIcons');
+    case 'points-config': return import('@/components/System/Sections');
+    case 'reports': return import('@/components/System/Sections');
+    case 'scans': return import('@/components/System/Sections');
+    case 'redemptions': return import('@/components/System/Sections');
+    default: return Promise.resolve();
+  }
+};
+
+const DEFAULT_PRELOAD_PAGES = [
+  'dashboard',
+  'electricians',
+  'dealers',
+  'app-users',
+  'counterboys',
+  'products',
+  'qr-hub',
+  'qr-codes',
+  'qr-generator',
+  'gift-products',
+  'gift-orders',
+  'transfer-points',
+  'notifications',
+  'reports',
+];
+
+const SESSION_TIMEOUT_MS = 20 * 60 * 1000;
+const SESSION_ACTIVITY_KEY = 'srv_admin_last_activity';
 
 // ── Skeleton shown while a chunk is downloading ────────────────────────────────
 function PageSkeleton() {
@@ -115,6 +171,7 @@ export default function Home() {
   const { mode, toggleTheme } = useTheme();
   const P = useThemePalette();
   const { auth, logout, products, pointsConfig } = useAppContext();
+  const [, startTransition] = useTransition();
   const [active, setActive] = useState('dashboard');
   const [electricianSubPage, setElectricianSubPage] = useState<string | undefined>(undefined);
   const [dealerSubPage, setDealerSubPage] = useState<string | undefined>(undefined);
@@ -132,6 +189,85 @@ export default function Home() {
   const loggedIn = auth.isLoggedIn;
   const role = auth.role;
   const adminName = auth.adminName;
+
+  useEffect(() => {
+    if (!loggedIn) return;
+
+    let cancelled = false;
+    const preload = () => {
+      if (cancelled) return;
+      DEFAULT_PRELOAD_PAGES.forEach(pageId => {
+        void preloadPageChunk(pageId);
+      });
+    };
+
+    const idleWindow = window as Window & {
+      requestIdleCallback?: (callback: IdleRequestCallback) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    };
+    const idleId = idleWindow.requestIdleCallback
+      ? idleWindow.requestIdleCallback(preload)
+      : window.setTimeout(preload, 600);
+
+    return () => {
+      cancelled = true;
+      if (idleWindow.cancelIdleCallback && typeof idleId === 'number') {
+        idleWindow.cancelIdleCallback(idleId);
+      } else {
+        window.clearTimeout(idleId);
+      }
+    };
+  }, [loggedIn]);
+
+  useEffect(() => {
+    if (!loggedIn) return;
+
+    let timeoutId = 0;
+    let lastActivityWrite = 0;
+    const markActivity = () => {
+      const now = Date.now();
+      if (now - lastActivityWrite > 5_000) {
+        localStorage.setItem(SESSION_ACTIVITY_KEY, String(now));
+        lastActivityWrite = now;
+      }
+      window.clearTimeout(timeoutId);
+      timeoutId = window.setTimeout(() => {
+        logout();
+        setActive('dashboard');
+      }, SESSION_TIMEOUT_MS);
+    };
+
+    const checkSession = () => {
+      const lastActivity = Number(localStorage.getItem(SESSION_ACTIVITY_KEY) || Date.now());
+      if (Date.now() - lastActivity >= SESSION_TIMEOUT_MS) {
+        logout();
+        setActive('dashboard');
+      }
+    };
+
+    const activityEvents: Array<keyof WindowEventMap> = [
+      'click',
+      'keydown',
+      'mousemove',
+      'scroll',
+      'touchstart',
+      'focus',
+    ];
+
+    markActivity();
+    const intervalId = window.setInterval(checkSession, 30_000);
+    activityEvents.forEach(eventName => {
+      window.addEventListener(eventName, markActivity, { passive: true });
+    });
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      window.clearInterval(intervalId);
+      activityEvents.forEach(eventName => {
+        window.removeEventListener(eventName, markActivity);
+      });
+    };
+  }, [loggedIn, logout]);
 
   const handleLogin = (r: AdminRole, name?: string) => {
     // auth state is already set by appContext.login() — nothing extra needed
@@ -152,28 +288,31 @@ export default function Home() {
   };
 
   const handleNavigate = (id: string, subPage?: string) => {
-    setActive(id);
-    if (id === 'electricians' && subPage) {
-      setElectricianSubPage(subPage);
-    } else if (id === 'electricians') {
-      setElectricianSubPage(undefined);
-    }
-    if (id === 'dealers' && subPage) {
-      setDealerSubPage(subPage);
-    } else if (id === 'dealers') {
-      setDealerSubPage(undefined);
-    }
-    if (id === 'app-users' && subPage) {
-      setAppUserSubPage(subPage);
-    } else if (id === 'app-users') {
-      setAppUserSubPage(undefined);
-    }
-    if (id === 'counterboys' && subPage) {
-      setCounterBoySubPage(subPage);
-    } else if (id === 'counterboys') {
-      setCounterBoySubPage(undefined);
-    }
-    setGlobalSearch('');
+    void preloadPageChunk(id);
+    startTransition(() => {
+      setActive(id);
+      if (id === 'electricians' && subPage) {
+        setElectricianSubPage(subPage);
+      } else if (id === 'electricians') {
+        setElectricianSubPage(undefined);
+      }
+      if (id === 'dealers' && subPage) {
+        setDealerSubPage(subPage);
+      } else if (id === 'dealers') {
+        setDealerSubPage(undefined);
+      }
+      if (id === 'app-users' && subPage) {
+        setAppUserSubPage(subPage);
+      } else if (id === 'app-users') {
+        setAppUserSubPage(undefined);
+      }
+      if (id === 'counterboys' && subPage) {
+        setCounterBoySubPage(subPage);
+      } else if (id === 'counterboys') {
+        setCounterBoySubPage(undefined);
+      }
+      setGlobalSearch('');
+    });
   };
 
   const handleGlobalSearch = (query: string) => {
@@ -834,7 +973,7 @@ export default function Home() {
         </div>
       )}
 
-      <Sidebar active={active} onNavigate={handleNavigate} onCollapseChange={setSidebarCollapsed} role={role} adminName={adminName} />
+      <Sidebar active={active} onNavigate={handleNavigate} onPreload={(id) => { void preloadPageChunk(id); }} onCollapseChange={setSidebarCollapsed} role={role} adminName={adminName} />
       <div style={{ 
         marginLeft: sidebarCollapsed ? 72 : 260, 
         flex: 1, 
@@ -1005,7 +1144,7 @@ export default function Home() {
 
         {/* Page content */}
         <div key={active} style={{ flex: 1, animation: 'fadeInUp 0.3s ease' }}>
-          <Suspense fallback={<PageSkeleton />}>
+          <Suspense fallback={null}>
             {renderPage()}
           </Suspense>
         </div>

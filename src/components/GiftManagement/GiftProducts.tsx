@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
-import { Gift, Plus, Trash2, FileSpreadsheet, ImageIcon, Zap, Store, SlidersHorizontal, Search, Pencil, User, Package } from 'lucide-react';
+import { Gift, Plus, Trash2, FileSpreadsheet, ImageIcon, Zap, Store, SlidersHorizontal, Search, Pencil, User, Package, Upload } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { giftApi } from '@/lib/api';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
