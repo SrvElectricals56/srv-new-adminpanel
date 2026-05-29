@@ -1,40 +1,74 @@
 'use client';
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import Image from 'next/image';
 import { Search, Bell, LayoutDashboard, Activity, Zap, Store, Package, Star, ScanLine, Gift, Tag, BarChart2, Shield, Smartphone, UserCheck, Users, LogOut, FileSpreadsheet, Sun, Moon, QrCode, ArrowLeftRight, Percent, Image as ImageIcon, MessageSquare, FileText, ClipboardList, Play } from 'lucide-react';
 import { useTheme, useThemePalette } from '@/lib/theme';
 import Sidebar from '@/components/Shared/Sidebar';
-import Dashboard from '@/components/Overview/Dashboard';
-import ProActiveInactiveHub from '@/components/Overview/ProActiveInactiveHub';
-import ElectricianHub from '@/components/Electrician/ElectricianHub';
-import DealerHub from '@/components/Dealer/DealerHub';
-import Products from '@/components/Catalog/Products';
-import ProductCategories from '@/components/Catalog/ProductCategories';
-import QRCodes from '@/components/QRManagement/QRCodes';
-import QRCodeGenerator from '@/components/QRManagement/QRCodeGenerator';
-import GiftProducts from '@/components/GiftManagement/GiftProducts';
-import GiftOrders from '@/components/GiftManagement/GiftOrders';
-import NotificationsPage from '@/components/Engagement/Notifications';
-import Banners from '@/components/Content/Banners';
-import TransferPoints from '@/components/Financial/TransferPoints';
-import Commissions from '@/components/Financial/DealerBonus';
-import Referrals from '@/components/Engagement/Referrals';
-import Testimonials from '@/components/Content/Testimonials';
-import PrivacyPolicy from '@/components/Content/PrivacyPolicy';
-import UploadPlays from '@/components/Content/UploadPlays';
-import EnquirySupport from '@/components/Support/EnquirySupport';
 import Login from '@/components/Shared/Login';
-import { PointsConfig, Reports, ScanHistory, Redemptions } from '@/components/System/Sections';
-import AdminSettings from '@/components/System/AdminSettings';
-import AppSettings from '@/components/System/AppSettings';
-import AppPageControls from '@/components/System/AppPageControls';
-import AppIcons from '@/components/System/AppIcons';
-import AppUserHub from '@/components/AppUser/AppUserHub';
-import CounterBoyHub from '@/components/CounterBoy/CounterBoyHub';
-import { exportRowsToExcel } from '@/lib/excel';
 import { useAppContext } from '@/lib/appContext';
-
 import type { AdminRole } from '@/lib/types';
+
+// ── Lazy-loaded page chunks ────────────────────────────────────────────────────
+// Each component is split into its own JS chunk and only downloaded when first visited.
+const Dashboard          = lazy(() => import('@/components/Overview/Dashboard'));
+const ProActiveInactiveHub = lazy(() => import('@/components/Overview/ProActiveInactiveHub'));
+const ElectricianHub     = lazy(() => import('@/components/Electrician/ElectricianHub'));
+const DealerHub          = lazy(() => import('@/components/Dealer/DealerHub'));
+const AppUserHub         = lazy(() => import('@/components/AppUser/AppUserHub'));
+const CounterBoyHub      = lazy(() => import('@/components/CounterBoy/CounterBoyHub'));
+const Products           = lazy(() => import('@/components/Catalog/Products'));
+const ProductCategories  = lazy(() => import('@/components/Catalog/ProductCategories'));
+const QRCodes            = lazy(() => import('@/components/QRManagement/QRCodes'));
+const QRCodeGenerator    = lazy(() => import('@/components/QRManagement/QRCodeGenerator'));
+const GiftProducts       = lazy(() => import('@/components/GiftManagement/GiftProducts'));
+const GiftOrders         = lazy(() => import('@/components/GiftManagement/GiftOrders'));
+const NotificationsPage  = lazy(() => import('@/components/Engagement/Notifications'));
+const Banners            = lazy(() => import('@/components/Content/Banners'));
+const TransferPoints     = lazy(() => import('@/components/Financial/TransferPoints'));
+const Commissions        = lazy(() => import('@/components/Financial/DealerBonus'));
+const Referrals          = lazy(() => import('@/components/Engagement/Referrals'));
+const Testimonials       = lazy(() => import('@/components/Content/Testimonials'));
+const PrivacyPolicy      = lazy(() => import('@/components/Content/PrivacyPolicy'));
+const UploadPlays        = lazy(() => import('@/components/Content/UploadPlays'));
+const EnquirySupport     = lazy(() => import('@/components/Support/EnquirySupport'));
+const AdminSettings      = lazy(() => import('@/components/System/AdminSettings'));
+const AppSettings        = lazy(() => import('@/components/System/AppSettings'));
+const AppPageControls    = lazy(() => import('@/components/System/AppPageControls'));
+const AppIcons           = lazy(() => import('@/components/System/AppIcons'));
+// Sections exports multiple named exports — wrap each individually
+const PointsConfig       = lazy(() => import('@/components/System/Sections').then(m => ({ default: m.PointsConfig })));
+const Reports            = lazy(() => import('@/components/System/Sections').then(m => ({ default: m.Reports })));
+const ScanHistory        = lazy(() => import('@/components/System/Sections').then(m => ({ default: m.ScanHistory })));
+const Redemptions        = lazy(() => import('@/components/System/Sections').then(m => ({ default: m.Redemptions })));
+
+// ── Skeleton shown while a chunk is downloading ────────────────────────────────
+function PageSkeleton() {
+  return (
+    <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Header bar */}
+      <div style={{ height: 36, width: '35%', borderRadius: 10, background: 'linear-gradient(90deg,#e2e8f0 25%,#f1f5f9 50%,#e2e8f0 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite' }} />
+      {/* Stat cards row */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14 }}>
+        {[1,2,3,4].map(i => (
+          <div key={i} style={{ height: 90, borderRadius: 16, background: 'linear-gradient(90deg,#e2e8f0 25%,#f1f5f9 50%,#e2e8f0 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite' }} />
+        ))}
+      </div>
+      {/* Table skeleton */}
+      <div style={{ borderRadius: 16, overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+        <div style={{ height: 44, background: 'linear-gradient(90deg,#e2e8f0 25%,#f1f5f9 50%,#e2e8f0 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite' }} />
+        {[1,2,3,4,5,6].map(i => (
+          <div key={i} style={{ height: 52, borderTop: '1px solid #e2e8f0', background: i % 2 === 0 ? '#f8fafc' : 'white', display: 'flex', alignItems: 'center', padding: '0 16px', gap: 12 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(90deg,#e2e8f0 25%,#f1f5f9 50%,#e2e8f0 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite', flexShrink: 0 }} />
+            <div style={{ flex: 1, height: 14, borderRadius: 6, background: 'linear-gradient(90deg,#e2e8f0 25%,#f1f5f9 50%,#e2e8f0 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite' }} />
+            <div style={{ width: '15%', height: 14, borderRadius: 6, background: 'linear-gradient(90deg,#e2e8f0 25%,#f1f5f9 50%,#e2e8f0 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite' }} />
+            <div style={{ width: '10%', height: 14, borderRadius: 6, background: 'linear-gradient(90deg,#e2e8f0 25%,#f1f5f9 50%,#e2e8f0 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite' }} />
+          </div>
+        ))}
+      </div>
+      <style>{`@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
+    </div>
+  );
+}
 
 
 const ROLE_CONFIG: Record<AdminRole, { label: string; Icon: React.ElementType; color: string }> = {
@@ -967,7 +1001,9 @@ export default function Home() {
 
         {/* Page content */}
         <div key={active} style={{ flex: 1, animation: 'fadeInUp 0.3s ease' }}>
-          {renderPage()}
+          <Suspense fallback={<PageSkeleton />}>
+            {renderPage()}
+          </Suspense>
         </div>
       </div>
 

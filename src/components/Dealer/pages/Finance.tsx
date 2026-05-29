@@ -70,6 +70,7 @@ export default function DealerFinance() {
           exportFileName="dealer-wallet-history"
           fetchUserMeta={fetchUserMeta}
           showHeader={false}
+          showScanTab={false}
         />
       ) : (
         <RoleRedemptionRequestsPage

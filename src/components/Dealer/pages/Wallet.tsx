@@ -28,6 +28,7 @@ export default function WalletHistory() {
       exportTitle="Dealer Wallet"
       exportFileName="dealer-wallet"
       fetchUserMeta={fetchUserMeta}
+      showScanTab={false}
     />
   );
 }

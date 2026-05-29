@@ -69,6 +69,7 @@ export default function UserFinance() {
           exportFileName="user-finance-wallet"
           fetchUserMeta={fetchUserMeta}
           showHeader={false}
+          showScanTab={true}
         />
       ) : (
         <RoleRedemptionRequestsPage

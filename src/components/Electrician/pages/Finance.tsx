@@ -70,6 +70,7 @@ export default function ElectricianFinance() {
           exportFileName="electrician-finance-wallet"
           fetchUserMeta={fetchUserMeta}
           showHeader={false}
+          showScanTab={true}
         />
       ) : (
         <RoleRedemptionRequestsPage

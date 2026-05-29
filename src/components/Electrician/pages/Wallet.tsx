@@ -28,6 +28,7 @@ export default function ElectricianWallet() {
       exportTitle="Electrician Wallet"
       exportFileName="electrician-wallet"
       fetchUserMeta={fetchUserMeta}
+      showScanTab={true}
     />
   );
 }

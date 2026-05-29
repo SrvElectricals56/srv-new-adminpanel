@@ -28,6 +28,7 @@ export default function UserWallet() {
       exportTitle="User Wallet"
       exportFileName="user-wallet"
       fetchUserMeta={fetchUserMeta}
+      showScanTab={true}
     />
   );
 }

@@ -69,6 +69,7 @@ export default function CounterBoyFinance() {
           exportFileName="counterboy-finance-wallet"
           fetchUserMeta={fetchUserMeta}
           showHeader={false}
+          showScanTab={true}
         />
       ) : (
         <RoleRedemptionRequestsPage
