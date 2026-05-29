@@ -317,6 +317,10 @@ export default function AllAppUsers({ role }: AllAppUsersProps) {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [stateFilter, setStateFilter] = useState('');
+  const [cityFilter, setCityFilter] = useState('');
+  const [allStates, setAllStates] = useState<string[]>([]);
+  const [allCities, setAllCities] = useState<string[]>([]);
   const [stats, setStats] = useState({ total: 0, active: 0, pending: 0, inactive: 0 });
   const [showExport, setShowExport] = useState(false);
   const [showImport, setShowImport] = useState(false);
@@ -332,6 +336,7 @@ export default function AllAppUsers({ role }: AllAppUsersProps) {
   const canExport = permissions.canExportFromModule('app_users');
   const canCreate = permissions.canCreateInModule('app_users');
   const LIMIT = 20;
+  const sanitizeOptions = (values: string[]) => Array.from(new Set(values.map(value => value.trim()).filter(value => value && value !== '?'))).sort((a, b) => a.localeCompare(b));
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -339,15 +344,29 @@ export default function AllAppUsers({ role }: AllAppUsersProps) {
       const params: Record<string, string> = { page: String(page), limit: String(LIMIT) };
       if (search) params.search = search;
       if (statusFilter) params.status = statusFilter;
-      const res = await appUserApi.getAll(params);
+      if (stateFilter) params.state = stateFilter;
+      if (cityFilter) params.city = cityFilter;
+      const [res, statesRes, citiesRes] = await Promise.all([
+        appUserApi.getAll(params),
+        appUserApi.getDistinctStates(),
+        appUserApi.getDistinctCities(stateFilter ? { state: stateFilter } : undefined),
+      ]);
       setUsers(res.data ?? []);
       setTotal(res.total ?? 0);
+      setAllStates(sanitizeOptions(statesRes.states ?? []));
+      setAllCities(sanitizeOptions(citiesRes.cities ?? []));
     } catch {
       setAlert({ show: true, type: 'error', title: 'Error', message: 'Failed to load customers' });
     } finally {
       setLoading(false);
     }
-  }, [page, search, statusFilter]);
+  }, [cityFilter, page, search, stateFilter, statusFilter]);
+
+  useEffect(() => {
+    if (cityFilter && !allCities.includes(cityFilter)) {
+      setCityFilter('');
+    }
+  }, [allCities, cityFilter]);
 
   const loadStats = useCallback(async () => {
     try {
@@ -552,6 +571,34 @@ export default function AllAppUsers({ role }: AllAppUsersProps) {
           <option value="inactive">Inactive</option>
           <option value="suspended">Suspended</option>
         </select>
+        <select
+          value={stateFilter}
+          onChange={e => { setStateFilter(e.target.value); setCityFilter(''); setPage(1); }}
+          style={{ padding: '9px 12px', borderRadius: 10, border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: 13, cursor: 'pointer' }}
+        >
+          <option value="">All States</option>
+          {allStates.map((state) => (
+            <option key={state} value={state}>{state}</option>
+          ))}
+        </select>
+        <select
+          value={cityFilter}
+          onChange={e => { setCityFilter(e.target.value); setPage(1); }}
+          style={{ padding: '9px 12px', borderRadius: 10, border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: 13, cursor: 'pointer' }}
+        >
+          <option value="">All Cities</option>
+          {allCities.map((city) => (
+            <option key={city} value={city}>{city}</option>
+          ))}
+        </select>
+        {(statusFilter || stateFilter || cityFilter) && (
+          <button
+            onClick={() => { setStatusFilter(''); setStateFilter(''); setCityFilter(''); setPage(1); }}
+            style={{ padding: '9px 14px', borderRadius: 10, border: `1px solid ${C.red}`, background: '#FFF0F0', color: C.red, cursor: 'pointer', fontSize: 13, fontWeight: 700 }}
+          >
+            Clear Filters
+          </button>
+        )}
         <button onClick={() => load()} style={{ padding: '9px 16px', borderRadius: 10, border: `1px solid ${C.border}`, background: C.bg, color: C.muted, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
           <RefreshCw size={14} /> Refresh
         </button>

@@ -340,6 +340,7 @@ export default function Electricians({ role }: ElectriciansProps) {
   const [filterTier, setFilterTier] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterState, setFilterState] = useState('all');
+  const [filterCity, setFilterCity] = useState('all');
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterBank, setFilterBank] = useState('all');
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'week' | 'month' | 'custom'>('all');
@@ -348,7 +349,9 @@ export default function Electricians({ role }: ElectriciansProps) {
   // ── Tier counts (fetched separately for accurate totals across all pages) ──
   const [tierCounts, setTierCounts] = useState<{ Silver: number; Gold: number; Platinum: number; Diamond: number }>({ Silver: 0, Gold: 0, Platinum: 0, Diamond: 0 });
   const [allStates, setAllStates] = useState<string[]>([]);
+  const [allCities, setAllCities] = useState<string[]>([]);
   const [allCategories, setAllCategories] = useState<string[]>([]);
+  const sanitizeOptions = (values: string[]) => Array.from(new Set(values.map(value => value.trim()).filter(value => value && value !== '?'))).sort((a, b) => a.localeCompare(b));
 
   const loadTierCounts = async () => {
     try {
@@ -358,12 +361,22 @@ export default function Electricians({ role }: ElectriciansProps) {
         electricianApi.getDistinctCategories(),
       ]);
       setTierCounts(counts);
-      setAllStates(statesRes.states ?? []);
-      setAllCategories(catsRes.categories ?? []);
+      setAllStates(sanitizeOptions(statesRes.states ?? []));
+      setAllCategories(sanitizeOptions(catsRes.categories ?? []));
     } catch (err) {
       console.error('Failed to load tier counts:', err);
     }
   };
+
+  const loadCities = useCallback(async (state: string) => {
+    try {
+      const citiesRes = await electricianApi.getDistinctCities(state !== 'all' ? { state } : undefined);
+      setAllCities(sanitizeOptions(citiesRes.cities ?? []));
+    } catch (err) {
+      console.error('Failed to load electrician cities:', err);
+      setAllCities([]);
+    }
+  }, []);
 
   const loadData = useCallback(async (page: number) => {
     try {
@@ -376,6 +389,7 @@ export default function Electricians({ role }: ElectriciansProps) {
       if (filterTier !== 'all') params.tier = filterTier;
       if (filterStatus !== 'all') params.status = filterStatus;
       if (filterState !== 'all') params.state = filterState;
+      if (filterCity !== 'all') params.city = filterCity;
       if (filterCategory !== 'all') params.subCategory = filterCategory;
       if (filterBank !== 'all') params.bankLinked = filterBank === 'linked' ? 'true' : 'false';
 
@@ -426,16 +440,26 @@ export default function Electricians({ role }: ElectriciansProps) {
     } finally {
       setLoading(false);
     }
-  }, [search, filterTier, filterStatus, filterState, filterCategory, filterBank, dateFilter, customDateRange]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [search, filterTier, filterStatus, filterState, filterCity, filterCategory, filterBank, dateFilter, customDateRange]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Re-fetch from page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
     loadData(1);
-  }, [search, filterTier, filterStatus, filterState, filterCategory, filterBank, dateFilter, customDateRange]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [search, filterTier, filterStatus, filterState, filterCity, filterCategory, filterBank, dateFilter, customDateRange]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Initial load
   useEffect(() => { loadData(1); loadTierCounts(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    void loadCities(filterState);
+  }, [filterState, loadCities]);
+
+  useEffect(() => {
+    if (filterCity !== 'all' && !allCities.includes(filterCity)) {
+      setFilterCity('all');
+    }
+  }, [allCities, filterCity]);
 
   // Auto-refresh when tab becomes visible (no interval — avoids glitch/lag)
   useEffect(() => {
@@ -465,8 +489,9 @@ export default function Electricians({ role }: ElectriciansProps) {
   
   const inputStyle: React.CSSProperties = { width: '100%', padding: '9px 12px', border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 13.5, outline: 'none', background: C.surface, color: C.text, boxSizing: 'border-box' };
 
-  const uniqueStates = ['all', ...allStates];
-  const uniqueCategories = ['all', ...allCategories];
+  const uniqueStates = ['all', ...sanitizeOptions(allStates)];
+  const uniqueCities = ['all', ...sanitizeOptions(allCities)];
+  const uniqueCategories = ['all', ...sanitizeOptions(allCategories)];
 
   const filtered = data; // Server-side pagination handles filtering
 
@@ -652,8 +677,8 @@ export default function Electricians({ role }: ElectriciansProps) {
         )}
 
         {/* Active filter count badge */}
-        {(filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCategory !== 'all' || filterBank !== 'all' || dateFilter !== 'all') && (
-          <button onClick={() => { setFilterTier('all'); setFilterStatus('all'); setFilterState('all'); setFilterCategory('all'); setFilterBank('all'); setDateFilter('all'); setCustomDateRange({ from: '', to: '' }); }}
+        {(filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all' || dateFilter !== 'all') && (
+          <button onClick={() => { setFilterTier('all'); setFilterStatus('all'); setFilterState('all'); setFilterCity('all'); setFilterCategory('all'); setFilterBank('all'); setDateFilter('all'); setCustomDateRange({ from: '', to: '' }); }}
             style={{ padding: '8px 12px', borderRadius: 8, border: `1px solid ${C.red}`, background: '#FFF0F0', color: C.red, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4 }}>
             ✕ Clear Filters
           </button>
@@ -664,16 +689,16 @@ export default function Electricians({ role }: ElectriciansProps) {
           <button
             onClick={() => setShowFilterPopup(p => !p)}
             style={{
-              width: 38, height: 38, borderRadius: 10, border: `1.5px solid ${showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCategory !== 'all' || filterBank !== 'all') ? C.red : C.border}`,
-              background: showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCategory !== 'all' || filterBank !== 'all') ? '#FFF0F0' : C.card,
-              color: showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCategory !== 'all' || filterBank !== 'all') ? C.red : C.muted,
+              width: 38, height: 38, borderRadius: 10, border: `1.5px solid ${showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all') ? C.red : C.border}`,
+              background: showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all') ? '#FFF0F0' : C.card,
+              color: showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all') ? C.red : C.muted,
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative',
             }}
           >
             <SlidersHorizontal size={17} />
-            {(filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCategory !== 'all' || filterBank !== 'all') && (
+            {(filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all') && (
               <span style={{ position: 'absolute', top: -5, right: -5, width: 16, height: 16, borderRadius: '50%', background: C.red, color: 'white', fontSize: 9, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {[filterTier, filterStatus, filterState, filterCategory, filterBank].filter(f => f !== 'all').length}
+                {[filterTier, filterStatus, filterState, filterCity, filterCategory, filterBank].filter(f => f !== 'all').length}
               </span>
             )}
           </button>
@@ -701,6 +726,7 @@ export default function Electricians({ role }: ElectriciansProps) {
                     { label: 'Tier', value: filterTier, set: setFilterTier, options: [['all','All Tiers'],['Silver','🥈 Silver'],['Gold','🥇 Gold'],['Platinum','🏆 Platinum'],['Diamond','💎 Diamond']] },
                     { label: 'Status', value: filterStatus, set: setFilterStatus, options: [['all','All Status'],['active','✅ Active'],['pending','⏳ Pending'],['inactive','❌ Inactive']] },
                     { label: 'State', value: filterState, set: setFilterState, options: [['all','All States'], ...uniqueStates.filter(s => s !== 'all').map(s => [s, s])] },
+                    { label: 'City', value: filterCity, set: setFilterCity, options: [['all','All Cities'], ...uniqueCities.filter(c => c !== 'all').map(c => [c, c])] },
                     { label: 'Category', value: filterCategory, set: setFilterCategory, options: [['all','All Categories'], ...uniqueCategories.filter(c => c !== 'all').map(c => [c, c])] },
                     { label: 'Bank Account', value: filterBank, set: setFilterBank, options: [['all','All'],['linked','🏦 Linked'],['not_linked','❌ Not Linked']] },
                   ].map(f => (
@@ -715,7 +741,7 @@ export default function Electricians({ role }: ElectriciansProps) {
                 </div>
                 {/* Footer */}
                 <div style={{ padding: '16px 24px', borderTop: `1px solid ${C.border}`, display: 'flex', gap: 10 }}>
-                  <button onClick={() => { setFilterTier('all'); setFilterStatus('all'); setFilterState('all'); setFilterCategory('all'); setFilterBank('all'); setDateFilter('all'); setCustomDateRange({ from: '', to: '' }); }}
+                  <button onClick={() => { setFilterTier('all'); setFilterStatus('all'); setFilterState('all'); setFilterCity('all'); setFilterCategory('all'); setFilterBank('all'); setDateFilter('all'); setCustomDateRange({ from: '', to: '' }); }}
                     style={{ flex: 1, padding: '10px', borderRadius: 10, border: `1px solid ${C.border}`, background: C.bg, color: C.muted, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                     Reset All
                   </button>

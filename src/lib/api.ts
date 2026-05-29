@@ -158,6 +158,10 @@ export const electricianApi = {
   },
   getDistinctStates: () =>
     request<{ states: string[] }>('/electricians/distinct-states'),
+  getDistinctCities: (params?: Record<string, string>) => {
+    const q = params ? '?' + new URLSearchParams(params).toString() : '';
+    return request<{ cities: string[] }>(`/electricians/distinct-cities${q}`);
+  },
   getDistinctCategories: () =>
     request<{ categories: string[] }>('/electricians/distinct-categories'),
   getOne: (id: string) => request<any>(`/electricians/${id}`),
@@ -186,6 +190,10 @@ export const dealerApi = {
   },
   getDistinctStates: () =>
     request<{ states: string[] }>('/dealers/distinct-states'),
+  getDistinctCities: (params?: Record<string, string>) => {
+    const q = params ? '?' + new URLSearchParams(params).toString() : '';
+    return request<{ cities: string[] }>(`/dealers/distinct-cities${q}`);
+  },
   getOne: (id: string) => request<any>(`/dealers/${id}`),
   create: (body: object) => request<any>('/dealers', { method: 'POST', body: JSON.stringify(body) }),
   update: (id: string, body: object) => request<any>(`/dealers/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
@@ -440,6 +448,12 @@ export const appUserApi = {
     const q = params ? '?' + new URLSearchParams(params).toString() : '';
     return request<{ data: any[]; total: number; page: number; limit: number }>(`/app-users${q}`);
   },
+  getDistinctStates: () =>
+    request<{ states: string[] }>('/app-users/distinct-states'),
+  getDistinctCities: (params?: Record<string, string>) => {
+    const q = params ? '?' + new URLSearchParams(params).toString() : '';
+    return request<{ cities: string[] }>(`/app-users/distinct-cities${q}`);
+  },
   getStats: () =>
     request<{ total: number; active: number; pending: number; inactive: number }>('/app-users/stats'),
   getOne: (id: string) => request<any>(`/app-users/${id}`),
@@ -459,6 +473,12 @@ export const counterboyApi = {
   getAll: (params?: Record<string, string>) => {
     const q = params ? '?' + new URLSearchParams(params).toString() : '';
     return request<{ data: any[]; total: number; page: number; limit: number }>(`/counterboys${q}`);
+  },
+  getDistinctStates: () =>
+    request<{ states: string[] }>('/counterboys/distinct-states'),
+  getDistinctCities: (params?: Record<string, string>) => {
+    const q = params ? '?' + new URLSearchParams(params).toString() : '';
+    return request<{ cities: string[] }>(`/counterboys/distinct-cities${q}`);
   },
   getStats: () =>
     request<{ total: number; active: number; pending: number; inactive: number }>('/counterboys/stats'),

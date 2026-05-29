@@ -301,6 +301,7 @@ export default function Dealers({ role }: DealersProps) {
   const [filterTier, setFilterTier] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterState, setFilterState] = useState('all');
+  const [filterCity, setFilterCity] = useState('all');
   const [filterBank, setFilterBank] = useState('all');
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'week' | 'month' | 'custom'>('all');
   const [customDateRange, setCustomDateRange] = useState<{ from: string; to: string }>({ from: '', to: '' });
@@ -308,6 +309,8 @@ export default function Dealers({ role }: DealersProps) {
   // ── Stats (fetched separately for accurate totals across all pages) ──
   const [dealerStats, setDealerStats] = useState({ total: 0, active: 0, pending: 0, inactive: 0 });
   const [allStates, setAllStates] = useState<string[]>([]);
+  const [allCities, setAllCities] = useState<string[]>([]);
+  const sanitizeOptions = (values: string[]) => Array.from(new Set(values.map(value => value.trim()).filter(value => value && value !== '?'))).sort((a, b) => a.localeCompare(b));
 
   const loadStats = async () => {
     try {
@@ -316,11 +319,21 @@ export default function Dealers({ role }: DealersProps) {
         dealerApi.getDistinctStates(),
       ]);
       setDealerStats(stats);
-      setAllStates(statesRes.states ?? []);
+      setAllStates(sanitizeOptions(statesRes.states ?? []));
     } catch (err) {
       console.error('Failed to load dealer stats:', err);
     }
   };
+
+  const loadCities = useCallback(async (state: string) => {
+    try {
+      const citiesRes = await dealerApi.getDistinctCities(state !== 'all' ? { state } : undefined);
+      setAllCities(sanitizeOptions(citiesRes.cities ?? []));
+    } catch (err) {
+      console.error('Failed to load dealer cities:', err);
+      setAllCities([]);
+    }
+  }, []);
 
   const loadData = useCallback(async (page: number) => {
     try {
@@ -333,6 +346,7 @@ export default function Dealers({ role }: DealersProps) {
       if (filterTier !== 'all') params.tier = filterTier;
       if (filterStatus !== 'all') params.status = filterStatus;
       if (filterState !== 'all') params.state = filterState;
+      if (filterCity !== 'all') params.city = filterCity;
       if (filterBank !== 'all') params.bankLinked = filterBank === 'linked' ? 'true' : 'false';
 
       // Date filter → convert to dateFrom / dateTo
@@ -370,16 +384,26 @@ export default function Dealers({ role }: DealersProps) {
     } finally {
       setLoading(false);
     }
-  }, [search, filterTier, filterStatus, filterState, filterBank, dateFilter, customDateRange]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [search, filterTier, filterStatus, filterState, filterCity, filterBank, dateFilter, customDateRange]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Re-fetch from page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
     loadData(1);
-  }, [search, filterTier, filterStatus, filterState, filterBank, dateFilter, customDateRange]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [search, filterTier, filterStatus, filterState, filterCity, filterBank, dateFilter, customDateRange]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Initial load
   useEffect(() => { loadData(1); loadStats(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    void loadCities(filterState);
+  }, [filterState, loadCities]);
+
+  useEffect(() => {
+    if (filterCity !== 'all' && !allCities.includes(filterCity)) {
+      setFilterCity('all');
+    }
+  }, [allCities, filterCity]);
 
   // Auto-refresh when tab becomes visible
   useEffect(() => {
@@ -412,7 +436,8 @@ export default function Dealers({ role }: DealersProps) {
   
   const inputStyle: React.CSSProperties = { width: '100%', padding: '9px 12px', border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 13.5, outline: 'none', background: C.surface, color: C.text, boxSizing: 'border-box' };
 
-  const uniqueStates = ['all', ...allStates];
+  const uniqueStates = ['all', ...sanitizeOptions(allStates)];
+  const uniqueCities = ['all', ...sanitizeOptions(allCities)];
 
   const filtered = data; // Server-side pagination handles filtering
 
@@ -589,8 +614,8 @@ export default function Dealers({ role }: DealersProps) {
           </div>
         )}
 
-{(filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterBank !== 'all' || dateFilter !== 'all') && (
-          <button onClick={() => { setFilterTier('all'); setFilterStatus('all'); setFilterState('all'); setFilterBank('all'); setDateFilter('all'); setCustomDateRange({ from: '', to: '' }); }}
+{(filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterBank !== 'all' || dateFilter !== 'all') && (
+          <button onClick={() => { setFilterTier('all'); setFilterStatus('all'); setFilterState('all'); setFilterCity('all'); setFilterBank('all'); setDateFilter('all'); setCustomDateRange({ from: '', to: '' }); }}
             style={{ padding: '8px 12px', borderRadius: 8, border: `1px solid ${C.red}`, background: '#FFF0F0', color: C.red, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4 }}>
             ✕ Clear Filters
           </button>
@@ -601,9 +626,9 @@ export default function Dealers({ role }: DealersProps) {
           <button
             onClick={() => setShowFilterPopup(p => !p)}
             style={{
-              width: 38, height: 38, borderRadius: 10, border: `1.5px solid ${showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterBank !== 'all') ? C.red : C.border}`,
-              background: showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterBank !== 'all') ? '#FFF0F0' : C.card,
-              color: showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterBank !== 'all') ? C.red : C.muted,
+              width: 38, height: 38, borderRadius: 10, border: `1.5px solid ${showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterBank !== 'all') ? C.red : C.border}`,
+              background: showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterBank !== 'all') ? '#FFF0F0' : C.card,
+              color: showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterBank !== 'all') ? C.red : C.muted,
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative',
             }}
           >
@@ -631,6 +656,7 @@ export default function Dealers({ role }: DealersProps) {
                     { label: 'Tier', value: filterTier, set: setFilterTier, options: [['all','All Tiers'],['Silver','🥈 Silver'],['Gold','🥇 Gold'],['Platinum','🏆 Platinum'],['Diamond','💎 Diamond']] },
                     { label: 'Status', value: filterStatus, set: setFilterStatus, options: [['all','All Status'],['active','✅ Active'],['pending','⏳ Pending'],['inactive','❌ Inactive']] },
                     { label: 'State', value: filterState, set: setFilterState, options: [['all','All States'], ...uniqueStates.filter(s => s !== 'all').map(s => [s, s])] },
+                    { label: 'City', value: filterCity, set: setFilterCity, options: [['all','All Cities'], ...uniqueCities.filter(c => c !== 'all').map(c => [c, c])] },
                     { label: 'Bank Account', value: filterBank, set: setFilterBank, options: [['all','All'],['linked','🏦 Linked'],['not_linked','❌ Not Linked']] },
                   ].map(f => (
                     <div key={f.label}>
@@ -643,7 +669,7 @@ export default function Dealers({ role }: DealersProps) {
                   ))}
                 </div>
                 <div style={{ padding: '16px 24px', borderTop: `1px solid ${C.border}`, display: 'flex', gap: 10 }}>
-                  <button onClick={() => { setFilterTier('all'); setFilterStatus('all'); setFilterState('all'); setFilterBank('all'); setDateFilter('all'); setCustomDateRange({ from: '', to: '' }); }}
+                  <button onClick={() => { setFilterTier('all'); setFilterStatus('all'); setFilterState('all'); setFilterCity('all'); setFilterBank('all'); setDateFilter('all'); setCustomDateRange({ from: '', to: '' }); }}
                     style={{ flex: 1, padding: '10px', borderRadius: 10, border: `1px solid ${C.border}`, background: C.bg, color: C.muted, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                     Reset All
                   </button>
