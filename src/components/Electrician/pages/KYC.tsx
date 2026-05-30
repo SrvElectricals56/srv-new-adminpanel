@@ -79,7 +79,7 @@ function EditKYCModal({ doc, onClose, onSave, C }: { doc: ElectricianKYCItem; on
       <div style={{ background: C.card, borderRadius: 20, width: 560, maxWidth: '95vw', maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 25px 70px rgba(0,0,0,0.2)' }} onClick={e => e.stopPropagation()}>
         <div style={{ padding: '20px 24px', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div style={{ fontSize: 17, fontWeight: 800, color: C.text }}>✏️ Edit KYC — {doc.name}</div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: C.text }}>Edit KYC — {doc.name}</div>
             <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Update KYC documents and details</div>
           </div>
           <button onClick={onClose} style={{ background: C.bg, border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontSize: 16 }}>✕</button>
@@ -116,7 +116,7 @@ function EditKYCModal({ doc, onClose, onSave, C }: { doc: ElectricianKYCItem; on
             </div>
           )}
           <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-            <button onClick={() => onSave(form)} style={{ flex: 1, background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 10, padding: '12px', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>💾 Save Changes</button>
+            <button onClick={() => onSave(form)} style={{ flex: 1, background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 10, padding: '12px', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Save Changes</button>
             <button onClick={onClose} style={{ background: C.bg, color: C.muted, border: 'none', borderRadius: 10, padding: '12px 20px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
           </div>
         </div>

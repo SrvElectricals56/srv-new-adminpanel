@@ -1,8 +1,9 @@
 'use client';
 import { lazy, Suspense, useEffect, useState, useTransition } from 'react';
 import Image from 'next/image';
-import { Search, Bell, LayoutDashboard, Activity, Zap, Store, Package, Star, ScanLine, Gift, Tag, BarChart2, Shield, Smartphone, UserCheck, Users, LogOut, FileSpreadsheet, Sun, Moon, QrCode, ArrowLeftRight, Percent, Image as ImageIcon, MessageSquare, FileText, ClipboardList, Play } from 'lucide-react';
+import { Search, Bell, LayoutDashboard, Activity, Bolt, Store, Package, Star, ScanLine, Gift, Tag, ChartColumn, ShieldCheck, AppWindow, UserCheck, Users, LogOut, FileSpreadsheet, Sun, Moon, QrCode, ArrowLeftRight, Percent, Image as ImageIcon, MessageCircle, FileText, ClipboardList, Play } from 'lucide-react';
 import { useTheme, useThemePalette } from '@/lib/theme';
+import { I } from '@/lib/iconMap';
 import Sidebar from '@/components/Shared/Sidebar';
 import Login from '@/components/Shared/Login';
 import { useAppContext } from '@/lib/appContext';
@@ -127,7 +128,7 @@ function PageSkeleton() {
 
 
 const ROLE_CONFIG: Record<AdminRole, { label: string; Icon: React.ElementType; color: string }> = {
-  super_admin: { label: 'Super Admin', Icon: Shield, color: '#1D4ED8' },
+  super_admin: { label: 'Super Admin', Icon: ShieldCheck, color: '#1D4ED8' },
   admin: { label: 'Admin', Icon: UserCheck, color: '#7C3AED' },
   staff: { label: 'Staff', Icon: Users, color: '#0369A1' },
 };
@@ -135,7 +136,7 @@ const ROLE_CONFIG: Record<AdminRole, { label: string; Icon: React.ElementType; c
 const PAGE_LABELS: Record<string, { title: string; Icon: React.ElementType }> = {
   dashboard: { title: 'Dashboard', Icon: LayoutDashboard },
   'pro-active-inactive': { title: 'Pro / Active / Inactive', Icon: Activity },
-  electricians: { title: 'Electricians', Icon: Zap },
+  electricians: { title: 'Electricians', Icon: Bolt },
   dealers: { title: 'Dealers', Icon: Store },
   'app-users': { title: 'Customers', Icon: Users },
   counterboys: { title: 'Counter Boys', Icon: UserCheck },
@@ -155,13 +156,13 @@ const PAGE_LABELS: Record<string, { title: string; Icon: React.ElementType }> = 
   'transfer-points': { title: 'Transfer Points', Icon: ArrowLeftRight },
   'commissions': { title: 'Dealer Bonus', Icon: Percent },
   'referrals': { title: 'Referrals', Icon: Users },
-  'testimonials': { title: 'Testimonials', Icon: MessageSquare },
+  'testimonials': { title: 'Testimonials', Icon: MessageCircle },
   'privacy-policy': { title: 'Privacy Policy', Icon: FileText },
-  'enquiry-support': { title: 'Enquiry Support', Icon: MessageSquare },
+  'enquiry-support': { title: 'Enquiry Support', Icon: MessageCircle },
   scans: { title: 'Scan History', Icon: ScanLine },
   redemptions: { title: 'Redemptions', Icon: Gift },
-  reports: { title: 'Reports', Icon: BarChart2 },
-  'app-page-controls': { title: 'App Page Controls', Icon: Smartphone },
+  reports: { title: 'Reports', Icon: ChartColumn },
+  'app-page-controls': { title: 'App Page Controls', Icon: AppWindow },
   };
 
 export default function Home() {
@@ -598,14 +599,14 @@ export default function Home() {
                       <div style={{ fontSize: 13, fontWeight: 700, color: P.muted, marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Quick Access</div>
                       <div style={{ display: 'grid', gap: 8 }}>
                         {[
-                          { page: 'dashboard', label: 'Dashboard', icon: '📊', desc: 'Overview & analytics' },
-                          { page: 'electricians', label: 'Electricians', icon: '⚡', desc: 'Manage electricians' },
-                          { page: 'dealers', label: 'Dealers', icon: '🏬', desc: 'Manage dealers' },
-                          { page: 'products', label: 'Products', icon: '📦', desc: 'Product catalog' },
-                          { page: 'qr-codes', label: 'QR Codes', icon: '📱', desc: 'QR management' },
-                          { page: 'reports', label: 'Reports', icon: '📈', desc: 'Analytics & reports' },
-                          { page: 'enquiry-support', label: 'Enquiry Support', icon: '💬', desc: 'Customer support' },
-                          { page: 'notifications', label: 'Notifications', icon: '🔔', desc: 'Send notifications' },
+                          { page: 'dashboard', label: 'Dashboard', icon: 'BarChart3', desc: 'Overview & analytics' },
+                          { page: 'electricians', label: 'Electricians', icon: 'Bolt', desc: 'Manage electricians' },
+                          { page: 'dealers', label: 'Dealers', icon: 'Store', desc: 'Manage dealers' },
+                          { page: 'products', label: 'Products', icon: 'Package', desc: 'Product catalog' },
+                          { page: 'qr-codes', label: 'QR Codes', icon: 'Smartphone', desc: 'QR management' },
+                          { page: 'reports', label: 'Reports', icon: 'ChartLine', desc: 'Analytics & reports' },
+                          { page: 'enquiry-support', label: 'Enquiry Support', icon: 'MessageCircle', desc: 'Customer support' },
+                          { page: 'notifications', label: 'Notifications', icon: 'Bell', desc: 'Send notifications' },
                         ].map(item => (
                           <button
                             key={item.page}
@@ -655,7 +656,7 @@ export default function Home() {
                     type: 'Page',
                     title: val.title,
                     subtitle: `Navigate to ${val.title}`,
-                    icon: '📄',
+                    icon: 'FileText',
                     action: () => { setShowSearchModal(false); setActive(key); }
                   });
                 });
@@ -671,7 +672,7 @@ export default function Home() {
                     type: 'Product',
                     title: p.name,
                     subtitle: `${p.category} • ${p.sub}`,
-                    icon: '📦',
+                    icon: 'Package',
                     action: () => { setShowSearchModal(false); setActive('products'); }
                   });
                 });
@@ -686,7 +687,7 @@ export default function Home() {
                     type: 'Points Config',
                     title: pc.productName,
                     subtitle: `${pc.productId} • ${pc.basePoints + pc.bonusPoints} points`,
-                    icon: '⭐',
+                    icon: 'Star',
                     action: () => { setShowSearchModal(false); setActive('points-config'); }
                   });
                 });
@@ -694,7 +695,7 @@ export default function Home() {
                 if (results.length === 0) {
                   return (
                     <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-                      <div style={{ fontSize: 48, marginBottom: 12 }}>🔍</div>
+                      <div style={{ fontSize: 48, marginBottom: 12 }}>?</div>
                       <div style={{ fontSize: 16, fontWeight: 700, color: P.text, marginBottom: 6 }}>No results found</div>
                       <div style={{ fontSize: 13, color: P.modalMuted }}>Try searching for pages, users, products, or features</div>
                     </div>
@@ -743,7 +744,7 @@ export default function Home() {
                                 (e.currentTarget as HTMLButtonElement).style.transform = 'translateX(0)';
                               }}
                             >
-                              <div style={{ fontSize: 20 }}>{item.icon}</div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24 }}><I name={item.icon} size={20} /></div>
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ fontSize: 13, fontWeight: 700, color: P.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</div>
                                 <div style={{ fontSize: 11, color: P.modalMuted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.subtitle}</div>
@@ -803,10 +804,10 @@ export default function Home() {
             {/* Format Options */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
               {[
-                { key: 'excel', label: 'Excel', desc: '.xlsx spreadsheet', icon: '📊', color: '#065F46', bg: '#D1FAE5', bdr: '#6EE7B7' },
-                { key: 'csv', label: 'CSV', desc: 'Comma separated values', icon: '📄', color: '#0369A1', bg: '#E0F2FE', bdr: '#7DD3FC' },
-                { key: 'pdf', label: 'PDF', desc: 'Printable document', icon: '📋', color: '#B91C1C', bg: '#FEE2E2', bdr: '#FCA5A5' },
-                { key: 'zip', label: 'ZIP', desc: 'Excel + CSV bundled', icon: '🗜️', color: '#7C3AED', bg: '#F5F3FF', bdr: '#C4B5FD' },
+                { key: 'excel', label: 'Excel', desc: '.xlsx spreadsheet', icon: 'BarChart3', color: '#065F46', bg: '#D1FAE5', bdr: '#6EE7B7' },
+                { key: 'csv', label: 'CSV', desc: 'Comma separated values', icon: 'FileText', color: '#0369A1', bg: '#E0F2FE', bdr: '#7DD3FC' },
+                { key: 'pdf', label: 'PDF', desc: 'Printable document', icon: 'FileText', color: '#B91C1C', bg: '#FEE2E2', bdr: '#FCA5A5' },
+                { key: 'zip', label: 'ZIP', desc: 'Excel + CSV bundled', icon: 'Archive', color: '#7C3AED', bg: '#F5F3FF', bdr: '#C4B5FD' },
               ].map(opt => (
                 <button
                   key={opt.key}
@@ -821,7 +822,7 @@ export default function Home() {
                   onMouseEnter={e => { if (!exporting) { (e.currentTarget as HTMLButtonElement).style.background = opt.bg; (e.currentTarget as HTMLButtonElement).style.borderColor = opt.bdr; } }}
                   onMouseLeave={e => { if (!exporting) { (e.currentTarget as HTMLButtonElement).style.background = P.surface; (e.currentTarget as HTMLButtonElement).style.borderColor = P.border; } }}
                 >
-                  <div style={{ fontSize: 24, marginBottom: 8 }}>{exporting === opt.key ? '⏳' : opt.icon}</div>
+                  <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>{exporting === opt.key ? <I name='Loader' size={24} /> : <I name={opt.icon} size={24} />}</div>
                   <div style={{ fontSize: 14, fontWeight: 800, color: exporting === opt.key ? opt.color : P.text }}>{exporting === opt.key ? 'Exporting...' : opt.label}</div>
                   <div style={{ fontSize: 11, color: P.modalMuted, marginTop: 2 }}>{opt.desc}</div>
                 </button>

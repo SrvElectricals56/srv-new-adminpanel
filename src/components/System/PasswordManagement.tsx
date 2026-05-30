@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Key, Lock, Eye, EyeOff, Shield } from 'lucide-react';
+import { Key, Lock, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { adminApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
 import { PermissionGuard } from '@/components/Shared/PermissionGuard';
@@ -185,7 +185,7 @@ export default function PasswordManagement() {
               <div style={{ padding: '20px 24px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <div style={{ width: 38, height: 38, borderRadius: 10, background: C.accentSoft, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Shield size={20} color={C.accentText} />
+                    <ShieldCheck size={20} color={C.accentText} />
                   </div>
                   <div>
                     <div style={{ fontSize: 16, fontWeight: 800, color: C.text }}>Change Password</div>

@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { FileSpreadsheet, Plus, Users, Star, ScanLine, Wallet, Trash2, SlidersHorizontal, Calendar } from 'lucide-react';
+import { FileSpreadsheet, Plus, Users, Star, ScanLine, Wallet, Trash2, SlidersHorizontal, Calendar, Medal, Award, Trophy, Gem } from 'lucide-react';
 import { electricianApi, dealerApi } from '@/lib/api';
 import type { Electrician, MemberTier, UserStatus, AdminRole } from '@/lib/types';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
@@ -12,16 +12,17 @@ import ExportModal from '@/components/Shared/ExportModal';
 import ImportModal from '@/components/Shared/ImportModal';
 import { ViewModeToggle, type ListViewMode } from '@/components/Shared/ViewModeToggle';
 import PasswordInputField from '@/components/Shared/PasswordInputField';
+import { I } from '@/lib/iconMap';
 
 interface ElectriciansProps {
   role: AdminRole;
 }
 
 const TIER_CONFIG: Record<MemberTier, { bg: string; color: string; icon: string; bar: string }> = {
-  Silver: { bg: '#F1F5F9', color: '#475569', icon: '🥈', bar: '#94A3B8' },
-  Gold: { bg: '#FFFBEB', color: '#92400E', icon: '🥇', bar: '#F59E0B' },
-  Platinum: { bg: '#F5F3FF', color: '#5B21B6', icon: '🏆', bar: '#8B5CF6' },
-  Diamond: { bg: '#EFF6FF', color: '#1D4ED8', icon: '💎', bar: '#3B82F6' },
+  Silver: { bg: '#F1F5F9', color: '#475569', icon: '', bar: '#94A3B8' },
+  Gold: { bg: '#FFFBEB', color: '#92400E', icon: '', bar: '#F59E0B' },
+  Platinum: { bg: '#F5F3FF', color: '#5B21B6', icon: '', bar: '#8B5CF6' },
+  Diamond: { bg: '#EFF6FF', color: '#1D4ED8', icon: '', bar: '#3B82F6' },
 };
 
 const STATUS_CONFIG: Record<string, { bg: string; color: string; label: string }> = {
@@ -105,16 +106,16 @@ function ViewModal({
               <div>
                 <div style={{ fontSize: 20, fontWeight: 800, color: 'white' }}>{el.name}</div>
                 <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>{el.electricianCode} · {el.phone}</div>
-                {el.email && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>✉️ {el.email}</div>}
+                {el.email && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}><I name='Mail' size={12} /> {el.email}</div>}
               </div>
             </div>
             <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 10, width: 34, height: 34, cursor: 'pointer', color: 'white', fontSize: 16 }}>✕</button>
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
-            <span style={{ background: tier.bg, color: tier.color, fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20 }}>{tier.icon} {el.tier}</span>
+            <span style={{ background: tier.bg, color: tier.color, fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20 }}>{el.tier}</span>
             <span style={{ background: status.bg, color: status.color, fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20 }}>{status.label}</span>
-            <span style={{ background: '#EFF6FF', color: '#1D4ED8', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20 }}>⚡ Electrician</span>
-            {el.bankLinked && <span style={{ background: '#D1FAE5', color: '#065F46', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20 }}>🏦 Bank Linked</span>}
+            <span style={{ background: '#EFF6FF', color: '#1D4ED8', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20 }}>Electrician</span>
+            {el.bankLinked && <span style={{ background: '#D1FAE5', color: '#065F46', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20 }}>Bank Linked</span>}
           </div>
         </div>
 
@@ -201,7 +202,7 @@ function ViewModal({
 
           <div style={{ display: 'flex', gap: 10 }}>
             {permissions.canEdit && (
-              <button onClick={onEdit} style={{ flex: 1, background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 10, padding: '12px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)' }}>✏️ Edit Electrician</button>
+              <button onClick={onEdit} style={{ flex: 1, background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 10, padding: '12px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)' }}>Edit Electrician</button>
             )}
             <button onClick={onClose} style={{ background: C.bg, color: C.muted, border: 'none', borderRadius: 10, padding: '12px 20px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Close</button>
           </div>
@@ -259,7 +260,7 @@ function EditModal({ el, onClose, onSave, dealers = [] }: { el: Electrician | nu
       >
         <div style={{ padding: '22px 28px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: C.text }}>{isAdd ? '➕ Add New Electrician' : `✏️ Edit — ${el?.name}`}</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: C.text }}>{isAdd ? 'Add New Electrician' : `Edit — ${el?.name}`}</div>
             <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{isAdd ? 'Fill in all details to register a new electrician' : 'Update electrician profile and settings'}</div>
           </div>
           <button onClick={onClose} style={{ background: C.bg, border: 'none', borderRadius: 10, width: 34, height: 34, cursor: 'pointer', fontSize: 16 }}>✕</button>
@@ -268,7 +269,7 @@ function EditModal({ el, onClose, onSave, dealers = [] }: { el: Electrician | nu
         <div style={{ padding: 28 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             <div style={{ gridColumn: '1/-1' }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 6, paddingBottom: 6, borderBottom: `1px solid ${C.border}` }}>🖼️ Profile Photo</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 6, paddingBottom: 6, borderBottom: `1px solid ${C.border}` }}>Profile Photo</div>
             </div>
             {form.profileImage && (
               <div style={{ gridColumn: '1/-1', lineHeight: 0 }}>
@@ -286,7 +287,7 @@ function EditModal({ el, onClose, onSave, dealers = [] }: { el: Electrician | nu
 
             {/* Personal Info */}
             <div style={{ gridColumn: '1/-1' }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 14, paddingBottom: 8, borderBottom: `1px solid ${C.border}` }}>👤 Personal Information</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 14, paddingBottom: 8, borderBottom: `1px solid ${C.border}` }}>Personal Information</div>
             </div>
             <div>
               <label style={labelStyle}>Full Name *</label>
@@ -328,7 +329,7 @@ function EditModal({ el, onClose, onSave, dealers = [] }: { el: Electrician | nu
 
             {/* Location */}
             <div style={{ gridColumn: '1/-1', marginTop: 8 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 14, paddingBottom: 8, borderBottom: `1px solid ${C.border}` }}>📍 Location</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 14, paddingBottom: 8, borderBottom: `1px solid ${C.border}` }}>Location</div>
             </div>
             <div>
               <label style={labelStyle}>City *</label>
@@ -354,7 +355,7 @@ function EditModal({ el, onClose, onSave, dealers = [] }: { el: Electrician | nu
 
             {/* Dealer & Account */}
             <div style={{ gridColumn: '1/-1', marginTop: 8 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 14, paddingBottom: 8, borderBottom: `1px solid ${C.border}` }}>🏬 Dealer & Account</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 14, paddingBottom: 8, borderBottom: `1px solid ${C.border}` }}>Dealer & Account</div>
             </div>
             <div style={{ gridColumn: '1/-1' }}>
               <label style={labelStyle}>Dealer</label>
@@ -410,7 +411,7 @@ function EditModal({ el, onClose, onSave, dealers = [] }: { el: Electrician | nu
 
           <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
             <button onClick={() => onSave(form)} style={{ flex: 1, background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 10, padding: '13px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)' }}>
-              {isAdd ? '✅ Add Electrician' : '💾 Save Changes'}
+              {isAdd ? 'Add Electrician' : 'Save Changes'}
             </button>
             <button onClick={onClose} style={{ background: C.bg, color: C.muted, border: 'none', borderRadius: 10, padding: '13px 20px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
           </div>
@@ -683,7 +684,7 @@ export default function Electricians({ role }: ElectriciansProps) {
 
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
-          <h1 style={{ fontSize: 26, fontWeight: 800, color: C.text, marginBottom: 4 }}>⚡ Electricians</h1>
+          <h1 style={{ fontSize: 26, fontWeight: 800, color: C.text, marginBottom: 4 }}>Electricians</h1>
           <p style={{ color: C.muted, fontSize: 14 }}>Manage all registered electricians, tiers and points</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -741,11 +742,11 @@ export default function Electricians({ role }: ElectriciansProps) {
         {[
           { label: 'Total', value: totalCount, Icon: Users, color: '#3B82F6', bg: '#EFF6FF' },
           ...(['Silver','Gold','Platinum','Diamond'] as MemberTier[]).map(t => {
-            const tierIcons = { Silver: '🥈', Gold: '🥇', Platinum: '🏆', Diamond: '💎' };
+            const tierIcons: Record<string, React.ReactNode> = { Silver: <Medal size={18} />, Gold: <Award size={18} />, Platinum: <Trophy size={18} />, Diamond: <Gem size={18} /> };
             return {
               label: t, 
               value: tierCounts[t], 
-              Icon: () => <span style={{ fontSize: 18 }}>{tierIcons[t]}</span>, 
+              Icon: () => <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{tierIcons[t]}</span>, 
               color: TIER_CONFIG[t].color, 
               bg: TIER_CONFIG[t].bg,
             };
@@ -767,7 +768,7 @@ export default function Electricians({ role }: ElectriciansProps) {
 
       {/* Filters */}
       <div style={{ background: C.card, borderRadius: 14, padding: '14px 18px', border: `1px solid ${C.border}`, marginBottom: 16, display: 'flex', gap: 10, alignItems: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', position: 'relative' }}>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍  Search name, phone, city, code, dealer..." style={{ ...inputStyle, flex: 1 }} onFocus={e => (e.target as HTMLInputElement).style.borderColor = C.red} onBlur={e => (e.target as HTMLInputElement).style.borderColor = C.border} />
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, phone, city, code, dealer..." style={{ ...inputStyle, flex: 1 }} onFocus={e => (e.target as HTMLInputElement).style.borderColor = C.red} onBlur={e => (e.target as HTMLInputElement).style.borderColor = C.border} />
 
         {/* Date Filter */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -797,7 +798,7 @@ export default function Electricians({ role }: ElectriciansProps) {
         {(filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all' || dateFilter !== 'all') && (
           <button onClick={() => { setFilterTier('all'); setFilterStatus('all'); setFilterState('all'); setFilterCity('all'); setFilterCategory('all'); setFilterBank('all'); setDateFilter('all'); setCustomDateRange({ from: '', to: '' }); }}
             style={{ padding: '8px 12px', borderRadius: 8, border: `1px solid ${C.red}`, background: '#FFF0F0', color: C.red, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4 }}>
-            ✕ Clear Filters
+            Clear Filters
           </button>
         )}
 
@@ -840,12 +841,12 @@ export default function Electricians({ role }: ElectriciansProps) {
                 {/* Body */}
                 <div style={{ padding: '20px 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                   {[
-                    { label: 'Tier', value: filterTier, set: setFilterTier, options: [['all','All Tiers'],['Silver','🥈 Silver'],['Gold','🥇 Gold'],['Platinum','🏆 Platinum'],['Diamond','💎 Diamond']] },
-                    { label: 'Status', value: filterStatus, set: setFilterStatus, options: [['all','All Status'],['active','✅ Active'],['pending','⏳ Pending'],['inactive','❌ Inactive']] },
+                    { label: 'Tier', value: filterTier, set: setFilterTier, options: [['all','All Tiers'],['Silver','Silver'],['Gold','Gold'],['Platinum','Platinum'],['Diamond','Diamond']] },
+                    { label: 'Status', value: filterStatus, set: setFilterStatus, options: [['all','All Status'],['active','Active'],['pending','Pending'],['inactive','Inactive']] },
                     { label: 'State', value: filterState, set: setFilterState, options: [['all','All States'], ...uniqueStates.filter(s => s !== 'all').map(s => [s, s])] },
                     { label: 'City', value: filterCity, set: setFilterCity, options: [['all','All Cities'], ...uniqueCities.filter(c => c !== 'all').map(c => [c, c])] },
                     { label: 'Category', value: filterCategory, set: setFilterCategory, options: [['all','All Categories'], ...uniqueCategories.filter(c => c !== 'all').map(c => [c, c])] },
-                    { label: 'Bank Account', value: filterBank, set: setFilterBank, options: [['all','All'],['linked','🏦 Linked'],['not_linked','❌ Not Linked']] },
+                    { label: 'Bank Account', value: filterBank, set: setFilterBank, options: [['all','All'],['linked','Linked'],['not_linked','Not Linked']] },
                   ].map(f => (
                     <div key={f.label}>
                       <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>{f.label}</div>
@@ -879,7 +880,7 @@ export default function Electricians({ role }: ElectriciansProps) {
       {/* Error banner */}
       {loadError && (
         <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 12, padding: '12px 18px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: 16 }}>⚠️</span>
+          <span style={{ fontSize: 16 }}></span>
           <span style={{ flex: 1, fontSize: 13, color: '#991B1B', fontWeight: 600 }}>{loadError}</span>
           <button onClick={() => { setLoadError(null); loadData(currentPage); }} style={{ background: '#DC2626', color: 'white', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>Retry</button>
         </div>
@@ -890,7 +891,7 @@ export default function Electricians({ role }: ElectriciansProps) {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16, marginBottom: 16 }}>
           {!loading && filtered.length === 0 ? (
             <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: 48, color: C.muted, background: C.card, borderRadius: 16, border: `1px solid ${C.border}` }}>
-              <div style={{ fontSize: 40, marginBottom: 10 }}>🔍</div>
+              <div style={{ marginBottom: 10 }}><I name='Search' size={40} /></div>
               <div style={{ fontSize: 15, fontWeight: 700 }}>No electricians found</div>
             </div>
           ) : filtered.map((e) => {
@@ -914,7 +915,7 @@ export default function Electricians({ role }: ElectriciansProps) {
                     </div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
-                    <span style={{ background: tier.bg, color: tier.color, fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20 }}>{tier.icon} {e.tier}</span>
+                    <span style={{ background: tier.bg, color: tier.color, fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20 }}>{e.tier}</span>
                     <span style={{ background: status.bg, color: status.color, fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20 }}>{status.label}</span>
                   </div>
                 </div>
@@ -994,7 +995,7 @@ export default function Electricians({ role }: ElectriciansProps) {
                   <td style={{ padding: '13px 14px', fontSize: 12.5, color: C.muted, whiteSpace: 'nowrap' }}>{e.phone}</td>
                   <td style={{ padding: '13px 14px', fontSize: 12.5, color: C.muted, whiteSpace: 'nowrap' }}>{e.city}, {e.state}</td>
                   <td style={{ padding: '13px 14px' }}>
-                    <span style={{ background: tier.bg, color: tier.color, fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20, whiteSpace: 'nowrap' }}>{tier.icon} {e.tier}</span>
+                    <span style={{ background: tier.bg, color: tier.color, fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20, whiteSpace: 'nowrap' }}>{e.tier}</span>
                   </td>
                   <td style={{ padding: '13px 14px', fontSize: 14, fontWeight: 800, color: C.text }}>{e.totalPoints.toLocaleString('en-IN')}</td>
                   <td style={{ padding: '13px 14px', fontSize: 13, color: C.muted }}>{e.totalScans}</td>
@@ -1023,7 +1024,7 @@ export default function Electricians({ role }: ElectriciansProps) {
         </table>
         {!loading && filtered.length === 0 && (
           <div style={{ textAlign: 'center', padding: 60, color: C.muted }}>
-            <div style={{ fontSize: 40, marginBottom: 10 }}>🔍</div>
+            <div style={{ marginBottom: 10 }}><I name='Search' size={40} /></div>
             <div style={{ fontSize: 15, fontWeight: 700 }}>No electricians found</div>
             <div style={{ fontSize: 13, marginTop: 4 }}>Try adjusting filters or search terms</div>
           </div>

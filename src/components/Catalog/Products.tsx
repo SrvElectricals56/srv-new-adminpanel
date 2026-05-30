@@ -8,6 +8,7 @@ import { useThemePalette } from '@/lib/theme';
 import { productApi } from '@/lib/api';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 import AlertDialog from '@/components/Shared/AlertDialog';
+import { I } from '@/lib/iconMap';
 
 interface ProductsProps {
   role: AdminRole;
@@ -32,37 +33,37 @@ function ProductModal({ product, onClose, onEdit, canEdit }: { product: Product;
         onMouseUp={e => e.stopPropagation()}
       >
         <div style={{ padding: '22px 24px', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ fontSize: 17, fontWeight: 800, color: C.text }}>📦 Product Details</div>
+          <div style={{ fontSize: 17, fontWeight: 800, color: C.text }}>Product Details</div>
           <button onClick={onClose} style={{ background: C.bg, border: 'none', borderRadius: 10, width: 32, height: 32, cursor: 'pointer', fontSize: 16 }}>✕</button>
         </div>
         <div style={{ padding: 24 }}>
           <div style={{ textAlign: 'center', marginBottom: 20, background: C.bg, borderRadius: 16, padding: 20, minHeight: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {product.image ? (
-              <img src={product.image} alt={product.name} style={{ width: 160, height: 160, objectFit: 'contain' }} onError={e => { const t = e.currentTarget; t.style.display = 'none'; const ph = document.createElement('div'); ph.style.cssText = 'font-size:48px;'; ph.textContent = '📦'; t.parentElement?.appendChild(ph); }} />
+              <img src={product.image} alt={product.name} style={{ width: 160, height: 160, objectFit: 'contain' }} onError={e => { const t = e.currentTarget; t.style.display = 'none'; t.parentElement!.innerHTML = '<svg width=\"48\" height=\"48\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M16.5 9.4 7.55 4.24a1 1 0 0 0-1.1 0L3 6.25m13.5 3.15L21 7.25m-4.5 2.15L12 11.5M7.55 4.24 3 6.25m4.55-2.01L12 4.5m0 7L3 11.5m9 0 9-4m-9 4v9m9-13v6.13M3 6.25v6.13m0-6.13 9 4\" /><path d=\"M21 16a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2\"/></svg>'; }} />
             ) : (
-              <div style={{ fontSize: 48 }}>📦</div>
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 160 }}><Package size={48} /></div>
             )}
           </div>
           <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-            {product.badge && <span style={{ background: '#FFF0F0', color: C.red, fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20 }}>🏷️ {product.badge}</span>}
-            <span style={{ background: product.isActive ? '#D1FAE5' : '#FEE2E2', color: product.isActive ? '#065F46' : '#991B1B', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20 }}>{product.isActive ? '✅ Active' : '❌ Inactive'}</span>
-            <span style={{ background: '#EFF6FF', color: '#1D4ED8', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20 }}>📁 {product.category}</span>
+            {product.badge && <span style={{ background: '#FFF0F0', color: C.red, fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20 }}>{product.badge}</span>}
+            <span style={{ background: product.isActive ? '#D1FAE5' : '#FEE2E2', color: product.isActive ? '#065F46' : '#991B1B', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20 }}>{product.isActive ? 'Active' : 'Inactive'}</span>
+            <span style={{ background: '#EFF6FF', color: '#1D4ED8', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20 }}>{product.category}</span>
           </div>
           <div style={{ fontSize: 20, fontWeight: 800, color: C.text, marginBottom: 4 }}>{product.name}</div>
           <div style={{ fontSize: 13, color: C.muted, marginBottom: 20 }}>{product.sub}</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginBottom: 20 }}>
             {[
-              { label: 'Price', value: product.price, icon: '💰' },
-              { label: 'Points', value: `${product.points} pts`, icon: '⭐' },
-              { label: 'Stock', value: product.stock.toLocaleString('en-IN'), icon: '📦' },
-              { label: 'Total Scanned', value: product.totalScanned.toLocaleString('en-IN'), icon: '📷' },
-              { label: 'SKU', value: product.sku || '—', icon: '🔖' },
-              { label: 'MRP', value: product.mrp || '—', icon: '🏷️' },
+              { label: 'Price', value: product.price, icon: 'DollarSign', color: '#059669', bg: '#D1FAE5' },
+              { label: 'Points', value: `${product.points} pts`, icon: 'Star', color: '#D97706', bg: '#FEF3C7' },
+              { label: 'Stock', value: product.stock.toLocaleString('en-IN'), icon: 'Package', color: '#1D4ED8', bg: '#EFF6FF' },
+              { label: 'Total Scanned', value: product.totalScanned.toLocaleString('en-IN'), icon: 'Camera', color: '#7C3AED', bg: '#F5F3FF' },
+              { label: 'SKU', value: product.sku || '—', icon: 'Bookmark', color: '#DB2777', bg: '#FDF2F8' },
+              { label: 'MRP', value: product.mrp || '—', icon: 'Tag', color: '#C2410C', bg: '#FFF7ED' },
             ].map((s, i) => (
-              <div key={i} style={{ background: C.bg, borderRadius: 10, padding: '12px', textAlign: 'center' }}>
-                <div style={{ fontSize: 18, marginBottom: 4 }}>{s.icon}</div>
-                <div style={{ fontSize: 14, fontWeight: 800, color: C.text }}>{s.value}</div>
-                <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{s.label}</div>
+              <div key={i} style={{ background: C.card, borderRadius: 12, padding: '16px 14px', textAlign: 'center', border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+                <div style={{ width: 40, height: 40, borderRadius: 10, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px' }}><I name={s.icon} size={18} style={{ color: s.color }} /></div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: C.text }}>{s.value}</div>
+                <div style={{ fontSize: 11, color: s.color, marginTop: 2, fontWeight: 700 }}>{s.label}</div>
               </div>
             ))}
           </div>
@@ -74,7 +75,7 @@ function ProductModal({ product, onClose, onEdit, canEdit }: { product: Product;
           )}
           <div style={{ display: 'flex', gap: 10 }}>
             {canEdit && (
-              <button onClick={onEdit} style={{ flex: 1, background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 10, padding: '12px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)' }}>✏️ Edit Product</button>
+              <button onClick={onEdit} style={{ flex: 1, background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 10, padding: '12px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)' }}>Edit Product</button>
             )}
             <button onClick={onClose} style={{ background: C.bg, color: C.muted, border: 'none', borderRadius: 10, padding: '12px 20px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Close</button>
           </div>
@@ -117,7 +118,7 @@ function EditModal({ product, onClose, onSave, onDelete, categories, role, canDe
       <div style={{ background: C.card, borderRadius: 20, width: 600, maxWidth: '95vw', maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 25px 70px rgba(0,0,0,0.2)' }}>
         <div style={{ padding: '22px 28px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: C.text }}>{isAdd ? '➕ Add New Product' : `✏️ Edit — ${product?.name}`}</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: C.text }}>{isAdd ? 'Add New Product' : `Edit — ${product?.name}`}</div>
             <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Manage product info, points and stock</div>
           </div>
           <button onClick={onClose} style={{ background: C.bg, border: 'none', borderRadius: 10, width: 34, height: 34, cursor: 'pointer', fontSize: 16 }}>✕</button>
@@ -134,8 +135,8 @@ function EditModal({ product, onClose, onSave, onDelete, categories, role, canDe
             <div><label style={labelStyle}>Badge</label><input style={inputStyle} value={form.badge ?? ''} onChange={e => f('badge', e.target.value)} placeholder="e.g. Popular, New, Hot" /></div>
             <div style={{ gridColumn: '1/-1' }}><label style={labelStyle}>Product Image *</label>
               <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                <button type="button" onClick={() => setImageMode('url')} style={{ padding: '6px 12px', borderRadius: 6, border: `1.5px solid ${imageMode === 'url' ? C.red : C.border}`, background: imageMode === 'url' ? '#FFF0F0' : C.surface, color: imageMode === 'url' ? C.red : C.text, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>🔗 Import from URL</button>
-                <button type="button" onClick={() => setImageMode('file')} style={{ padding: '6px 12px', borderRadius: 6, border: `1.5px solid ${imageMode === 'file' ? C.red : C.border}`, background: imageMode === 'file' ? '#FFF0F0' : C.surface, color: imageMode === 'file' ? C.red : C.text, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>📂 Browse Files</button>
+                <button type="button" onClick={() => setImageMode('url')} style={{ padding: '6px 12px', borderRadius: 6, border: `1.5px solid ${imageMode === 'url' ? C.red : C.border}`, background: imageMode === 'url' ? '#FFF0F0' : C.surface, color: imageMode === 'url' ? C.red : C.text, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Import from URL</button>
+                <button type="button" onClick={() => setImageMode('file')} style={{ padding: '6px 12px', borderRadius: 6, border: `1.5px solid ${imageMode === 'file' ? C.red : C.border}`, background: imageMode === 'file' ? '#FFF0F0' : C.surface, color: imageMode === 'file' ? C.red : C.text, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Browse Files</button>
               </div>
               {imageMode === 'url' ? (
                 <div style={{ display: 'flex', gap: 8 }}>
@@ -151,7 +152,7 @@ function EditModal({ product, onClose, onSave, onDelete, categories, role, canDe
                   <label style={{ flex: 1, display: 'flex', flexDirection: 'column', cursor: imageUploading ? 'not-allowed' : 'pointer' }}>
                     <input type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} disabled={imageUploading} />
                     <div style={{ padding: '20px', border: `2px dashed ${C.border}`, borderRadius: 8, textAlign: 'center', background: C.bg, color: C.muted, fontSize: 13 }}>
-                      {imageUploading ? '⏳ Uploading...' : form.image ? 'Click to change image' : 'Click to upload image'}
+                      {imageUploading ? 'Uploading...' : form.image ? 'Click to change image' : 'Click to upload image'}
                     </div>
                   </label>
                   {form.image && (
@@ -178,9 +179,9 @@ function EditModal({ product, onClose, onSave, onDelete, categories, role, canDe
           </div>
           <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
             {!isAdd && onDelete && (isSuperAdmin || canDelete) && (
-              <button onClick={onDelete} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 10, padding: '13px 20px', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>🗑️ Delete</button>
+              <button onClick={onDelete} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 10, padding: '13px 20px', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Delete</button>
             )}
-            <button onClick={() => onSave(form)} disabled={imageUploading} style={{ flex: 1, background: imageUploading ? C.muted : `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 10, padding: '13px', fontSize: 14, fontWeight: 700, cursor: imageUploading ? 'not-allowed' : 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)' }}>{imageUploading ? '⏳ Uploading Image...' : isAdd ? '✅ Add Product' : '💾 Save Changes'}</button>
+            <button onClick={() => onSave(form)} disabled={imageUploading} style={{ flex: 1, background: imageUploading ? C.muted : `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 10, padding: '13px', fontSize: 14, fontWeight: 700, cursor: imageUploading ? 'not-allowed' : 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)' }}>{imageUploading ? 'Uploading Image...' : isAdd ? 'Add Product' : 'Save Changes'}</button>
             <button onClick={onClose} style={{ background: C.bg, color: C.muted, border: 'none', borderRadius: 10, padding: '13px 20px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
           </div>
         </div>
@@ -437,7 +438,7 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
 
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
-          <h1 style={{ fontSize: 26, fontWeight: 800, color: C.text, marginBottom: 4 }}>📦 Products</h1>
+          <h1 style={{ fontSize: 26, fontWeight: 800, color: C.text, marginBottom: 4 }}>Products</h1>
           <p style={{ color: C.muted, fontSize: 14 }}>Manage product catalog, points and stock levels</p>
         </div>
         {canCreate && (
@@ -468,12 +469,12 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
 
       {/* Search + extra filters */}
       <div style={{ background: C.card, borderRadius: 14, padding: '14px 18px', border: `1px solid ${C.border}`, marginBottom: 18, display: 'flex', gap: 10, alignItems: 'center', position: 'relative' }}>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍  Search product name, category, SKU..." style={{ ...inputStyle, flex: 1 }} onFocus={e => (e.target as HTMLInputElement).style.borderColor = C.red} onBlur={e => (e.target as HTMLInputElement).style.borderColor = C.border} />
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search product name, category, SKU..." style={{ ...inputStyle, flex: 1 }} onFocus={e => (e.target as HTMLInputElement).style.borderColor = C.red} onBlur={e => (e.target as HTMLInputElement).style.borderColor = C.border} />
 
         {(filterStatus !== 'all' || filterStock !== 'all' || filterBadge !== 'all') && (
           <button onClick={() => { setFilterStatus('all'); setFilterStock('all'); setFilterBadge('all'); }}
             style={{ padding: '8px 12px', borderRadius: 8, border: `1px solid ${C.red}`, background: '#FFF0F0', color: C.red, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-            ✕ Clear Filters
+            Clear Filters
           </button>
         )}
 
@@ -514,8 +515,8 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
                 </div>
                 <div style={{ padding: '20px 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                   {[
-                    { label: 'Status', value: filterStatus, set: setFilterStatus, options: [['all','All Status'],['active','✅ Active'],['inactive','❌ Inactive']] },
-                    { label: 'Stock Level', value: filterStock, set: setFilterStock, options: [['all','All Stock'],['low','⚠️ Low (<500)'],['out','❌ Out of Stock'],['ok','✅ In Stock']] },
+                    { label: 'Status', value: filterStatus, set: setFilterStatus, options: [['all','All Status'],['active','Active'],['inactive','Inactive']] },
+                    { label: 'Stock Level', value: filterStock, set: setFilterStock, options: [['all','All Stock'],['low','Low (<500)'],['out','Out of Stock'],['ok','In Stock']] },
                     ...(uniqueBadges.length > 0 ? [{ label: 'Badge', value: filterBadge, set: setFilterBadge, options: [['all','All Badges'], ...uniqueBadges.map(b => [b, b])] }] : []),
                   ].map(f => (
                     <div key={f.label}>
@@ -563,9 +564,9 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <div style={{ width: 46, height: 46, borderRadius: 10, background: C.bg, overflow: 'hidden', flexShrink: 0 }}>
                       {p.image ? (
-                        <img src={p.image} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} onError={e => { const t = e.currentTarget; t.style.display = 'none'; const ph = t.parentElement; if (ph) { ph.style.display = 'flex'; ph.style.alignItems = 'center'; ph.style.justifyContent = 'center'; ph.style.fontSize = '20px'; ph.innerHTML = '📦'; } }} />
+                        <img src={p.image} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} onError={e => { const t = e.currentTarget; t.style.display = 'none'; const ph = t.parentElement; if (ph) { ph.innerHTML = '<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M16.5 9.4 7.55 4.24a1 1 0 0 0-1.1 0L3 6.25m13.5 3.15L21 7.25m-4.5 2.15L12 11.5M7.55 4.24 3 6.25m4.55-2.01L12 4.5m0 7L3 11.5m9 0 9-4m-9 4v9m9-13v6.13M3 6.25v6.13m0-6.13 9 4\"/><path d=\"M21 16a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2\"/></svg>'; ph.style.display = 'flex'; ph.style.alignItems = 'center'; ph.style.justifyContent = 'center'; } }} />
                       ) : (
-                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, color: C.muted }}>📦</div>
+                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.muted }}><I name='Package' size={20} /></div>
                       )}
                     </div>
                     <div>

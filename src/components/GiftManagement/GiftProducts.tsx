@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
-import { Gift, Plus, Trash2, FileSpreadsheet, ImageIcon, Zap, Store, SlidersHorizontal, Search, Pencil, User, Package, Upload } from 'lucide-react';
+import { Gift, Plus, Trash2, FileSpreadsheet, ImageIcon, Bolt, Store, SlidersHorizontal, Search, Pencil, User, Package, Upload } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { giftApi } from '@/lib/api';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
@@ -157,8 +157,8 @@ function EditGiftModal({ gift, onClose, onSave, C }: { gift: GiftProduct; onClos
           <div>
             <label style={{ fontSize: 12, fontWeight: 700, color: C.muted, display: 'block', marginBottom: 6, textTransform: 'uppercase' }}>Status</label>
             <select style={inputStyle} value={form.status} onChange={e => f('status', e.target.value)}>
-              <option value="active">✅ Active</option>
-              <option value="inactive">❌ Inactive</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
             </select>
           </div>
         </div>
@@ -297,7 +297,7 @@ export default function GiftProducts({ role }: { role?: import('@/lib/types').Ad
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', background: C.card, borderRadius: 12, padding: 4, border: `1px solid ${C.border}`, gap: 4 }}>
           {[
-            { id: 'electrician', label: 'Electrician Gifts', Icon: Zap },
+            { id: 'electrician', label: 'Electrician Gifts', Icon: Bolt },
             { id: 'dealer',      label: 'Dealer Gifts',      Icon: Store },
             { id: 'customer',    label: 'Customer Gifts',    Icon: User },
             { id: 'counterboy',  label: 'Counterboy Gifts',  Icon: Package },
@@ -321,7 +321,7 @@ export default function GiftProducts({ role }: { role?: import('@/lib/types').Ad
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search gift name..." style={{ ...inputStyle, paddingLeft: 32, width: '100%', boxSizing: 'border-box' }} />
         </div>
         {filterStatus !== 'all' && (
-          <button onClick={() => setFilterStatus('all')} style={{ padding: '8px 12px', borderRadius: 8, border: `1px solid ${C.red}`, background: '#FFF0F0', color: C.red, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>✕ Clear</button>
+          <button onClick={() => setFilterStatus('all')} style={{ padding: '8px 12px', borderRadius: 8, border: `1px solid ${C.red}`, background: '#FFF0F0', color: C.red, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>Clear</button>
         )}
         <div style={{ position: 'relative' }}>
           <button onClick={() => setShowFilterPopup(p => !p)} style={{ width: 38, height: 38, borderRadius: 10, border: `1.5px solid ${showFilterPopup || filterStatus !== 'all' ? C.red : C.border}`, background: showFilterPopup || filterStatus !== 'all' ? '#FFF0F0' : C.card, color: showFilterPopup || filterStatus !== 'all' ? C.red : C.muted, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -342,8 +342,8 @@ export default function GiftProducts({ role }: { role?: import('@/lib/types').Ad
                   <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', marginBottom: 8 }}>Status</div>
                   <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as any)} style={{ width: '100%', padding: '9px 12px', border: `1.5px solid ${filterStatus !== 'all' ? C.red : C.border}`, borderRadius: 10, fontSize: 13, outline: 'none', background: C.inputBg, color: C.text }}>
                     <option value="all">All Status</option>
-                    <option value="active">✅ Active</option>
-                    <option value="inactive">❌ Inactive</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
                   </select>
                 </div>
                 <div style={{ padding: '0 22px 18px', display: 'flex', gap: 10 }}>
@@ -379,7 +379,7 @@ export default function GiftProducts({ role }: { role?: import('@/lib/types').Ad
                     fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20,
                     display: 'flex', alignItems: 'center', gap: 4, width: 'fit-content',
                   }}>
-                    {g.type === 'electrician' ? <Zap size={11} /> : g.type === 'dealer' ? <Store size={11} /> : g.type === 'customer' ? <User size={11} /> : <Package size={11} />}
+                    {g.type === 'electrician' ? <Bolt size={11} /> : g.type === 'dealer' ? <Store size={11} /> : g.type === 'customer' ? <User size={11} /> : <Package size={11} />}
                     {g.type === 'electrician' ? 'Electrician' : g.type === 'dealer' ? 'Dealer' : g.type === 'customer' ? 'Customer' : 'Counterboy'}
                   </span>
                 </td>
@@ -391,12 +391,12 @@ export default function GiftProducts({ role }: { role?: import('@/lib/types').Ad
                   }
                 </td>
                 <td style={{ padding: '14px 16px' }}>
-                  <span style={{ background: '#FEF3C7', color: '#92400E', fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 20 }}>⚡ {g.pointsRequired}</span>
+                  <span style={{ background: '#FEF3C7', color: '#92400E', fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 20 }}>{g.pointsRequired}</span>
                 </td>
                 <td style={{ padding: '14px 16px', fontSize: 13, fontWeight: 600, color: C.text }}>{g.stock}</td>
                 <td style={{ padding: '14px 16px' }}>
                   <button onClick={() => toggleStatus(g.id)} style={{ background: g.status === 'active' ? '#D1FAE5' : '#FEE2E2', color: g.status === 'active' ? '#065F46' : '#991B1B', border: 'none', borderRadius: 20, padding: '4px 12px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
-                    {g.status === 'active' ? '✅ Active' : '❌ Inactive'}
+                    {g.status === 'active' ? 'Active' : 'Inactive'}
                   </button>
                 </td>
                 <td style={{ padding: '14px 16px' }}>

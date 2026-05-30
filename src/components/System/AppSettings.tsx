@@ -1,9 +1,10 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Smartphone, Save, ToggleLeft, ToggleRight, Bell, Gift, Info, Headphones, Award, Medal, SlidersHorizontal, Link2, ThumbsUp, FileText, Image as ImageIcon } from 'lucide-react';
+import { AppWindow, Save, ToggleLeft, ToggleRight, Bell, Gift, Info, Headphones, Award, Medal, SlidersHorizontal, Link2, ThumbsUp, FileText, Image as ImageIcon } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { electricianApi, dealerApi, settingsApi } from '@/lib/api';
 import AppIcons from './AppIcons';
+import { I } from '@/lib/iconMap';
 
 interface AppConfig {
   // App Info
@@ -83,7 +84,7 @@ function CatalogPdfUploader({ onUploaded, C, lbl }: { onUploaded: (url: string) 
       if (!res.ok) throw new Error('Upload failed');
       const data = await res.json();
       await onUploaded(data.url);
-      setSuccess(`✅ Uploaded: ${file.name}`);
+      setSuccess(`Uploaded: ${file.name}`);
     } catch (err: any) {
       setError(err.message || 'Upload failed');
     } finally {
@@ -96,12 +97,12 @@ function CatalogPdfUploader({ onUploaded, C, lbl }: { onUploaded: (url: string) 
       <label style={lbl}>Upload New Catalog PDF</label>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <label style={{ cursor: uploading ? 'not-allowed' : 'pointer', background: '#2563EB', color: '#fff', borderRadius: 8, padding: '9px 18px', fontSize: 13, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 6, opacity: uploading ? 0.6 : 1 }}>
-          {uploading ? '⏳ Uploading...' : '📤 Choose PDF'}
+          {uploading ? 'Uploading...' : 'Choose PDF'}
           <input type="file" accept="application/pdf" style={{ display: 'none' }} onChange={handleFile} disabled={uploading} />
         </label>
         <span style={{ fontSize: 12, color: C.muted }}>Max 50MB · PDF only</span>
       </div>
-      {error && <div style={{ marginTop: 8, fontSize: 12, color: '#DC2626' }}>❌ {error}</div>}
+      {error && <div style={{ marginTop: 8, fontSize: 12, color: '#DC2626' }}>{error}</div>}
       {success && <div style={{ marginTop: 8, fontSize: 12, color: '#059669' }}>{success}</div>}
     </div>
   );
@@ -270,7 +271,7 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
       <div style={{ background: 'linear-gradient(135deg, #7C3AED, #5B21B6)', borderRadius: 16, padding: '24px 28px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Smartphone size={24} color="#fff" />
+            <AppWindow size={24} color="#fff" />
           </div>
           <div>
             <div style={{ fontSize: 20, fontWeight: 800, color: '#fff' }}>App Settings</div>
@@ -279,7 +280,7 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           {config.maintenanceMode && (
-            <div style={{ background: 'rgba(239,68,68,0.25)', borderRadius: 10, padding: '8px 14px', fontSize: 12, fontWeight: 700, color: '#FCA5A5' }}>⚠️ Maintenance Mode ON</div>
+            <div style={{ background: 'rgba(239,68,68,0.25)', borderRadius: 10, padding: '8px 14px', fontSize: 12, fontWeight: 700, color: '#FCA5A5' }}>Maintenance Mode ON</div>
           )}
           <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: '8px 14px', fontSize: 12, color: 'rgba(255,255,255,0.8)' }}>v{config.appVersion}</div>
           <button onClick={handleSave} disabled={!canEdit || saving || loading} style={{ background: saving ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.9)', color: '#7C3AED', border: 'none', borderRadius: 10, padding: '10px 20px', fontSize: 13, fontWeight: 700, cursor: !canEdit || saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: canEdit ? 1 : 0.7 }}>
@@ -292,7 +293,7 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
 
       {saved && (
         <div style={{ background: '#D1FAE5', borderRadius: 12, padding: '12px 18px', marginBottom: 20, display: 'flex', gap: 10, alignItems: 'center', border: '1px solid #A7F3D0' }}>
-          <span style={{ fontSize: 18 }}>✅</span>
+          <span style={{ fontSize: 18 }}></span>
           <span style={{ fontSize: 14, color: '#065F46', fontWeight: 700 }}>App settings saved! Changes will reflect in the app within a few minutes.</span>
         </div>
       )}
@@ -316,7 +317,7 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
 
           {activeSection === 'app' && (
             <div style={{ display: 'grid', gap: 16 }}>
-              <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 4 }}>📱 App Information</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 4 }}>App Information</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <div><label style={lbl}>App Name</label><input style={inp} value={config.appName} onChange={e => f('appName', e.target.value)} /></div>
                 <div><label style={lbl}>Tagline</label><input style={inp} value={config.tagline} onChange={e => f('tagline', e.target.value)} /></div>
@@ -340,7 +341,7 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
               <div style={{ padding: '16px', background: config.maintenanceMode ? '#FEF2F2' : C.bg, borderRadius: 12, border: `1px solid ${config.maintenanceMode ? '#FCA5A5' : C.border}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: config.maintenanceMode ? '#DC2626' : C.text }}>🔧 Maintenance Mode</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: config.maintenanceMode ? '#DC2626' : C.text }}>Maintenance Mode</div>
                     <div style={{ fontSize: 12, color: C.muted }}>Show maintenance screen to all app users</div>
                   </div>
                   <Toggle value={config.maintenanceMode} onChange={v => f('maintenanceMode', v)} />
@@ -356,7 +357,7 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
 
           {activeSection === 'support' && (
             <div style={{ display: 'grid', gap: 16 }}>
-              <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 4 }}>📞 Support Contact</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 4 }}>Support Contact</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <div><label style={lbl}>Support Phone</label><input style={inp} value={config.supportPhone} onChange={e => f('supportPhone', e.target.value)} /></div>
                 <div><label style={lbl}>Support Email</label><input type="email" style={inp} value={config.supportEmail} onChange={e => f('supportEmail', e.target.value)} /></div>
@@ -367,7 +368,7 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
 
           {activeSection === 'points' && (
             <div style={{ display: 'grid', gap: 16 }}>
-              <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 4 }}>⭐ Points & Rewards Config</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 4 }}>Points & Rewards Config</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <div><label style={lbl}>Max Points Per Day (per user)</label><input type="number" style={inp} value={numberInputValue(config.maxPointsPerDay)} onChange={e => f('maxPointsPerDay', parseNumberInput(e.target.value))} /></div>
                 <div><label style={lbl}>Min Redemption Points</label><input type="number" style={inp} value={numberInputValue(config.minRedemptionPoints)} onChange={e => f('minRedemptionPoints', parseNumberInput(e.target.value))} /></div>
@@ -384,9 +385,9 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
           {activeSection === 'tiers' && (
             <div style={{ display: 'grid', gap: 20 }}>
               <div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 12 }}>⚡ Electrician Tiers (Points)</div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 12 }}>Electrician Tiers (Points)</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12 }}>
-                  {[['🥈 Silver', 'silverMin'], ['🥇 Gold', 'goldMin'], ['🏆 Platinum', 'platinumMin'], ['💎 Diamond', 'diamondMin']].map(([label, key]) => (
+                  {[['Silver', 'silverMin'], ['Gold', 'goldMin'], ['Platinum', 'platinumMin'], ['Diamond', 'diamondMin']].map(([label, key]) => (
                     <div key={key} style={{ background: C.bg, borderRadius: 10, padding: 14, border: `1px solid ${C.border}` }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 8 }}>{label}</div>
                       <label style={lbl}>Min Points</label>
@@ -396,9 +397,9 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
                 </div>
               </div>
               <div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 12 }}>🏬 Dealer Tiers (Electrician Count)</div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 12 }}>Dealer Tiers (Electrician Count)</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12 }}>
-                  {[['🥈 Silver', 'dealerSilverMin'], ['🥇 Gold', 'dealerGoldMin'], ['🏆 Platinum', 'dealerPlatinumMin'], ['💎 Diamond', 'dealerDiamondMin']].map(([label, key]) => (
+                  {[['Silver', 'dealerSilverMin'], ['Gold', 'dealerGoldMin'], ['Platinum', 'dealerPlatinumMin'], ['Diamond', 'dealerDiamondMin']].map(([label, key]) => (
                     <div key={key} style={{ background: C.bg, borderRadius: 10, padding: 14, border: `1px solid ${C.border}` }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 8 }}>{label}</div>
                       <label style={lbl}>Min Electricians</label>
@@ -412,14 +413,14 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
 
           {activeSection === 'features' && (
             <div style={{ display: 'grid', gap: 12 }}>
-              <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 4 }}>🔧 App Features Toggle</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 4 }}>App Features Toggle</div>
               {[
                 { key: 'scanEnabled', label: 'QR Scan & Earn', desc: 'Allow electricians to scan QR codes and earn points' },
                 { key: 'giftsEnabled', label: 'Gift Store', desc: 'Show gift store and allow gift redemptions' },
                 { key: 'referralEnabled', label: 'Referral System', desc: 'Allow users to refer friends and earn bonus points' },
                 { key: 'transferPointsEnabled', label: 'Transfer Points', desc: 'Allow electricians to transfer points to dealers' },
                 { key: 'testimonialsEnabled', label: 'Testimonials Section', desc: 'Show testimonials section on all home screens in the app' },
-                { key: 'playEnabled', label: '▶️ Play Zone (Videos)', desc: 'Enable the Play Zone video section for customers. Disable to show a "Coming Soon" screen instead.' },
+                { key: 'playEnabled', label: 'Play Zone (Videos)', desc: 'Enable the Play Zone video section for customers. Disable to show a "Coming Soon" screen instead.' },
                 { key: 'dealerCanAddElectrician', label: 'Dealer Can Add Electrician', desc: 'Allow dealers to add new electricians from their app. When disabled, the "Add Electrician" button is hidden from dealer screens.' },
               ].map(item => (
                 <div key={item.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: C.bg, borderRadius: 12, border: `1px solid ${C.border}` }}>
@@ -435,7 +436,7 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
 
           {activeSection === 'links' && (
             <div style={{ display: 'grid', gap: 16 }}>
-              <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 4 }}>🔗 App Links & URLs</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 4 }}>App Links & URLs</div>
               <div style={{ display: 'grid', gap: 14 }}>
                 <div><label style={lbl}>Privacy Policy URL</label><input style={inp} value={config.privacyPolicyUrl} onChange={e => f('privacyPolicyUrl', e.target.value)} /></div>
                 <div><label style={lbl}>Terms & Conditions URL</label><input style={inp} value={config.termsUrl} onChange={e => f('termsUrl', e.target.value)} /></div>
@@ -447,7 +448,7 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
 
           {activeSection === 'rateus' && (
             <div style={{ display: 'grid', gap: 16 }}>
-              <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 4 }}>⭐ Rate Us Configuration</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 4 }}>Rate Us Configuration</div>
               <div style={{ fontSize: 13, color: C.muted, marginBottom: 8 }}>Configure when and how to prompt users to rate the app</div>
               
               <div style={{ display: 'grid', gap: 14 }}>
@@ -504,7 +505,7 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
                 </div>
 
                 <div style={{ padding: '16px', background: '#DBEAFE', borderRadius: 12, border: '1px solid #93C5FD' }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#1E40AF', marginBottom: 8 }}>💡 Rate Us Prompt Preview</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#1E40AF', marginBottom: 8 }}>Rate Us Prompt Preview</div>
                   <div style={{ background: 'white', borderRadius: 10, padding: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
                     <div style={{ textAlign: 'center', marginBottom: 12 }}>
                       <div style={{ fontSize: 32, marginBottom: 8 }}>⭐⭐⭐⭐⭐</div>
@@ -532,7 +533,7 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
 
           {activeSection === 'catalog' && (
             <div style={{ display: 'grid', gap: 16 }}>
-              <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 4 }}>📄 Product Catalog PDFs</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 4 }}>Product Catalog PDFs</div>
               <div style={{ fontSize: 13, color: C.muted, marginBottom: 8 }}>
                 Upload separate PDF catalogs for dealers and for all other app users.
               </div>
@@ -549,7 +550,7 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
                 {config.generalCatalogPdfUrl && (
                   <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
                     <a href={config.generalCatalogPdfUrl} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: '#2563EB', textDecoration: 'underline' }}>
-                      📄 Preview general catalog
+                      Preview general catalog
                     </a>
                   </div>
                 )}
@@ -575,7 +576,7 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
                 {config.dealerCatalogPdfUrl && (
                   <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
                     <a href={config.dealerCatalogPdfUrl} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: '#2563EB', textDecoration: 'underline' }}>
-                      📄 Preview dealer catalog
+                      Preview dealer catalog
                     </a>
                   </div>
                 )}
@@ -597,12 +598,12 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
 
           {activeSection === 'notifications' && (
             <div style={{ display: 'grid', gap: 16 }}>
-              <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 4 }}>🔔 Push Notifications</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 4 }}>Push Notifications</div>
               <div style={{ fontSize: 13, color: C.muted, marginBottom: 8 }}>Send push notifications to users in the mobile app</div>
               
               {notificationSent && (
                 <div style={{ background: '#D1FAE5', borderRadius: 12, padding: '12px 18px', display: 'flex', gap: 10, alignItems: 'center', border: '1px solid #A7F3D0' }}>
-                  <span style={{ fontSize: 18 }}>✅</span>
+                  <span style={{ fontSize: 18 }}></span>
                   <span style={{ fontSize: 14, color: '#065F46', fontWeight: 700 }}>Notification sent successfully!</span>
                 </div>
               )}
@@ -680,7 +681,7 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
                                   <div style={{ fontSize: 11, color: '#10B981', marginTop: 2 }}>⭐ {user.points} pts</div>
                                 )}
                                 {user.type === 'Dealer' && (
-                                  <div style={{ fontSize: 11, color: '#F59E0B', marginTop: 2 }}>👥 {(user as any).electricians}</div>
+                                  <div style={{ fontSize: 11, color: '#F59E0B', marginTop: 2 }}>Team {(user as any).electricians}</div>
                                 )}
                               </div>
                             </div>
@@ -722,7 +723,7 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
                 </div>
 
                 <div style={{ padding: '16px', background: '#FEF3C7', borderRadius: 12, border: '1px solid #FCD34D' }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#92400E', marginBottom: 4 }}>⚠️ Preview</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#92400E', marginBottom: 4 }}>Preview</div>
                   <div style={{ background: 'white', borderRadius: 8, padding: '12px', marginTop: 8 }}>
                     <div style={{ fontSize: 14, fontWeight: 700, color: '#1F2937', marginBottom: 4 }}>
                       {notificationTitle || 'Notification Title'}

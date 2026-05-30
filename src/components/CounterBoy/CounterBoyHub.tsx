@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { Users, Trophy, FileCheck, Wallet, Gift, CreditCard, Landmark } from 'lucide-react';
+import { Users, Medal, FileCheck, Wallet, Gift, CreditCard, Landmark } from 'lucide-react';
 import AllCounterBoys from './AllCounterBoys';
 import TopCounterBoys from './pages/TopCounterBoys';
 import CounterBoyKYC from './pages/KYC';
@@ -19,7 +19,7 @@ interface CounterBoyHubProps {
 
 const subPages = [
   { id: 'counterboys', label: 'All Counter Boys', Icon: Users, description: 'Manage counter staff' },
-  { id: 'top', label: 'Top Counter Boys', Icon: Trophy, description: 'Leaderboard' },
+  { id: 'top', label: 'Top Counter Boys', Icon: Medal, description: 'Leaderboard' },
   { id: 'kyc', label: 'KYC Management', Icon: FileCheck, description: 'Verify documents' },
   { id: 'wallet', label: 'Wallet History', Icon: Wallet, description: 'Track transactions' },
   { id: 'offers', label: 'Offers', Icon: Gift, description: 'Manage promotions' },

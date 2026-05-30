@@ -1,8 +1,9 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Play, Plus, Trash2, Edit3, Save, X, ToggleLeft, ToggleRight, Users, MessageSquare, Heart, Send } from 'lucide-react';
+import { Play, Plus, Trash2, Edit3, Save, X, ToggleLeft, ToggleRight, Users, MessageCircle, Heart, Send } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { getToken } from '@/lib/api';
+import { I } from '@/lib/iconMap';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL!;
 
@@ -95,9 +96,9 @@ type Stats = {
 };
 
 const CATEGORIES = [
-  { id: 'reels', label: '🎬 Quick Reels', desc: 'Short product tips' },
-  { id: 'guides', label: '📹 Video Guides', desc: 'Step-by-step explainers' },
-  { id: 'tips', label: '💡 Helpful Tips', desc: 'Buying help & highlights' },
+  { id: 'reels', label: 'Quick Reels', desc: 'Short product tips' },
+  { id: 'guides', label: 'Video Guides', desc: 'Step-by-step explainers' },
+  { id: 'tips', label: 'Helpful Tips', desc: 'Buying help & highlights' },
 ];
 
 const ROLE_OPTIONS = [
@@ -193,7 +194,7 @@ function VideoUploader({ onUploaded, lbl }: { onUploaded: (url: string) => void;
           if (xhr.status >= 200 && xhr.status < 300) {
             const data = JSON.parse(xhr.responseText);
             onUploaded(data.url);
-            setSuccess(`✅ Uploaded: ${file.name}`);
+            setSuccess(`Uploaded: ${file.name}`);
             setProgress(100);
             resolve();
           } else {
@@ -219,7 +220,7 @@ function VideoUploader({ onUploaded, lbl }: { onUploaded: (url: string) => void;
       <label style={lbl}>Upload Video File</label>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <label style={{ cursor: uploading ? 'not-allowed' : 'pointer', background: '#1D4ED8', color: '#fff', borderRadius: 8, padding: '9px 18px', fontSize: 13, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 6, opacity: uploading ? 0.6 : 1 }}>
-          {uploading ? `⏳ Uploading ${progress}%...` : '📤 Choose Video'}
+          {uploading ? `Uploading ${progress}%...` : 'Choose Video'}
           <input type="file" accept="video/mp4,video/webm,video/ogg,video/quicktime,video/x-msvideo,video/x-matroska" style={{ display: 'none' }} onChange={handleFile} disabled={uploading} />
         </label>
         <span style={{ fontSize: 12, color: '#64748B' }}>Max 500MB · mp4, webm, mov, avi, mkv</span>
@@ -235,7 +236,7 @@ function VideoUploader({ onUploaded, lbl }: { onUploaded: (url: string) => void;
         </div>
       )}
 
-      {error && <div style={{ marginTop: 8, fontSize: 12, color: '#DC2626' }}>❌ {error}</div>}
+      {error && <div style={{ marginTop: 8, fontSize: 12, color: '#DC2626' }}>{error}</div>}
       {success && <div style={{ marginTop: 8, fontSize: 12, color: '#059669' }}>{success}</div>}
     </div>
   );
@@ -480,18 +481,19 @@ export default function UploadPlays({ role }: { role?: string }) {
       {stats && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 24 }}>
           {[
-            { label: 'Total Videos', value: stats.totalPlays, icon: '🎬', color: '#1D4ED8' },
-            { label: 'Active Videos', value: stats.activePlays, icon: '✅', color: '#059669' },
-            { label: 'Total Views', value: stats.totalViews, icon: '👁️', color: '#7C3AED' },
+              { label: 'Total Videos', value: stats.totalPlays, icon: 'Clapperboard', color: '#1D4ED8', bg: '#EFF6FF' },
+            { label: 'Active Videos', value: stats.activePlays, icon: 'Check', color: '#059669', bg: '#D1FAE5' },
+            { label: 'Total Views', value: stats.totalViews, icon: 'Eye', color: '#7C3AED', bg: '#F5F3FF' },
             {
               label: stats.totalComments !== undefined ? 'Comments & Replies' : 'Unique Viewers',
               value: stats.totalComments ?? stats.uniqueViewers,
-              icon: stats.totalComments !== undefined ? '💬' : '👥',
+              icon: stats.totalComments !== undefined ? 'MessageCircle' : 'Users',
               color: '#D97706',
+              bg: '#FEF3C7',
             },
           ].map(s => (
             <div key={s.label} style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, padding: '18px 20px', boxShadow: C.shadow }}>
-              <div style={{ fontSize: 24, marginBottom: 8 }}>{s.icon}</div>
+              <div style={{ width: 42, height: 42, borderRadius: 12, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}><I name={s.icon} size={22} style={{ color: s.color }} /></div>
               <div style={{ fontSize: 26, fontWeight: 900, color: s.color }}>{s.value}</div>
               <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{s.label}</div>
             </div>
@@ -532,7 +534,7 @@ export default function UploadPlays({ role }: { role?: string }) {
 
       {/* Category filter */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
-        {[{ id: 'all', label: '📋 All' }, ...CATEGORIES].map(cat => (
+        {[{ id: 'all', label: 'All' }, ...CATEGORIES].map(cat => (
           <button key={cat.id} onClick={() => setFilterCat(cat.id)}
             style={{ padding: '7px 14px', borderRadius: 20, border: `1.5px solid ${filterCat === cat.id ? '#1D4ED8' : C.border}`, background: filterCat === cat.id ? '#1D4ED8' : C.card, color: filterCat === cat.id ? '#fff' : C.text, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
             {cat.label}
@@ -545,7 +547,7 @@ export default function UploadPlays({ role }: { role?: string }) {
         <div style={{ textAlign: 'center', padding: 60, color: C.muted }}>Loading videos...</div>
       ) : filtered.length === 0 ? (
         <div style={{ textAlign: 'center', padding: 60, background: C.card, borderRadius: 16, border: `1px solid ${C.border}` }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>🎬</div>
+          <div style={{ marginBottom: 12 }}><I name='Clapperboard' size={48} /></div>
           <div style={{ fontSize: 16, fontWeight: 700, color: C.text }}>No videos yet</div>
           <div style={{ fontSize: 13, color: C.muted, marginTop: 4 }}>Click Add Video to upload the first role-based play</div>
         </div>
@@ -584,10 +586,10 @@ export default function UploadPlays({ role }: { role?: string }) {
                   ))}
                 </div>
                 <div style={{ fontSize: 11, color: C.muted, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                  <span>👁️ {play.viewCount} views</span>
-                  <span>📅 {new Date(play.createdAt).toLocaleDateString()}</span>
-                  <span>🔢 Order: {play.displayOrder}</span>
-                  <a href={play.videoUrl} target="_blank" rel="noreferrer" style={{ color: '#1D4ED8', textDecoration: 'none', fontWeight: 600 }}>🔗 Open Video</a>
+                  <span><I name='Eye' size={14} /> {play.viewCount} views</span>
+                  <span><I name='Calendar' size={14} /> {new Date(play.createdAt).toLocaleDateString()}</span>
+                  <span><I name='Hash' size={14} /> Order: {play.displayOrder}</span>
+                  <a href={play.videoUrl} target="_blank" rel="noreferrer" style={{ color: '#1D4ED8', textDecoration: 'none', fontWeight: 600 }}><I name='Link' size={14} /> Open Video</a>
                 </div>
               </div>
 
@@ -597,7 +599,7 @@ export default function UploadPlays({ role }: { role?: string }) {
                   <Users size={14} /> Viewers
                 </button>
                 <button onClick={() => openInteractions(play)} title="Open likes and comments" style={{ padding: '7px 12px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.bg, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: C.text }}>
-                  <MessageSquare size={14} /> Comments
+                  <MessageCircle size={14} /> Comments
                 </button>
                 {canEdit && (
                   <>
@@ -646,7 +648,7 @@ export default function UploadPlays({ role }: { role?: string }) {
                         background: videoInputMode === mode ? '#1D4ED8' : C.bg,
                         color: videoInputMode === mode ? '#fff' : C.muted,
                       }}>
-                      {mode === 'url' ? '🔗 Paste URL' : '📤 Upload File'}
+                      {mode === 'url' ? 'Paste URL' : 'Upload File'}
                     </button>
                   ))}
                 </div>
@@ -667,7 +669,7 @@ export default function UploadPlays({ role }: { role?: string }) {
                     />
                     {form.videoUrl && form.videoUrl.includes('/uploads/videos/') && (
                       <div style={{ marginTop: 8, padding: '8px 12px', background: '#D1FAE5', borderRadius: 8, fontSize: 12, color: '#059669', display: 'flex', alignItems: 'center', gap: 6 }}>
-                        ✅ Video uploaded — <a href={form.videoUrl} target="_blank" rel="noreferrer" style={{ color: '#059669', fontWeight: 700 }}>Preview</a>
+                        Video uploaded — <a href={form.videoUrl} target="_blank" rel="noreferrer" style={{ color: '#059669', fontWeight: 700 }}>Preview</a>
                       </div>
                     )}
                   </div>
@@ -748,7 +750,7 @@ export default function UploadPlays({ role }: { role?: string }) {
           <div style={{ background: C.card, borderRadius: 20, padding: 28, width: 560, maxWidth: '95vw', maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 25px 60px rgba(0,0,0,0.3)' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: C.text }}>👁️ Viewers — {viewersModal.play.title}</div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: C.text }}><I name='Eye' size={16} /> Viewers — {viewersModal.play.title}</div>
                 {viewersModal.data && (
                   <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>
                     {viewersModal.data.totalViews} total views · {viewersModal.data.uniqueViewers} unique viewers
@@ -762,7 +764,7 @@ export default function UploadPlays({ role }: { role?: string }) {
               <div style={{ textAlign: 'center', padding: 40, color: C.muted }}>Loading viewers...</div>
             ) : !viewersModal.data?.viewers?.length ? (
               <div style={{ textAlign: 'center', padding: 40 }}>
-                <div style={{ fontSize: 36, marginBottom: 8 }}>👀</div>
+                <div style={{ marginBottom: 8 }}><I name='Eye' size={36} /></div>
                 <div style={{ color: C.muted, fontSize: 14 }}>No views yet</div>
               </div>
             ) : (
@@ -794,7 +796,7 @@ export default function UploadPlays({ role }: { role?: string }) {
                       <Heart size={14} /> {interactionsModal.data.likeCount} likes
                     </div>
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 999, background: '#DBEAFE', color: '#1D4ED8', fontSize: 12, fontWeight: 700 }}>
-                      <MessageSquare size={14} /> {interactionsModal.data.comments.length} comments
+                      <MessageCircle size={14} /> {interactionsModal.data.comments.length} comments
                     </div>
                   </div>
                 ) : null}
@@ -806,7 +808,7 @@ export default function UploadPlays({ role }: { role?: string }) {
               <div style={{ textAlign: 'center', padding: 40, color: C.muted }}>Loading comments...</div>
             ) : !interactionsModal.data?.comments?.length ? (
               <div style={{ textAlign: 'center', padding: 40, background: C.bg, borderRadius: 16, border: `1px solid ${C.border}` }}>
-                <div style={{ fontSize: 34, marginBottom: 10 }}>💬</div>
+                <div style={{ marginBottom: 10 }}><I name='MessageCircle' size={34} /></div>
                 <div style={{ color: C.text, fontSize: 15, fontWeight: 800 }}>No comments yet</div>
                 <div style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>New customer comments will show up here automatically.</div>
               </div>

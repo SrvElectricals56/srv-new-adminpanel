@@ -7,6 +7,7 @@ import { financeApi } from '@/lib/api';
 import ExportModal from '@/components/Shared/ExportModal';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 import AlertDialog from '@/components/Shared/AlertDialog';
+import { I } from '@/lib/iconMap';
 
 interface BonusRecord {
   id: string;
@@ -181,7 +182,7 @@ export default function DealerBonus({ role }: { role?: import('@/lib/types').Adm
       {selected.length > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, padding: '10px 16px', background: 'rgba(21,128,61,0.1)', borderRadius: 10, border: '1px solid rgba(21,128,61,0.25)' }}>
           <span style={{ fontSize: 13, fontWeight: 600, color: '#15803D' }}>{selected.length} selected</span>
-          <button onClick={() => setBulkPay(true)} style={{ padding: '6px 14px', borderRadius: 7, border: 'none', background: 'rgba(34,197,94,0.15)', color: '#16A34A', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>✓ Bulk Mark Paid</button>
+          <button onClick={() => setBulkPay(true)} style={{ padding: '6px 14px', borderRadius: 7, border: 'none', background: 'rgba(34,197,94,0.15)', color: '#16A34A', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Bulk Mark Paid</button>
           <button onClick={() => setSelected([])} style={{ padding: '6px 14px', borderRadius: 7, border: `1px solid ${C.border}`, background: C.bg, color: C.muted, fontSize: 12, cursor: 'pointer' }}>Clear</button>
         </div>
       )}

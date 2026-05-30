@@ -3,11 +3,11 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { useThemePalette } from '@/lib/theme';
 import {
-  LayoutDashboard, Zap, Store, Package, Star, Tag,
-  BarChart2, QrCode, Gift, Bell, Users,
+  LayoutDashboard, Bolt, Store, Package, Star, Tag,
+  ChartColumn, QrCode, Gift, Bell, Users,
   ChevronLeft, ChevronRight, ArrowLeftRight, Percent,
-  Image as ImageIcon, MessageSquare, FileText,
-  UserCheck, Shield, Smartphone, Play, Activity,
+  Image as ImageIcon, MessageCircle, FileText,
+  UserCheck, ShieldCheck, AppWindow, Play, Activity,
 } from 'lucide-react';
 
 const NAV_GROUPS = [
@@ -21,7 +21,7 @@ const NAV_GROUPS = [
   {
     label: 'Users',
     items: [
-      { id: 'electricians', label: 'Electricians', Icon: Zap },
+      { id: 'electricians', label: 'Electricians', Icon: Bolt },
       { id: 'dealers', label: 'Dealers', Icon: Store },
       { id: 'app-users', label: 'Customers', Icon: Users },
       { id: 'counterboys', label: 'Counter Boys', Icon: UserCheck },
@@ -68,7 +68,7 @@ const NAV_GROUPS = [
     label: 'Content',
     items: [
       { id: 'banners', label: 'Banners', Icon: ImageIcon },
-      { id: 'testimonials', label: 'Testimonials', Icon: MessageSquare },
+      { id: 'testimonials', label: 'Testimonials', Icon: MessageCircle },
       { id: 'upload-plays', label: 'Upload Plays', Icon: Play },
       { id: 'privacy-policy', label: 'Privacy Policy', Icon: FileText },
     ]
@@ -76,16 +76,16 @@ const NAV_GROUPS = [
   {
     label: 'Support',
     items: [
-      { id: 'enquiry-support', label: 'Enquiry Support', Icon: MessageSquare },
+      { id: 'enquiry-support', label: 'Enquiry Support', Icon: MessageCircle },
     ]
   },
   {
     label: 'System',
     items: [
-      { id: 'reports', label: 'Reports', Icon: BarChart2 },
-      { id: 'admin-settings', label: 'Admin Settings', Icon: Shield },
-      { id: 'app-settings', label: 'App Settings', Icon: Smartphone },
-      { id: 'app-page-controls', label: 'App Page Controls', Icon: Smartphone },
+      { id: 'reports', label: 'Reports', Icon: ChartColumn },
+      { id: 'admin-settings', label: 'Admin Settings', Icon: ShieldCheck },
+      { id: 'app-settings', label: 'App Settings', Icon: AppWindow },
+      { id: 'app-page-controls', label: 'App Page Controls', Icon: AppWindow },
     ]
   },
 ];

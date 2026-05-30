@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { FileSpreadsheet, Plus, Store, CheckCircle, Zap, Clock, MapPin, Phone, Building2, Target, Check, Pencil, SlidersHorizontal, Calendar, Trash2 } from 'lucide-react';
+import { FileSpreadsheet, Plus, Store, CheckCircle, Bolt, Clock, MapPin, Phone, Building2, Target, Check, Pencil, SlidersHorizontal, Calendar, Trash2 } from 'lucide-react';
 import { dealerApi, financeApi } from '@/lib/api';
 import type { Dealer, MemberTier, UserStatus, AdminRole } from '@/lib/types';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
@@ -11,6 +11,7 @@ import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 import ExportModal from '@/components/Shared/ExportModal';
 import ImportModal from '@/components/Shared/ImportModal';
 import PasswordInputField from '@/components/Shared/PasswordInputField';
+import { I } from '@/lib/iconMap';
 
 interface DealersProps {
   role: AdminRole;
@@ -18,10 +19,10 @@ interface DealersProps {
 }
 
 const TIER_CONFIG: Record<MemberTier, { bg: string; color: string; icon: string; bar: string; max: number }> = {
-  Silver: { bg: '#F1F5F9', color: '#475569', icon: '🥈', bar: '#94A3B8', max: 110 },
-  Gold: { bg: '#FFFBEB', color: '#92400E', icon: '🥇', bar: '#F59E0B', max: 200 },
-  Platinum: { bg: '#F5F3FF', color: '#5B21B6', icon: '🏆', bar: '#8B5CF6', max: 300 },
-  Diamond: { bg: '#EFF6FF', color: '#1D4ED8', icon: '💎', bar: '#3B82F6', max: 999 },
+  Silver: { bg: '#F1F5F9', color: '#475569', icon: '', bar: '#94A3B8', max: 110 },
+  Gold: { bg: '#FFFBEB', color: '#92400E', icon: '', bar: '#F59E0B', max: 200 },
+  Platinum: { bg: '#F5F3FF', color: '#5B21B6', icon: '', bar: '#8B5CF6', max: 300 },
+  Diamond: { bg: '#EFF6FF', color: '#1D4ED8', icon: '', bar: '#3B82F6', max: 999 },
 };
 
 const STATUS_CONFIG: Record<string, { bg: string; color: string; label: string }> = {
@@ -113,14 +114,14 @@ function ViewModal({
           <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
             <span style={{ background: tier.bg, color: tier.color, fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20 }}>{tier.icon} {dealer.tier}</span>
             <span style={{ background: status.bg, color: status.color, fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20 }}>{status.label}</span>
-            {dealer.bankLinked && <span style={{ background: '#D1FAE5', color: '#065F46', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20 }}>🏦 Bank Linked</span>}
+            {dealer.bankLinked && <span style={{ background: '#D1FAE5', color: '#065F46', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20 }}>Bank Linked</span>}
           </div>
         </div>
 
         <div style={{ padding: 28 }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 12, marginBottom: 22 }}>
             {[
-              { label: 'Electricians', value: dealer.electricianCount, Icon: Zap },
+              { label: 'Electricians', value: dealer.electricianCount, Icon: Bolt },
               { label: 'Dealer Bonus', value: `₹${Number(dealer.bonusPoints ?? 0).toLocaleString('en-IN')}`, Icon: Target },
             ].map((s, i) => (
               <div key={i} style={{ background: C.bg, borderRadius: 12, padding: '14px', textAlign: 'center' }}>
@@ -210,7 +211,7 @@ function ViewModal({
           {/* Linked Electricians */}
           {linkedElectricians.length > 0 && (
             <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}><Zap size={14} style={{ color: C.red }} /> Linked Electricians ({linkedElectricians.length})</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}><Bolt size={14} style={{ color: C.red }} /> Linked Electricians ({linkedElectricians.length})</div>
               {linkedElectricians.slice(0, 4).map(e => (
                 <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: C.bg, borderRadius: 10, marginBottom: 6 }}>
                   <div style={{ width: 32, height: 32, borderRadius: 8, background: '#FFF0F0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: C.red }}>{e.name[0]}</div>
@@ -272,7 +273,7 @@ function EditModal({ dealer, onClose, onSave }: { dealer: Dealer | null; onClose
       >
         <div style={{ padding: '22px 28px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: C.text }}>{isAdd ? '➕ Add New Dealer' : `✏️ Edit — ${dealer?.name}`}</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: C.text }}>{isAdd ? 'Add New Dealer' : `Edit — ${dealer?.name}`}</div>
             <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{isAdd ? 'Register a new dealer in the network' : 'Update dealer profile and business info'}</div>
           </div>
           <button onClick={onClose} style={{ background: C.bg, border: 'none', borderRadius: 10, width: 34, height: 34, cursor: 'pointer', fontSize: 16 }}>✕</button>
@@ -280,7 +281,7 @@ function EditModal({ dealer, onClose, onSave }: { dealer: Dealer | null; onClose
         <div style={{ padding: 28 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             <div style={{ gridColumn: '1/-1' }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 6, paddingBottom: 6, borderBottom: `1px solid ${C.border}` }}>🖼️ Profile Photo</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 6, paddingBottom: 6, borderBottom: `1px solid ${C.border}` }}>Profile Photo</div>
             </div>
             {form.profileImage && (
               <div style={{ gridColumn: '1/-1', lineHeight: 0 }}>
@@ -325,7 +326,7 @@ function EditModal({ dealer, onClose, onSave }: { dealer: Dealer | null; onClose
               <input style={inputStyle} value={form.gstNumber ?? ''} onChange={e => f('gstNumber', e.target.value)} placeholder="GST registration number" />
             </div>
 
-            <div style={{ gridColumn: '1/-1', marginTop: 8 }}><div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 14, paddingBottom: 8, borderBottom: `1px solid ${C.border}` }}>📍 Location</div></div>
+            <div style={{ gridColumn: '1/-1', marginTop: 8 }}><div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 14, paddingBottom: 8, borderBottom: `1px solid ${C.border}` }}>Location</div></div>
             <div style={{ gridColumn: '1/-1' }}>
               <label style={labelStyle}>Full Address</label>
               <textarea style={{ ...inputStyle, resize: 'vertical', minHeight: 60 } as React.CSSProperties} value={form.address ?? ''} onChange={e => f('address', e.target.value)} placeholder="Shop/building, street, area" />
@@ -347,7 +348,7 @@ function EditModal({ dealer, onClose, onSave }: { dealer: Dealer | null; onClose
               if (/^\d*$/.test(val)) f('pincode', val);
             }} placeholder="6-digit pincode" /></div>
 
-            <div style={{ gridColumn: '1/-1', marginTop: 8 }}><div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 14, paddingBottom: 8, borderBottom: `1px solid ${C.border}` }}>📊 Account Settings</div></div>
+            <div style={{ gridColumn: '1/-1', marginTop: 8 }}><div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 14, paddingBottom: 8, borderBottom: `1px solid ${C.border}` }}>Account Settings</div></div>
             <div><label style={labelStyle}>Tier</label>
               <select style={inputStyle} value={form.tier ?? 'Silver'} onChange={e => f('tier', e.target.value as MemberTier)}>
                 {(['Silver','Gold','Platinum','Diamond'] as MemberTier[]).map(t => <option key={t} value={t}>{t}</option>)}
@@ -374,7 +375,7 @@ function EditModal({ dealer, onClose, onSave }: { dealer: Dealer | null; onClose
           </div>
 
           <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
-            <button onClick={() => onSave(form)} style={{ flex: 1, background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 10, padding: '13px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)' }}>{isAdd ? '✅ Add Dealer' : '💾 Save Changes'}</button>
+            <button onClick={() => onSave(form)} style={{ flex: 1, background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 10, padding: '13px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)' }}>{isAdd ? 'Add Dealer' : 'Save Changes'}</button>
             <button onClick={onClose} style={{ background: C.bg, color: C.muted, border: 'none', borderRadius: 10, padding: '13px 20px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
           </div>
         </div>
@@ -692,7 +693,7 @@ export default function Dealers({ role }: DealersProps) {
 
       {/* Filters */}
       <div style={{ background: C.card, borderRadius: 14, padding: '14px 18px', border: `1px solid ${C.border}`, marginBottom: 18, display: 'flex', gap: 10, alignItems: 'center', position: 'relative' }}>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍  Search dealer name, code, town, contact..." style={{ ...inputStyle, flex: 1 }} onFocus={e => (e.target as HTMLInputElement).style.borderColor = C.red} onBlur={e => (e.target as HTMLInputElement).style.borderColor = C.border} />
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search dealer name, code, town, contact..." style={{ ...inputStyle, flex: 1 }} onFocus={e => (e.target as HTMLInputElement).style.borderColor = C.red} onBlur={e => (e.target as HTMLInputElement).style.borderColor = C.border} />
 
         {/* Date Filter */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -721,7 +722,7 @@ export default function Dealers({ role }: DealersProps) {
 {(filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterBank !== 'all' || dateFilter !== 'all') && (
           <button onClick={() => { setFilterTier('all'); setFilterStatus('all'); setFilterState('all'); setFilterCity('all'); setFilterBank('all'); setDateFilter('all'); setCustomDateRange({ from: '', to: '' }); }}
             style={{ padding: '8px 12px', borderRadius: 8, border: `1px solid ${C.red}`, background: '#FFF0F0', color: C.red, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4 }}>
-            ✕ Clear Filters
+            Clear Filters
           </button>
         )}
 
@@ -757,11 +758,11 @@ export default function Dealers({ role }: DealersProps) {
                 </div>
                 <div style={{ padding: '20px 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                   {[
-                    { label: 'Tier', value: filterTier, set: setFilterTier, options: [['all','All Tiers'],['Silver','🥈 Silver'],['Gold','🥇 Gold'],['Platinum','🏆 Platinum'],['Diamond','💎 Diamond']] },
-                    { label: 'Status', value: filterStatus, set: setFilterStatus, options: [['all','All Status'],['active','✅ Active'],['pending','⏳ Pending'],['inactive','❌ Inactive']] },
+                    { label: 'Tier', value: filterTier, set: setFilterTier, options: [['all','All Tiers'],['Silver','Silver'],['Gold','Gold'],['Platinum','Platinum'],['Diamond','Diamond']] },
+                    { label: 'Status', value: filterStatus, set: setFilterStatus, options: [['all','All Status'],['active','Active'],['pending','Pending'],['inactive','Inactive']] },
                     { label: 'State', value: filterState, set: setFilterState, options: [['all','All States'], ...uniqueStates.filter(s => s !== 'all').map(s => [s, s])] },
                     { label: 'City', value: filterCity, set: setFilterCity, options: [['all','All Cities'], ...uniqueCities.filter(c => c !== 'all').map(c => [c, c])] },
-                    { label: 'Bank Account', value: filterBank, set: setFilterBank, options: [['all','All'],['linked','🏦 Linked'],['not_linked','❌ Not Linked']] },
+                    { label: 'Bank Account', value: filterBank, set: setFilterBank, options: [['all','All'],['linked','Linked'],['not_linked','Not Linked']] },
                   ].map(f => (
                     <div key={f.label}>
                       <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>{f.label}</div>
@@ -790,7 +791,7 @@ export default function Dealers({ role }: DealersProps) {
         {/* View toggle */}
         <div style={{ display: 'flex', gap: 4 }}>
           {(['grid','table'] as const).map(v => (
-            <button key={v} onClick={() => setViewMode(v)} style={{ padding: '8px 14px', borderRadius: 8, border: `1.5px solid ${viewMode === v ? C.red : C.border}`, background: viewMode === v ? '#FFF0F0' : C.card, color: viewMode === v ? C.red : C.muted, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>{v === 'grid' ? '⊞ Grid' : '☰ Table'}</button>
+            <button key={v} onClick={() => setViewMode(v)} style={{ padding: '8px 14px', borderRadius: 8, border: `1.5px solid ${viewMode === v ? C.red : C.border}`, background: viewMode === v ? '#FFF0F0' : C.card, color: viewMode === v ? C.red : C.muted, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>{v === 'grid' ? 'Grid' : 'Table'}</button>
           ))}
         </div>
 

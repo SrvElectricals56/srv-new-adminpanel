@@ -8,6 +8,7 @@ import { useAppContext } from '@/lib/appContext';
 import { qrCodeApi } from '@/lib/api';
 import QRCodeLib from 'qrcode';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
+import { I } from '@/lib/iconMap';
 
 interface QRCodesProps {
   role: AdminRole;
@@ -391,7 +392,7 @@ export default function QRCodes({ role }: QRCodesProps) {
                       fontSize: 12, 
                       fontWeight: 700 
                     }}>
-                      ⚡ {qr.points}
+                      {qr.points}
                     </div>
                   </td>
                   <td style={{ padding: '16px 20px', textAlign: 'center' }}>
@@ -576,7 +577,7 @@ export default function QRCodes({ role }: QRCodesProps) {
               </div>
               <div style={{ background: C.bg, borderRadius: 12, padding: 16 }}>
                 <div style={{ fontSize: 11, color: C.muted, marginBottom: 4, textTransform: 'uppercase', fontWeight: 600 }}>Points</div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#F59E0B' }}>⚡ {selectedQR.points}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#F59E0B' }}>{selectedQR.points}</div>
               </div>
               <div style={{ background: C.bg, borderRadius: 12, padding: 16 }}>
                 <div style={{ fontSize: 11, color: C.muted, marginBottom: 4, textTransform: 'uppercase', fontWeight: 600 }}>Status</div>

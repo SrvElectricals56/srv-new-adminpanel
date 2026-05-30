@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Shield, Save } from 'lucide-react';
+import { ShieldCheck, Save } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { settingsApi } from '@/lib/api';
+import { I } from '@/lib/iconMap';
 
 const DEFAULT_CONTENT = `Privacy Policy - SRV Electricals
 
@@ -101,7 +102,7 @@ export default function PrivacyPolicy({ role }: { role?: import('@/lib/types').A
       <div style={{ background: 'linear-gradient(135deg, #1E293B, #334155)', borderRadius: 16, padding: '24px 28px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Shield size={24} color="#fff" />
+            <ShieldCheck size={24} color="#fff" />
           </div>
           <div>
             <div style={{ fontSize: 20, fontWeight: 800, color: '#fff' }}>Privacy Policy</div>
@@ -128,7 +129,7 @@ export default function PrivacyPolicy({ role }: { role?: import('@/lib/types').A
                 style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' as const, resize: 'vertical' as const, fontFamily: 'monospace', fontSize: 12, lineHeight: 1.6 }} />
             </div>
             <div style={{ padding: '12px 20px', borderTop: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              {saved ? <div style={{ fontSize: 13, fontWeight: 600, color: '#16A34A' }}>✓ Published successfully!</div> : <div />}
+              {saved ? <div style={{ fontSize: 13, fontWeight: 600, color: '#16A34A' }}>Published successfully!</div> : <div />}
               <button onClick={handleSave} disabled={saving || !canEdit} style={{ padding: '10px 24px', borderRadius: 9, border: 'none', background: (saving || !canEdit) ? C.muted : 'linear-gradient(135deg, #1D4ED8, #1E40AF)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: (saving || !canEdit) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Save size={14} /> {saving ? 'Saving...' : canEdit ? 'Save & Publish' : 'View Only'}
               </button>

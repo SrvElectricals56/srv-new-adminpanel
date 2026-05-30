@@ -6,6 +6,7 @@ import { useThemePalette } from '@/lib/theme';
 import { notificationApi, userSearchApi } from '@/lib/api';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 import AlertDialog from '@/components/Shared/AlertDialog';
+import { I } from '@/lib/iconMap';
 
 interface NotificationRecord {
   id: string;
@@ -342,7 +343,7 @@ export default function NotificationsPage({ role }: { role?: import('@/lib/types
               <div style={{ display: 'flex', gap: 8 }}>
                 {(['now', 'schedule'] as const).map(mode => (
                   <button key={mode} onClick={() => setForm(f => ({ ...f, scheduleMode: mode }))} style={{ flex: 1, padding: '8px', borderRadius: 8, border: `2px solid ${form.scheduleMode === mode ? '#1D4ED8' : C.border}`, background: form.scheduleMode === mode ? 'rgba(29,78,216,0.1)' : C.bg, color: form.scheduleMode === mode ? '#1D4ED8' : C.muted, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                    {mode === 'now' ? '⚡ Send Now' : '🕐 Schedule'}
+                    {mode === 'now' ? 'Send Now' : 'Schedule'}
                   </button>
                 ))}
               </div>
@@ -350,9 +351,9 @@ export default function NotificationsPage({ role }: { role?: import('@/lib/types
                 <input type="datetime-local" value={form.scheduledAt} onChange={e => setForm(f => ({ ...f, scheduledAt: e.target.value }))} style={{ ...inputStyle, marginTop: 8 }} />
               )}
             </div>
-            {sent && <div style={{ padding: '10px', borderRadius: 8, background: 'rgba(34,197,94,0.15)', color: '#16A34A', fontSize: 13, fontWeight: 600, textAlign: 'center' }}>✓ Notification sent successfully!</div>}
+            {sent && <div style={{ padding: '10px', borderRadius: 8, background: 'rgba(34,197,94,0.15)', color: '#16A34A', fontSize: 13, fontWeight: 600, textAlign: 'center' }}>Notification sent successfully!</div>}
             <button onClick={handleSend} disabled={sending || !form.title.trim() || !form.body.trim()} style={{ padding: '11px', borderRadius: 9, border: 'none', background: sending ? C.muted : 'linear-gradient(135deg, #1D4ED8, #1E40AF)', color: '#fff', fontSize: 14, fontWeight: 700, cursor: sending ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-              {sending ? '⏳ Sending...' : <><Send size={15} /> {form.scheduleMode === 'schedule' ? 'Schedule Notification' : 'Send Now'}</>}
+              {sending ? 'Sending...' : <><Send size={15} /> {form.scheduleMode === 'schedule' ? 'Schedule Notification' : 'Send Now'}</>}
             </button>
           </div>
         </div>}

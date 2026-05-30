@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import Image from 'next/image';
-import { Shield, Users, UserCheck, Eye, EyeOff, LogIn, Zap, Lock, Mail, ChevronRight, Sun, Moon } from 'lucide-react';
+import { ShieldCheck, Users, UserCheck, Eye, EyeOff, LogIn, Bolt, Lock, Mail, ChevronRight, Sun, Moon } from 'lucide-react';
 import { useTheme } from '@/lib/theme';
 import { useAppContext } from '@/lib/appContext';
 import type { AdminRole } from '@/lib/types';
@@ -21,7 +21,7 @@ const ROLES: RoleOption[] = [
     id: 'super_admin',
     label: 'Super Admin',
     description: 'Full system access & control',
-    Icon: Shield,
+    Icon: ShieldCheck,
     color: '#1D4ED8',
     bg: 'linear-gradient(135deg, #EFF6FF, #DBEAFE)',
     border: '#1D4ED8',
@@ -403,9 +403,9 @@ export default function Login({ onLogin }: LoginProps) {
 
         {/* Footer */}
         <div style={{ textAlign: 'center', marginTop: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-          <Zap size={12} color={theme.footerText} />
+          <Bolt size={12} color={theme.footerText} />
           <span style={{ fontSize: 12, color: theme.footerText }}>SRV Electricals Admin Portal v1.0</span>
-          <Zap size={12} color={theme.footerText} />
+          <Bolt size={12} color={theme.footerText} />
         </div>
       </div>
 

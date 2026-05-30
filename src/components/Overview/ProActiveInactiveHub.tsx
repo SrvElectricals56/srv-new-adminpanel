@@ -11,11 +11,12 @@ import {
   TrendingUp,
   UserCheck,
   Users,
-  Zap,
+  Bolt,
 } from 'lucide-react';
 
 import { appUserApi, counterboyApi, dealerApi, electricianApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
+import { I } from '@/lib/iconMap';
 
 type RoleTab = 'electrician' | 'dealer' | 'counterboy' | 'customer';
 type ActivityTab = 'proactive' | 'active' | 'inactive';
@@ -55,11 +56,11 @@ const CARD_RENDER_CHUNK = 24;
 const ROLE_TABS: Array<{
   id: RoleTab;
   label: string;
-  Icon: typeof Zap;
+  Icon: typeof Bolt;
   accent: string;
   hint: string;
 }> = [
-  { id: 'electrician', label: 'Electrician', Icon: Zap, accent: '#2563EB', hint: 'Scans, points, wallet and recent activity' },
+  { id: 'electrician', label: 'Electrician', Icon: Bolt, accent: '#2563EB', hint: 'Scans, points, wallet and recent activity' },
   { id: 'dealer', label: 'Dealer', Icon: Store, accent: '#A16207', hint: 'Recent access and electrician growth' },
   { id: 'counterboy', label: 'Counter Boy', Icon: UserCheck, accent: '#7C3AED', hint: 'Scans, points and wallet engagement' },
   { id: 'customer', label: 'Customer', Icon: Users, accent: '#0F766E', hint: 'Reward usage and account engagement' },
@@ -346,7 +347,7 @@ function appendRowsToBuckets(
 
 const CRITERIA: Record<RoleTab, { icon: string; proactive: string[]; active: string[]; inactive: string[] }> = {
   electrician: {
-    icon: '⚡',
+    icon: 'Bolt',
     proactive: [
       'Last activity within 7 days AND at least one of:',
       '  • 10+ total scans',
@@ -365,7 +366,7 @@ const CRITERIA: Record<RoleTab, { icon: string; proactive: string[]; active: str
     ],
   },
   dealer: {
-    icon: '🏪',
+    icon: 'Store',
     proactive: [
       'Last activity within 7 days AND at least one of:',
       '  • 5+ electricians under them',
@@ -383,7 +384,7 @@ const CRITERIA: Record<RoleTab, { icon: string; proactive: string[]; active: str
     ],
   },
   counterboy: {
-    icon: '👤',
+    icon: 'User',
     proactive: [
       'Last activity within 7 days AND at least one of:',
       '  • 5+ total scans',
@@ -402,7 +403,7 @@ const CRITERIA: Record<RoleTab, { icon: string; proactive: string[]; active: str
     ],
   },
   customer: {
-    icon: '👥',
+    icon: 'Users',
     proactive: [
       'Last activity within 7 days AND at least one of:',
       '  • 200+ total points',

@@ -1,10 +1,11 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Shield, Plus, Pencil, Trash2, Eye, EyeOff, Key, UserCheck, Users, Lock } from 'lucide-react';
+import { ShieldCheck, Plus, Pencil, Trash2, Eye, EyeOff, Key, UserCheck, Users, Lock } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { adminApi } from '@/lib/api';
 import { useAppContext } from '@/lib/appContext';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
+import { I } from '@/lib/iconMap';
 
 type AdminRole = 'super_admin' | 'admin' | 'staff';
 
@@ -21,9 +22,9 @@ interface AdminUser {
 }
 
 const ROLE_CONFIG: Record<AdminRole, { label: string; color: string; bg: string; icon: string }> = {
-  super_admin: { label: 'Super Admin', color: '#DC2626', bg: '#FEE2E2', icon: '👑' },
-  admin:       { label: 'Admin',       color: '#1D4ED8', bg: '#EFF6FF', icon: '🛡️' },
-  staff:       { label: 'Staff',       color: '#065F46', bg: '#D1FAE5', icon: '👤' },
+  super_admin: { label: 'Super Admin', color: '#DC2626', bg: '#FEE2E2', icon: 'Crown' },
+  admin:       { label: 'Admin',       color: '#1D4ED8', bg: '#EFF6FF', icon: 'Shield' },
+  staff:       { label: 'Staff',       color: '#065F46', bg: '#D1FAE5', icon: 'User' },
 };
 
 const ALL_PERMISSIONS = [
@@ -355,12 +356,12 @@ export default function AdminSettings() {
             <div style={{ padding: '20px 24px' }}>
               {passwordError && (
                 <div style={{ background: '#FEE2E2', border: '1px solid #FECACA', borderRadius: 10, padding: '12px 16px', marginBottom: 16, color: '#991B1B', fontSize: 13, fontWeight: 600 }}>
-                  ❌ {passwordError}
+                      {passwordError}
                 </div>
               )}
               {passwordSuccess && (
                 <div style={{ background: '#D1FAE5', border: '1px solid #A7F3D0', borderRadius: 10, padding: '12px 16px', marginBottom: 16, color: '#065F46', fontSize: 13, fontWeight: 600 }}>
-                  ✅ Password changed successfully!
+                      Password changed successfully!
                 </div>
               )}
               <div style={{ display: 'grid', gap: 14 }}>
@@ -459,7 +460,7 @@ export default function AdminSettings() {
       <div style={{ background: 'linear-gradient(135deg, #1E293B, #334155)', borderRadius: 16, padding: '24px 28px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Shield size={24} color="#fff" />
+            <ShieldCheck size={24} color="#fff" />
           </div>
           <div>
             <div style={{ fontSize: 20, fontWeight: 800, color: '#fff' }}>Admin Settings</div>
@@ -485,7 +486,7 @@ export default function AdminSettings() {
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: C.card, borderRadius: 10, padding: 4, border: `1px solid ${C.border}`, width: 'fit-content' }}>
-        {[{ id: 'users', label: '👥 Admin Users' }, { id: 'roles', label: '🔐 Role Permissions' }, { id: 'password', label: '🔒 Password Policy' }].map(t => (
+        {[{ id: 'users', label: 'Admin Users' }, { id: 'roles', label: 'Role Permissions' }, { id: 'password', label: 'Password Policy' }].map(t => (
           <button key={t.id} onClick={() => setActiveTab(t.id as any)} style={{ padding: '8px 20px', borderRadius: 7, border: 'none', background: activeTab === t.id ? C.red : 'transparent', color: activeTab === t.id ? '#fff' : C.muted, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
             {t.label}
           </button>
@@ -521,7 +522,7 @@ export default function AdminSettings() {
                     </td>
                     <td style={{ padding: '14px 16px' }}>
                       <button onClick={() => toggleStatus(a.id)} style={{ background: a.status === 'active' ? '#D1FAE5' : '#FEE2E2', color: a.status === 'active' ? '#065F46' : '#991B1B', border: 'none', borderRadius: 20, padding: '4px 12px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
-                        {a.status === 'active' ? '✅ Active' : '❌ Inactive'}
+                        {a.status === 'active' ? 'Active' : 'Inactive'}
                       </button>
                     </td>
                     <td style={{ padding: '14px 16px', fontSize: 12, color: C.muted }}>{a.lastLogin}</td>
@@ -547,7 +548,7 @@ export default function AdminSettings() {
         <div>
           {permSaved && (
             <div style={{ background: '#D1FAE5', borderRadius: 12, padding: '12px 18px', marginBottom: 16, display: 'flex', gap: 10, alignItems: 'center', border: '1px solid #A7F3D0' }}>
-              <span style={{ fontSize: 18 }}>✅</span>
+              <span style={{ fontSize: 18 }}></span>
               <span style={{ fontSize: 14, color: '#065F46', fontWeight: 700 }}>Permissions saved successfully for all users!</span>
             </div>
           )}
@@ -666,7 +667,7 @@ export default function AdminSettings() {
                           cursor: saving ? 'not-allowed' : 'pointer'
                         }}
                       >
-                        {saving ? '⏳' : '✓'} Save
+                        {saving ? '' : ''} Save
                       </button>
                     )}
                   </div>
@@ -690,7 +691,7 @@ export default function AdminSettings() {
                           onClick={() => isEditing && role !== 'super_admin' && toggleRolePerm(role, perm)}
                         >
                           <div style={{ width: 18, height: 18, borderRadius: 4, background: has ? '#D1FAE5' : '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <span style={{ fontSize: 10 }}>{has ? '✓' : '✗'}</span>
+                            <span style={{ fontSize: 10 }}>{has ? <I name='Check' size={10} /> : <I name='X' size={10} />}</span>
                           </div>
                           <span style={{ fontSize: 12, color: has ? C.text : C.muted, fontWeight: has ? 600 : 400 }}>{perm}</span>
                         </div>
@@ -707,13 +708,13 @@ export default function AdminSettings() {
       {activeTab === 'password' && (
         <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, padding: '28px 32px', boxShadow: C.shadow }}>
           <div style={{ marginBottom: 24 }}>
-            <div style={{ fontSize: 18, fontWeight: 800, color: C.text, marginBottom: 6 }}>🔒 Password Policy</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: C.text, marginBottom: 6 }}>Password Policy</div>
             <div style={{ fontSize: 13, color: C.muted }}>Configure password requirements and security settings for admin accounts</div>
           </div>
 
           {passwordPolicySaved && (
             <div style={{ background: '#D1FAE5', borderRadius: 12, padding: '12px 18px', marginBottom: 20, display: 'flex', gap: 10, alignItems: 'center', border: '1px solid #A7F3D0' }}>
-              <span style={{ fontSize: 18 }}>✅</span>
+              <span style={{ fontSize: 18 }}></span>
               <span style={{ fontSize: 14, color: '#065F46', fontWeight: 700 }}>Password policy saved successfully!</span>
             </div>
           )}
@@ -847,7 +848,7 @@ export default function AdminSettings() {
 
             {/* Preview */}
             <div style={{ padding: '16px 20px', background: '#DBEAFE', borderRadius: 12, border: '1px solid #93C5FD' }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#1E40AF', marginBottom: 10 }}>📋 Current Policy Summary</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#1E40AF', marginBottom: 10 }}>Current Policy Summary</div>
               <div style={{ fontSize: 12, color: '#1E3A8A', lineHeight: 1.8 }}>
                 • Password must be at least <strong>{passwordPolicy.minLength} characters</strong><br />
                 • Must contain: {[
@@ -902,7 +903,7 @@ export default function AdminSettings() {
             <div style={{ padding: '20px 24px', display: 'grid', gap: 14 }}>
               {saveError && (
                 <div style={{ background: '#FEE2E2', border: '1px solid #FECACA', borderRadius: 10, padding: '12px 16px', color: '#991B1B', fontSize: 13, fontWeight: 600 }}>
-                  ❌ {saveError}
+                  {saveError}
                 </div>
               )}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
@@ -951,7 +952,7 @@ export default function AdminSettings() {
               <div>
                 <label style={lbl}>Note</label>
                 <div style={{ padding: '12px 16px', background: '#EFF6FF', borderRadius: 10, border: `1px solid #BFDBFE` }}>
-                  <div style={{ fontSize: 13, color: '#1E40AF', fontWeight: 600 }}>ℹ️ Permissions are managed separately</div>
+                  <div style={{ fontSize: 13, color: '#1E40AF', fontWeight: 600 }}><I name='Info' size={14} /> Permissions are managed separately</div>
                   <div style={{ fontSize: 12, color: '#1E3A8A', marginTop: 4 }}>After creating this admin, go to the <strong>Role Permissions</strong> tab to configure what they can access.</div>
                 </div>
               </div>
@@ -959,7 +960,7 @@ export default function AdminSettings() {
             <div style={{ padding: '0 24px 20px', display: 'flex', gap: 10 }}>
               <button onClick={handleSave} disabled={saving || !form.name || !form.email || (!editingId && (form.password !== form.confirmPassword || !form.password))}
                 style={{ flex: 1, background: saving ? C.muted : `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 12, padding: '12px', fontSize: 14, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}>
-                {saving ? '⏳ Saving...' : editingId ? 'Save Changes' : 'Create Admin'}
+                {saving ? 'Saving...' : editingId ? 'Save Changes' : 'Create Admin'}
               </button>
               <button onClick={() => setShowModal(false)} style={{ flex: 1, background: C.bg, color: C.muted, border: `1px solid ${C.border}`, borderRadius: 12, padding: '12px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
             </div>

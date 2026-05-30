@@ -40,7 +40,7 @@ export function ViewModeToggle({
             whiteSpace: 'nowrap',
           }}
         >
-          {mode === 'grid' ? '⊞ Grid' : '☰ Table'}
+          {mode === 'grid' ? 'Grid' : 'Table'}
         </button>
       ))}
     </div>

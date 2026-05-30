@@ -1,19 +1,20 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { Trophy, TrendingUp, Calendar, FileSpreadsheet } from 'lucide-react';
+import { Medal, TrendingUp, Calendar, FileSpreadsheet } from 'lucide-react';
 import { electricianApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
 import type { MemberTier } from '@/lib/types';
 import ExportModal from '@/components/Shared/ExportModal';
+import { I } from '@/lib/iconMap';
 
 type Range = 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom';
 type SortBy = 'points' | 'scans' | 'redemptions';
 
 const TIER_CONFIG: Record<MemberTier, { color: string; bg: string; icon: string }> = {
-  Silver:   { color: '#475569', bg: '#F1F5F9', icon: '🥈' },
-  Gold:     { color: '#92400E', bg: '#FFFBEB', icon: '🥇' },
-  Platinum: { color: '#5B21B6', bg: '#F5F3FF', icon: '🏆' },
-  Diamond:  { color: '#1D4ED8', bg: '#EFF6FF', icon: '💎' },
+  Silver:   { color: '#475569', bg: '#F1F5F9', icon: '' },
+  Gold:     { color: '#92400E', bg: '#FFFBEB', icon: '' },
+  Platinum: { color: '#5B21B6', bg: '#F5F3FF', icon: '' },
+  Diamond:  { color: '#1D4ED8', bg: '#EFF6FF', icon: '' },
 };
 
 const RANK_COLORS = ['#F59E0B', '#94A3B8', '#CD7F32', '#6B7280'];
@@ -95,7 +96,7 @@ export default function TopElectricians() {
       <div style={{ background: `linear-gradient(135deg, #F59E0B, #D97706)`, borderRadius: 18, padding: '22px 28px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 8px 24px rgba(245,158,11,0.25)' }}>
         <div>
           <div style={{ fontSize: 22, fontWeight: 900, color: 'white', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Trophy size={26} /> Top Electricians
+            <Medal size={26} /> Top Electricians
           </div>
           <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 4 }}>
             {rangeLabels[range]} — Top 10 performers by {sortBy}
@@ -152,7 +153,7 @@ export default function TopElectricians() {
             const podiumH = rank === 1 ? 90 : rank === 2 ? 70 : 55;
             return (
               <div key={e.id} style={{ background: C.card, borderRadius: 16, padding: '20px 16px', border: `2px solid ${rank === 1 ? '#F59E0B' : C.border}`, textAlign: 'center', boxShadow: rank === 1 ? '0 8px 24px rgba(245,158,11,0.2)' : '0 2px 8px rgba(0,0,0,0.04)', position: 'relative' }}>
-                {rank === 1 && <div style={{ position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)', fontSize: 22 }}>👑</div>}
+                {rank === 1 && <div style={{ position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><I name='Crown' size={22} /></div>}
                 <div style={{ width: 52, height: 52, borderRadius: '50%', background: `linear-gradient(135deg, ${tier.bg}, ${tier.color}22)`, border: `3px solid ${RANK_COLORS[rank - 1]}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '8px auto 10px', fontSize: 20, fontWeight: 900, color: tier.color }}>
                   {e.name[0]}
                 </div>

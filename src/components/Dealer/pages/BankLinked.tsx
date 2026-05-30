@@ -8,10 +8,10 @@ import ExportModal from '@/components/Shared/ExportModal';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 
 const TIER_CONFIG: Record<MemberTier, { color: string; bg: string; icon: string }> = {
-  Silver:   { color: '#475569', bg: '#F1F5F9', icon: '🥈' },
-  Gold:     { color: '#92400E', bg: '#FFFBEB', icon: '🥇' },
-  Platinum: { color: '#5B21B6', bg: '#F5F3FF', icon: '🏆' },
-  Diamond:  { color: '#1D4ED8', bg: '#EFF6FF', icon: '💎' },
+  Silver:   { color: '#475569', bg: '#F1F5F9', icon: '' },
+  Gold:     { color: '#92400E', bg: '#FFFBEB', icon: '' },
+  Platinum: { color: '#5B21B6', bg: '#F5F3FF', icon: '' },
+  Diamond:  { color: '#1D4ED8', bg: '#EFF6FF', icon: '' },
 };
 
 function ViewModal({ d, onClose, C }: { d: Dealer; onClose: () => void; C: any }) {
@@ -32,7 +32,7 @@ function ViewModal({ d, onClose, C }: { d: Dealer; onClose: () => void; C: any }
             { label: 'Email', value: d.email ?? '—' },
             { label: 'Town', value: `${d.town}, ${d.state}` },
             { label: 'Tier', value: `${tier.icon} ${d.tier}` },
-            { label: 'Bank Linked', value: d.bankLinked ? '✅ Yes' : '❌ No' },
+            { label: 'Bank Linked', value: d.bankLinked ? 'Yes' : 'No' },
             { label: 'UPI ID', value: d.upiId ?? '—' },
             { label: 'Bank Name', value: (d as any).bankName ?? '—' },
             { label: 'Account Holder', value: (d as any).accountHolderName ?? '—' },
@@ -90,10 +90,10 @@ function EditModal({ d, onClose, onSave, C }: { d: Dealer; onClose: () => void; 
           <div>
             <label style={{ fontSize: 12, fontWeight: 700, color: C.muted, display: 'block', marginBottom: 6, textTransform: 'uppercase' }}>Tier</label>
             <select style={inputStyle} value={form.tier} onChange={e => f('tier', e.target.value)}>
-              <option value="Silver">🥈 Silver</option>
-              <option value="Gold">🥇 Gold</option>
-              <option value="Platinum">🏆 Platinum</option>
-              <option value="Diamond">💎 Diamond</option>
+              <option value="Silver">Silver</option>
+              <option value="Gold">Gold</option>
+              <option value="Platinum">Platinum</option>
+              <option value="Diamond">Diamond</option>
             </select>
           </div>
           <div>
@@ -250,7 +250,7 @@ export default function DealerBankLinked() {
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, phone, code, town..." style={{ ...inputStyle, paddingLeft: 32, width: '100%', boxSizing: 'border-box' }} />
         </div>
         {activeFilters > 0 && (
-          <button onClick={() => { setFilterBank('all'); setFilterTier('all'); }} style={{ padding: '8px 12px', borderRadius: 8, border: `1px solid ${C.red}`, background: '#FFF0F0', color: C.red, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>✕ Clear</button>
+          <button onClick={() => { setFilterBank('all'); setFilterTier('all'); }} style={{ padding: '8px 12px', borderRadius: 8, border: `1px solid ${C.red}`, background: '#FFF0F0', color: C.red, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>Clear</button>
         )}
         <div style={{ position: 'relative' }}>
           <button onClick={() => setShowFilterPopup(p => !p)} style={{ width: 38, height: 38, borderRadius: 10, border: `1.5px solid ${showFilterPopup || activeFilters > 0 ? C.red : C.border}`, background: showFilterPopup || activeFilters > 0 ? '#FFF0F0' : C.card, color: showFilterPopup || activeFilters > 0 ? C.red : C.muted, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
@@ -272,18 +272,18 @@ export default function DealerBankLinked() {
                     <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', marginBottom: 8 }}>Bank Status</div>
                     <select value={filterBank} onChange={e => setFilterBank(e.target.value as any)} style={{ width: '100%', padding: '9px 12px', border: `1.5px solid ${filterBank !== 'all' ? C.red : C.border}`, borderRadius: 10, fontSize: 13, outline: 'none', background: C.inputBg, color: C.text }}>
                       <option value="all">All</option>
-                      <option value="linked">🏦 Linked</option>
-                      <option value="not_linked">❌ Not Linked</option>
+                      <option value="linked">Linked</option>
+                      <option value="not_linked">Not Linked</option>
                     </select>
                   </div>
                   <div>
                     <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', marginBottom: 8 }}>Tier</div>
                     <select value={filterTier} onChange={e => setFilterTier(e.target.value)} style={{ width: '100%', padding: '9px 12px', border: `1.5px solid ${filterTier !== 'all' ? C.red : C.border}`, borderRadius: 10, fontSize: 13, outline: 'none', background: C.inputBg, color: C.text }}>
                       <option value="all">All Tiers</option>
-                      <option value="Silver">🥈 Silver</option>
-                      <option value="Gold">🥇 Gold</option>
-                      <option value="Platinum">🏆 Platinum</option>
-                      <option value="Diamond">💎 Diamond</option>
+                      <option value="Silver">Silver</option>
+                      <option value="Gold">Gold</option>
+                      <option value="Platinum">Platinum</option>
+                      <option value="Diamond">Diamond</option>
                     </select>
                   </div>
                 </div>

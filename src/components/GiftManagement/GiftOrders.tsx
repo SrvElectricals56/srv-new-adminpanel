@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, Zap, Store, Eye, Check, X, Package, SlidersHorizontal, Search, User, FileSpreadsheet } from 'lucide-react';
+import { ShoppingBag, Bolt, Store, Eye, Check, X, Package, SlidersHorizontal, Search, User, FileSpreadsheet } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { giftApi, redemptionApi } from '@/lib/api';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
@@ -22,11 +22,11 @@ interface GiftOrder {
 }
 
 const STATUS_CONFIG: Record<OrderStatus, { bg: string; color: string; label: string }> = {
-  pending:   { bg: '#FEF3C7', color: '#92400E', label: '⏳ Pending' },
-  approved:  { bg: '#D1FAE5', color: '#065F46', label: '✅ Approved' },
-  shipped:   { bg: '#EFF6FF', color: '#1D4ED8', label: '🚚 Shipped' },
-  delivered: { bg: '#F0FDF4', color: '#166534', label: '📦 Delivered' },
-  rejected:  { bg: '#FEE2E2', color: '#991B1B', label: '❌ Rejected' },
+  pending:   { bg: '#FEF3C7', color: '#92400E', label: 'Pending' },
+  approved:  { bg: '#D1FAE5', color: '#065F46', label: 'Approved' },
+  shipped:   { bg: '#EFF6FF', color: '#1D4ED8', label: 'Shipped' },
+  delivered: { bg: '#F0FDF4', color: '#166534', label: 'Delivered' },
+  rejected:  { bg: '#FEE2E2', color: '#991B1B', label: 'Rejected' },
 };
 
 function OrderDetailModal({ order, onClose, C }: { order: GiftOrder; onClose: () => void; C: any }) {
@@ -52,14 +52,14 @@ function OrderDetailModal({ order, onClose, C }: { order: GiftOrder; onClose: ()
             <img src={order.giftImage} alt={order.giftName} style={{ width: 90, height: 90, objectFit: 'cover', borderRadius: 12, border: `2px solid ${C.border}` }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
             <div>
               <div style={{ fontSize: 18, fontWeight: 800, color: C.text }}>{order.giftName}</div>
-              <div style={{ fontSize: 13, color: '#F59E0B', fontWeight: 700, marginTop: 4 }}>⚡ {order.pointsUsed} points</div>
+              <div style={{ fontSize: 13, color: '#F59E0B', fontWeight: 700, marginTop: 4 }}>{order.pointsUsed} points</div>
               <span style={{ background: s.bg, color: s.color, fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, display: 'inline-block', marginTop: 6 }}>{s.label}</span>
             </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             {[
               { label: 'Order ID', value: `#${order.id}` },
-              { label: 'Type', value: order.type === 'electrician' ? '⚡ Electrician' : order.type === 'dealer' ? '🏬 Dealer' : order.type === 'customer' ? '👤 Customer' : '🧾 Counterboy' },
+              { label: 'Type', value: order.type === 'electrician' ? 'Electrician' : order.type === 'dealer' ? 'Dealer' : order.type === 'customer' ? 'Customer' : 'Counterboy' },
               { label: order.type === 'electrician' ? 'Electrician' : order.type === 'dealer' ? 'Dealer' : order.type === 'customer' ? 'Customer' : 'Counterboy', value: order.userName },
               { label: 'Code', value: order.userCode },
               { label: 'Dealer', value: order.dealerName },
@@ -166,7 +166,7 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
       {/* Tabs + Export */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', background: C.card, borderRadius: 12, padding: 4, border: `1px solid ${C.border}`, gap: 4 }}>
-          {[{ id: 'electrician', label: 'Electrician Orders', Icon: Zap }, { id: 'dealer', label: 'Dealer Orders', Icon: Store }, { id: 'customer', label: 'Customer Orders', Icon: User }, { id: 'counterboy', label: 'Counterboy Orders', Icon: Package }].map(t => (
+          {[{ id: 'electrician', label: 'Electrician Orders', Icon: Bolt }, { id: 'dealer', label: 'Dealer Orders', Icon: Store }, { id: 'customer', label: 'Customer Orders', Icon: User }, { id: 'counterboy', label: 'Counterboy Orders', Icon: Package }].map(t => (
             <button key={t.id} onClick={() => setTab(t.id as any)}
               style={{ padding: '9px 20px', borderRadius: 9, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 7, background: tab === t.id ? '#7C3AED' : 'transparent', color: tab === t.id ? 'white' : C.muted, transition: 'all 0.2s' }}>
               <t.Icon size={15} /> {t.label}
@@ -183,7 +183,7 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, gift, dealer..." style={{ ...inputStyle, paddingLeft: 32, width: '100%', boxSizing: 'border-box' }} />
         </div>
         {activeFilters > 0 && (
-          <button onClick={() => setFilterStatus('all')} style={{ padding: '8px 12px', borderRadius: 8, border: `1px solid ${C.red}`, background: '#FFF0F0', color: C.red, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>✕ Clear</button>
+          <button onClick={() => setFilterStatus('all')} style={{ padding: '8px 12px', borderRadius: 8, border: `1px solid ${C.red}`, background: '#FFF0F0', color: C.red, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>Clear</button>
         )}
         <div style={{ position: 'relative' }}>
           <button onClick={() => setShowFilterPopup(p => !p)} style={{ width: 38, height: 38, borderRadius: 10, border: `1.5px solid ${showFilterPopup || activeFilters > 0 ? C.red : C.border}`, background: showFilterPopup || activeFilters > 0 ? '#FFF0F0' : C.card, color: showFilterPopup || activeFilters > 0 ? C.red : C.muted, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
@@ -204,11 +204,11 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
                   <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', marginBottom: 8 }}>Order Status</div>
                   <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as any)} style={{ width: '100%', padding: '9px 12px', border: `1.5px solid ${filterStatus !== 'all' ? C.red : C.border}`, borderRadius: 10, fontSize: 13, outline: 'none', background: C.inputBg, color: C.text }}>
                     <option value="all">All Status</option>
-                    <option value="pending">⏳ Pending</option>
-                    <option value="approved">✅ Approved</option>
-                    <option value="shipped">🚚 Shipped</option>
-                    <option value="delivered">📦 Delivered</option>
-                    <option value="rejected">❌ Rejected</option>
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                    <option value="shipped">Shipped</option>
+                    <option value="delivered">Delivered</option>
+                    <option value="rejected">Rejected</option>
                   </select>
                 </div>
                 <div style={{ padding: '0 22px 18px', display: 'flex', gap: 10 }}>
@@ -242,7 +242,7 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
                   <td style={{ padding: '14px 16px', fontSize: 13, fontWeight: 800, color: C.muted }}>{order.id}</td>
                   <td style={{ padding: '14px 16px' }}>
                     <span style={{ background: order.type === 'electrician' ? '#FFF0F0' : order.type === 'dealer' ? '#EFF6FF' : order.type === 'customer' ? '#F0FDF4' : '#FDF4FF', color: order.type === 'electrician' ? '#C2410C' : order.type === 'dealer' ? '#1D4ED8' : order.type === 'customer' ? '#15803D' : '#7C3AED', fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, display: 'flex', alignItems: 'center', gap: 4, width: 'fit-content' }}>
-                      {order.type === 'electrician' ? <Zap size={11} /> : order.type === 'dealer' ? <Store size={11} /> : order.type === 'customer' ? <User size={11} /> : <Package size={11} />}
+                      {order.type === 'electrician' ? <Bolt size={11} /> : order.type === 'dealer' ? <Store size={11} /> : order.type === 'customer' ? <User size={11} /> : <Package size={11} />}
                       {order.type === 'electrician' ? 'Electrician' : order.type === 'dealer' ? 'Dealer' : order.type === 'customer' ? 'Customer' : 'Counterboy'}
                     </span>
                   </td>
@@ -261,7 +261,7 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
                   </td>
                   <td style={{ padding: '14px 16px', fontSize: 12, color: C.muted }}>{order.dealerName}</td>
                   <td style={{ padding: '14px 16px' }}>
-                    <span style={{ background: '#FEF3C7', color: '#92400E', fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 20 }}>⚡ {order.pointsUsed}</span>
+                    <span style={{ background: '#FEF3C7', color: '#92400E', fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 20 }}>{order.pointsUsed}</span>
                   </td>
                   <td style={{ padding: '14px 16px', fontSize: 12, color: C.muted }}>{new Date(order.orderedAt).toLocaleDateString('en-IN')}</td>
                   <td style={{ padding: '14px 16px' }}>

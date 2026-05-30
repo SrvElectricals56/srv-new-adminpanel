@@ -5,6 +5,7 @@ import { Search, Share2, X } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { referralApi, settingsApi } from '@/lib/api';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
+import { I } from '@/lib/iconMap';
 
 interface ReferralRecord {
   id: string;
@@ -141,7 +142,7 @@ export default function Referrals({ role }: { role?: import('@/lib/types').Admin
       <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: C.card, borderRadius: 10, padding: 4, border: `1px solid ${C.border}`, width: 'fit-content' }}>
         {(['codes', 'config'] as const).map(tab => (
           <button key={tab} onClick={() => setActiveTab(tab)} style={{ padding: '8px 24px', borderRadius: 7, border: 'none', background: activeTab === tab ? '#4338CA' : 'transparent', color: activeTab === tab ? '#fff' : C.muted, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-            {tab === 'codes' ? '🔗 Referral Codes' : '⚙️ Config'}
+            {tab === 'codes' ? 'Referral Codes' : 'Config'}
           </button>
         ))}
       </div>
@@ -228,7 +229,7 @@ export default function Referrals({ role }: { role?: import('@/lib/types').Admin
               <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>Example: {config.baseLinkUrl}RAMESH10</div>
             </div>
             {configSaved && (
-              <div style={{ padding: '10px', borderRadius: 8, background: 'rgba(34,197,94,0.15)', color: '#16A34A', fontSize: 13, fontWeight: 600, textAlign: 'center' }}>✓ Configuration saved successfully!</div>
+              <div style={{ padding: '10px', borderRadius: 8, background: 'rgba(34,197,94,0.15)', color: '#16A34A', fontSize: 13, fontWeight: 600, textAlign: 'center' }}>Configuration saved successfully!</div>
             )}
             <button onClick={handleSaveConfig} disabled={!canEdit || configSaving} style={{ padding: '11px', borderRadius: 9, border: 'none', background: configSaving ? '#9CA3AF' : 'linear-gradient(135deg, #4338CA, #6366F1)', color: '#fff', fontSize: 14, fontWeight: 700, cursor: !canEdit || configSaving ? 'not-allowed' : 'pointer', opacity: canEdit ? 1 : 0.7 }}>
               {configSaving ? 'Saving...' : 'Save Configuration'}

@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { Zap, FileCheck, ScanLine, Wallet, Gift, CreditCard, Trophy, Landmark } from 'lucide-react';
+import { Bolt, FileCheck, ScanLine, Wallet, Gift, CreditCard, Medal, Landmark } from 'lucide-react';
 import Electricians from './AllElectricians';
 import ElectricianKYC from './pages/KYC';
 import ElectricianScanHistory from './pages/ScanHistory';
@@ -20,8 +20,8 @@ interface ElectricianHubProps {
 }
 
 const subPages = [
-  { id: 'electricians', label: 'All Electricians', Icon: Zap, description: 'Manage electricians' },
-  { id: 'top', label: 'Top Electricians', Icon: Trophy, description: 'Leaderboard' },
+  { id: 'electricians', label: 'All Electricians', Icon: Bolt, description: 'Manage electricians' },
+  { id: 'top', label: 'Top Electricians', Icon: Medal, description: 'Leaderboard' },
   { id: 'kyc', label: 'KYC Management', Icon: FileCheck, description: 'Verify documents' },
   { id: 'scans', label: 'Scan History', Icon: ScanLine, description: 'View scan records' },
   { id: 'wallet', label: 'Wallet History', Icon: Wallet, description: 'Track transactions' },

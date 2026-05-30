@@ -6,12 +6,13 @@ import type { Electrician, MemberTier, UserStatus } from '@/lib/types';
 import { useThemePalette } from '@/lib/theme';
 import ExportModal from '@/components/Shared/ExportModal';
 import AlertDialog from '@/components/Shared/AlertDialog';
+import { I } from '@/lib/iconMap';
 
 const TIER_CONFIG: Record<MemberTier, { bg: string; color: string; icon: string }> = {
-  Silver: { bg: '#F1F5F9', color: '#475569', icon: '🥈' },
-  Gold: { bg: '#FFFBEB', color: '#92400E', icon: '🥇' },
-  Platinum: { bg: '#F5F3FF', color: '#5B21B6', icon: '🏆' },
-  Diamond: { bg: '#EFF6FF', color: '#1D4ED8', icon: '💎' },
+  Silver: { bg: '#F1F5F9', color: '#475569', icon: '' },
+  Gold: { bg: '#FFFBEB', color: '#92400E', icon: '' },
+  Platinum: { bg: '#F5F3FF', color: '#5B21B6', icon: '' },
+  Diamond: { bg: '#EFF6FF', color: '#1D4ED8', icon: '' },
 };
 
 const STATUS_CONFIG: Record<UserStatus, { bg: string; color: string; label: string }> = {
@@ -208,7 +209,7 @@ function AddModal({ dealers = [], onClose, onSave }: { dealers?: {id: string; na
       <div style={{ background: C.card, borderRadius: 20, width: 680, maxWidth: '95vw', maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 25px 70px rgba(0,0,0,0.2)' }} onClick={e => e.stopPropagation()}>
         <div style={{ padding: '22px 28px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: C.text }}>➕ Add Associate Electrician</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: C.text }}>Add Associate Electrician</div>
             <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Link a new electrician to a dealer</div>
           </div>
           <button onClick={onClose} style={{ background: C.bg, border: 'none', borderRadius: 10, width: 34, height: 34, cursor: 'pointer', fontSize: 16 }}>✕</button>
@@ -216,7 +217,7 @@ function AddModal({ dealers = [], onClose, onSave }: { dealers?: {id: string; na
 
         <div style={{ padding: 28, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
           {/* Personal Info */}
-          <div style={{ gridColumn: '1/-1', fontSize: 13, fontWeight: 700, color: C.text, paddingBottom: 8, borderBottom: `1px solid ${C.border}` }}>👤 Personal Information</div>
+          <div style={{ gridColumn: '1/-1', fontSize: 13, fontWeight: 700, color: C.text, paddingBottom: 8, borderBottom: `1px solid ${C.border}` }}>Personal Information</div>
 
           <div>
             <label style={{ fontSize: 12, fontWeight: 700, color: C.muted, display: 'block', marginBottom: 6, textTransform: 'uppercase' }}>Full Name *</label>
@@ -233,7 +234,7 @@ function AddModal({ dealers = [], onClose, onSave }: { dealers?: {id: string; na
             }} placeholder="10-digit mobile" />
           </div>
 
-          <div style={{ gridColumn: '1/-1', fontSize: 13, fontWeight: 700, color: C.text, paddingBottom: 8, borderBottom: `1px solid ${C.border}` }}>🖼️ Profile Photo</div>
+          <div style={{ gridColumn: '1/-1', fontSize: 13, fontWeight: 700, color: C.text, paddingBottom: 8, borderBottom: `1px solid ${C.border}` }}>Profile Photo</div>
           {form.profileImage && (
             <div style={{ gridColumn: '1/-1', lineHeight: 0 }}>
               <img src={form.profileImage} alt="" style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', display: 'block', border: `1px solid ${C.border}` }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
@@ -267,7 +268,7 @@ function AddModal({ dealers = [], onClose, onSave }: { dealers?: {id: string; na
           </div>
 
           {/* Location */}
-          <div style={{ gridColumn: '1/-1', fontSize: 13, fontWeight: 700, color: C.text, paddingBottom: 8, borderBottom: `1px solid ${C.border}`, marginTop: 4 }}>📍 Location</div>
+          <div style={{ gridColumn: '1/-1', fontSize: 13, fontWeight: 700, color: C.text, paddingBottom: 8, borderBottom: `1px solid ${C.border}`, marginTop: 4 }}>Location</div>
           <div>
             <label style={{ fontSize: 12, fontWeight: 700, color: C.muted, display: 'block', marginBottom: 6, textTransform: 'uppercase' }}>City</label>
             <input style={inputStyle} value={form.city ?? ''} onChange={e => {
@@ -291,7 +292,7 @@ function AddModal({ dealers = [], onClose, onSave }: { dealers?: {id: string; na
           </div>
 
           {/* Account Settings */}
-          <div style={{ gridColumn: '1/-1', fontSize: 13, fontWeight: 700, color: C.text, paddingBottom: 8, borderBottom: `1px solid ${C.border}`, marginTop: 4 }}>📊 Account Settings</div>
+          <div style={{ gridColumn: '1/-1', fontSize: 13, fontWeight: 700, color: C.text, paddingBottom: 8, borderBottom: `1px solid ${C.border}`, marginTop: 4 }}>Account Settings</div>
           <div>
             <label style={{ fontSize: 12, fontWeight: 700, color: C.muted, display: 'block', marginBottom: 6, textTransform: 'uppercase' }}>Dealer</label>
             <select style={inputStyle} value={form.dealerId ?? ''} onChange={e => {
@@ -381,7 +382,7 @@ function EditModal({
 
         <div style={{ padding: 28, display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 14 }}>
           <div style={{ gridColumn: '1/-1' }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 6, paddingBottom: 6, borderBottom: `1px solid ${C.border}` }}>🖼️ Profile Photo</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 6, paddingBottom: 6, borderBottom: `1px solid ${C.border}` }}>Profile Photo</div>
           </div>
           {form.profileImage && (
             <div style={{ gridColumn: '1/-1', lineHeight: 0 }}>

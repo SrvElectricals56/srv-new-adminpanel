@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { LayoutGrid, RotateCcw, Save, Settings2, Smartphone, Type } from 'lucide-react';
+import { LayoutGrid, RotateCcw, Save, Settings2, AppWindow, Type } from 'lucide-react';
 import { settingsApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
 
@@ -1151,7 +1151,7 @@ export default function AppPageControls({ role }: { role?: import('@/lib/types')
       <div style={{ background: 'linear-gradient(135deg, #0F172A, #1E293B)', borderRadius: 20, padding: '22px 24px', marginBottom: 22, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{ width: 54, height: 54, borderRadius: 16, background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Smartphone size={27} />
+            <AppWindow size={27} />
           </div>
           <div>
             <div style={{ fontSize: 24, fontWeight: 900 }}>App Page Controls</div>

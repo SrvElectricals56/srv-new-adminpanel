@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { Users, Trophy, FileCheck, Wallet, Gift, CreditCard, Landmark } from 'lucide-react';
+import { Users, Medal, FileCheck, Wallet, Gift, CreditCard, Landmark } from 'lucide-react';
 import AllAppUsers from './AllAppUsers';
 import TopUsers from './pages/TopUsers';
 import UserKYC from './pages/KYC';
@@ -19,7 +19,7 @@ interface AppUserHubProps {
 
 const subPages = [
   { id: 'users', label: 'All Customers', Icon: Users, description: 'Manage customer accounts' },
-  { id: 'top', label: 'Top Customers', Icon: Trophy, description: 'Leaderboard' },
+  { id: 'top', label: 'Top Customers', Icon: Medal, description: 'Leaderboard' },
   { id: 'kyc', label: 'KYC Management', Icon: FileCheck, description: 'Verify documents' },
   { id: 'wallet', label: 'Wallet History', Icon: Wallet, description: 'Track transactions' },
   { id: 'offers', label: 'Offers', Icon: Gift, description: 'Manage promotions' },

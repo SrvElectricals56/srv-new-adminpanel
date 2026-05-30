@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { MessageSquare, Search, Filter, Send, X, Clock, CheckCircle, AlertCircle, User, Phone, Mail, Calendar } from 'lucide-react';
+import { MessageCircle, Search, Filter, Send, X, Clock, CheckCircle, AlertCircle, User, Phone, Mail, Calendar } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { supportApi } from '@/lib/api';
 
@@ -159,7 +159,7 @@ export default function EnquirySupport() {
       <div style={{ background: 'linear-gradient(135deg, #7C3AED, #5B21B6)', borderRadius: 16, padding: '24px 28px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <MessageSquare size={24} color="#fff" />
+            <MessageCircle size={24} color="#fff" />
           </div>
           <div>
             <div style={{ fontSize: 20, fontWeight: 800, color: '#fff' }}>Enquiry Support</div>
@@ -214,7 +214,7 @@ export default function EnquirySupport() {
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {filteredEnquiries.length === 0 ? (
               <div style={{ padding: '40px 20px', textAlign: 'center', color: C.muted }}>
-                <MessageSquare size={48} style={{ margin: '0 auto 12px', opacity: 0.3 }} />
+                <MessageCircle size={48} style={{ margin: '0 auto 12px', opacity: 0.3 }} />
                 <div style={{ fontSize: 14, fontWeight: 600 }}>No enquiries found</div>
               </div>
             ) : (

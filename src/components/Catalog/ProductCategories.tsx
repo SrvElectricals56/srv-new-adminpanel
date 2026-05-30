@@ -684,7 +684,7 @@ export default function ProductCategories({ role, onNavigate }: { role?: import(
                   fontSize: 13, fontWeight: 600, cursor: imageUploading ? 'not-allowed' : 'pointer',
                 }}
               >
-                {imageUploading ? '⏳ Uploading...' : editingId !== null ? 'Save Changes' : 'Add Category'}
+                {imageUploading ? 'Uploading...' : editingId !== null ? 'Save Changes' : 'Add Category'}
               </button>
             </div>
           </div>

@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Zap, Store, ScanLine, Star, Users, AlertTriangle, BarChart2, Trophy, CreditCard, Gift, MessageSquare } from 'lucide-react';
+import { Bolt, Store, ScanLine, Star, Users, AlertTriangle, ChartColumn, Medal, CreditCard, Gift, MessageCircle, X, Check, Award, Trophy, Gem, FileText, IndianRupee } from 'lucide-react';
 import { analyticsApi, redemptionApi, scanApi, supportApi } from '@/lib/api';
 import type { AdminRole } from '@/lib/types';
 import { getPermissions } from '@/lib/permissions';
@@ -85,14 +85,14 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
   };
 
   const statCards = [
-    { label: 'Total Electricians', value: stats?.totalElectricians?.toLocaleString('en-IN') ?? '—', Icon: Zap, change: 'All registered', up: true, color: '#1D4ED8', bg: '#FFF0F0', navigateTo: 'electricians' },
+    { label: 'Total Electricians', value: stats?.totalElectricians?.toLocaleString('en-IN') ?? '—', Icon: Bolt, change: 'All registered', up: true, color: '#1D4ED8', bg: '#FFF0F0', navigateTo: 'electricians' },
     { label: 'Total Dealers', value: stats?.totalDealers?.toLocaleString('en-IN') ?? '—', Icon: Store, change: 'All registered', up: true, color: '#3B82F6', bg: '#EFF6FF', navigateTo: 'dealers' },
     { label: 'Scans Today', value: stats?.totalScansToday?.toLocaleString('en-IN') ?? '—', Icon: ScanLine, change: 'Today', up: true, color: '#10B981', bg: '#D1FAE5', navigateTo: 'electricians', subPage: 'scans' },
     { label: 'Points Awarded', value: stats?.totalPointsAwarded ? `${(stats.totalPointsAwarded / 1000).toFixed(0)}K` : '—', Icon: Star, change: 'Total all-time', up: true, color: '#F59E0B', bg: '#FFFBEB', navigateTo: 'points-config' },
-    { label: 'Finance', value: '💳', Icon: CreditCard, change: 'Electrician, Dealer, Customer & Counter Boy', up: true, color: '#065F46', bg: '#D1FAE5', navigateTo: 'finance-choice' },
+    { label: 'Finance', value: null, Icon: CreditCard, change: 'Electrician, Dealer, Customer & Counter Boy', up: true, color: '#065F46', bg: '#D1FAE5', navigateTo: 'finance-choice', valueIcon: IndianRupee },
     { label: 'Active Users', value: stats?.activeUsers?.toLocaleString('en-IN') ?? '—', Icon: Users, change: 'Currently active', up: true, color: '#0369A1', bg: '#F0F9FF', navigateTo: 'electricians' },
-    { label: 'Top Electricians', value: '🏆', Icon: Trophy, change: 'View leaderboard', up: true, color: '#F59E0B', bg: '#FFFBEB', navigateTo: 'electricians', subPage: 'top' },
-    { label: 'Top Dealers', value: '🏅', Icon: Store, change: 'View leaderboard', up: true, color: '#3B82F6', bg: '#EFF6FF', navigateTo: 'dealers', subPage: 'top' },
+    { label: 'Top Electricians', value: null, Icon: Medal, change: 'View leaderboard', up: true, color: '#F59E0B', bg: '#FFFBEB', navigateTo: 'electricians', subPage: 'top', valueIcon: Trophy },
+    { label: 'Top Dealers', value: null, Icon: Store, change: 'View leaderboard', up: true, color: '#3B82F6', bg: '#EFF6FF', navigateTo: 'dealers', subPage: 'top', valueIcon: Award },
   ];
 
   // Real chart data — fallback to empty bars if not loaded yet
@@ -115,20 +115,20 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
                   <div style={{ fontSize: 12, color: C.muted }}>Which finance page would you like to open?</div>
                 </div>
               </div>
-              <button onClick={() => setShowFinanceChoice(false)} style={{ background: C.bg, border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontSize: 16, color: C.muted }}>✕</button>
+              <button onClick={() => setShowFinanceChoice(false)} style={{ background: C.bg, border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.muted }}><X size={16} /></button>
             </div>
             <div style={{ padding: '20px 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               {[
-                { label: 'Electrician', emoji: '⚡', nav: 'electricians' },
-                { label: 'Dealer', emoji: '🏬', nav: 'dealers' },
-                { label: 'Customer', emoji: '👤', nav: 'app-users' },
-                { label: 'Counter Boy', emoji: '🧾', nav: 'counterboys' },
+                { label: 'Electrician', Icon: Bolt, nav: 'electricians' },
+                { label: 'Dealer', Icon: Store, nav: 'dealers' },
+                { label: 'Customer', Icon: Users, nav: 'app-users' },
+                { label: 'Counter Boy', Icon: FileText, nav: 'counterboys' },
               ].map(item => (
                 <button key={item.label} onClick={() => { setShowFinanceChoice(false); onNavigate && onNavigate(item.nav, 'finance'); }}
                   style={{ background: C.surface, border: `2px solid ${C.border}`, borderRadius: 14, padding: '20px 16px', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s' }}
                   onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#FFF0F0'; (e.currentTarget as HTMLButtonElement).style.borderColor = C.red; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = C.surface; (e.currentTarget as HTMLButtonElement).style.borderColor = C.border; }}>
-                  <div style={{ fontSize: 28, marginBottom: 8 }}>{item.emoji}</div>
+                  <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'center' }}><item.Icon size={28} /></div>
                   <div style={{ fontSize: 14, fontWeight: 800, color: C.text }}>{item.label}</div>
                   <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>Wallet, payments and redemptions</div>
                 </button>
@@ -153,7 +153,7 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>Pending Action</div>
           </div>
           <div onClick={() => onNavigate && onNavigate('enquiry-support')} style={{ textAlign: 'center', padding: '10px 20px', background: 'rgba(124,58,237,0.25)', borderRadius: 12, border: '1px solid rgba(124,58,237,0.3)', cursor: 'pointer' }}>
-            <div style={{ fontSize: 22, fontWeight: 900, color: '#C4B5FD', display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}><MessageSquare size={20} /> {pendingEnquiries}</div>
+            <div style={{ fontSize: 22, fontWeight: 900, color: '#C4B5FD', display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}><MessageCircle size={20} /> {pendingEnquiries}</div>
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>Pending Enquiries</div>
           </div>
         </div>
@@ -170,7 +170,7 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
               <div style={{ width: 42, height: 42, borderRadius: 12, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.color }}><s.Icon size={20} /></div>
               <span style={{ background: '#D1FAE5', color: '#065F46', fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 20 }}>↑</span>
             </div>
-            <div style={{ fontSize: 28, fontWeight: 900, color: C.text, marginBottom: 4 }}>{loading ? '...' : s.value}</div>
+            <div style={{ fontSize: 28, fontWeight: 900, color: C.text, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>{loading ? '...' : s.valueIcon ? <s.valueIcon size={28} style={{ color: s.color }} /> : s.value}</div>
             <div style={{ fontSize: 13, fontWeight: 700, color: C.muted, marginBottom: 2 }}>{s.label}</div>
             <div style={{ fontSize: 11, color: '#10B981', fontWeight: 600 }}>{s.change}</div>
           </div>
@@ -183,7 +183,7 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
         <div onClick={() => onNavigate && onNavigate('electricians', 'scans')} style={{ background: C.card, borderRadius: 16, padding: 22, border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', cursor: 'pointer' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
             <div>
-              <div style={{ fontSize: 16, fontWeight: 800, color: C.text, display: 'flex', alignItems: 'center', gap: 8 }}><BarChart2 size={18} style={{ color: C.red }} /> Scan Activity — This Week</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: C.text, display: 'flex', alignItems: 'center', gap: 8 }}><ChartColumn size={18} style={{ color: C.red }} /> Scan Activity — This Week</div>
               <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Daily scan count</div>
             </div>
           </div>
@@ -204,20 +204,20 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
 
         {/* Tier Distribution */}
         <div onClick={() => onNavigate && onNavigate('electricians')} style={{ background: C.card, borderRadius: 16, padding: 22, border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', cursor: 'pointer' }}>
-          <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}><Trophy size={18} style={{ color: '#F59E0B' }} /> Tier Distribution</div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}><Medal size={18} style={{ color: '#F59E0B' }} /> Tier Distribution</div>
           <div style={{ fontSize: 12, color: C.muted, marginBottom: 20 }}>Electricians by tier</div>
           {loading ? (
             <div style={{ color: C.muted, fontSize: 13 }}>Loading...</div>
           ) : (
             ['Silver', 'Gold', 'Platinum', 'Diamond'].map(tier => {
-              const icons: Record<string, string> = { Silver: '🥈', Gold: '🥇', Platinum: '🏆', Diamond: '💎' };
+              const tierIconMap: Record<string, React.ReactNode> = { Silver: <Medal size={16} />, Gold: <Award size={16} />, Platinum: <Trophy size={16} />, Diamond: <Gem size={16} /> };
               const total = stats?.totalElectricians || 1;
               const count = tierData[tier] ?? 0;
               const pct = total > 0 ? Math.round((count / total) * 100) : 0;
               return (
                 <div key={tier} style={{ marginBottom: 14 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{icons[tier]} {tier}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: C.text, display: 'flex', alignItems: 'center', gap: 6 }}>{tierIconMap[tier]} {tier}</span>
                     <span style={{ fontSize: 13, fontWeight: 800, color: C.text }}>{count} <span style={{ fontSize: 11, color: C.muted, fontWeight: 400 }}>({pct}%)</span></span>
                   </div>
                   <div style={{ height: 8, background: C.bg, borderRadius: 4, overflow: 'hidden' }}>
@@ -234,7 +234,7 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
         {/* Recent Scans */}
         <div onClick={() => onNavigate && onNavigate('electricians', 'scans')} style={{ background: C.card, borderRadius: 16, padding: 22, border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', cursor: 'pointer' }}>
-          <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 18, display: 'flex', alignItems: 'center', gap: 8 }}><Zap size={18} style={{ color: C.red }} /> Recent Scans</div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 18, display: 'flex', alignItems: 'center', gap: 8 }}><Bolt size={18} style={{ color: C.red }} /> Recent Scans</div>
           {loading ? <div style={{ color: C.muted, fontSize: 13 }}>Loading...</div> :
             recentScans.length === 0 ? <div style={{ textAlign: 'center', padding: '24px 0', color: C.muted, fontSize: 14 }}>No scans yet</div> :
             recentScans.slice(0, 5).map((s: any, i: number) => (
@@ -260,7 +260,7 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
             {pendingRedemptions.length > 0 && <span style={{ background: '#FFF0F0', color: C.red, fontSize: 12, fontWeight: 800, padding: '4px 10px', borderRadius: 20 }}>{pendingRedemptions.length} pending</span>}
           </div>
           {loading ? <div style={{ color: C.muted, fontSize: 13 }}>Loading...</div> :
-            pendingRedemptions.length === 0 ? <div style={{ textAlign: 'center', padding: '24px 0', color: C.muted, fontSize: 14 }}>All caught up! ✅</div> :
+            pendingRedemptions.length === 0 ? <div style={{ textAlign: 'center', padding: '24px 0', color: C.muted, fontSize: 14 }}>All caught up!</div> :
             pendingRedemptions.map((r: any, i: number) => (
               <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: i < pendingRedemptions.length - 1 ? `1px solid ${C.bg}` : 'none' }}>
                 <div style={{ width: 36, height: 36, borderRadius: 10, background: '#F5F3FF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: '#7C3AED', fontSize: 14, flexShrink: 0 }}>{(r.userName || 'U')[0]}</div>
@@ -270,8 +270,8 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
                 </div>
                 {permissions.canEdit && (
                   <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                    <button onClick={() => handleApproveRedemption(r.id)} style={{ background: '#D1FAE5', color: '#065F46', border: 'none', borderRadius: 8, padding: '5px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>✓</button>
-                    <button onClick={() => handleRejectRedemption(r.id)} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 8, padding: '5px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>✕</button>
+                    <button onClick={() => handleApproveRedemption(r.id)} style={{ background: '#D1FAE5', color: '#065F46', border: 'none', borderRadius: 8, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><Check size={14} /></button>
+                    <button onClick={() => handleRejectRedemption(r.id)} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 8, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><X size={14} /></button>
                   </div>
                 )}
               </div>

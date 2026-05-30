@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { QrCode, Download, RefreshCw, Zap, Package, Gift, Copy, Check, FileText, FileSpreadsheet, Archive } from 'lucide-react';
+import { QrCode, Download, RefreshCw, Bolt, Package, Gift, Copy, Check, FileText, FileSpreadsheet, Archive } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import type { AdminRole } from '@/lib/types';
 import { getPermissions } from '@/lib/permissions';
@@ -94,7 +94,7 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
       setGeneratedQRs(prev => [...newQRs, ...prev]);
       setAlertDialog({
         show: true,
-        title: '✅ QR Codes Generated',
+        title: 'QR Codes Generated',
         message: `${count} QR codes for "${product.name}" saved to database successfully.`,
         type: 'success',
       });
@@ -318,7 +318,7 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
         </div>
         <div style={{ textAlign: 'center', padding: '10px 20px', background: 'rgba(255,255,255,0.07)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)' }}>
           <div style={{ fontSize: 22, fontWeight: 900, color: '#10B981', display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
-            <Zap size={20} /> {generatedQRs.filter(q => q.status === 'active').length}
+            <Bolt size={20} /> {generatedQRs.filter(q => q.status === 'active').length}
           </div>
           <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>Active QR Codes</div>
         </div>
@@ -333,7 +333,7 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
 
           {!permissions.canEdit && (
             <div style={{ background: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: 12, padding: 16, marginBottom: 20 }}>
-              <div style={{ fontSize: 13, color: '#92400E', fontWeight: 600 }}>⚠️ View Only Mode</div>
+              <div style={{ fontSize: 13, color: '#92400E', fontWeight: 600 }}>View Only Mode</div>
               <div style={{ fontSize: 12, color: '#92400E', marginTop: 4 }}>You don't have permission to generate QR codes</div>
             </div>
           )}
@@ -469,7 +469,7 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
                       QR ID: <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{qr.id}</span>
                     </div>
                     <div style={{ display: 'flex', gap: 16, fontSize: 11, color: C.muted, marginBottom: 12 }}>
-                      <div><Zap size={12} style={{ display: 'inline', marginRight: 4 }} />{qr.points} points</div>
+                      <div><Bolt size={12} style={{ display: 'inline', marginRight: 4 }} />{qr.points} points</div>
                       <div>SKU: {qr.productId}</div>
                       <div>Generated: {new Date(qr.generatedAt).toLocaleDateString('en-IN')}</div>
                     </div>

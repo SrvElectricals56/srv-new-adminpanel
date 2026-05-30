@@ -6,6 +6,7 @@ import { useThemePalette } from '@/lib/theme';
 import { bannerApi } from '@/lib/api';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 import AlertDialog from '@/components/Shared/AlertDialog';
+import { I } from '@/lib/iconMap';
 
 interface Banner {
   id: string;
@@ -320,7 +321,7 @@ export default function BannersPage({ role }: { role?: import('@/lib/types').Adm
                   {(['All', 'Electrician', 'Dealer', 'Customer', 'CounterBoy'] as const).map(role => (
                     <label key={role} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, color: C.text }}>
                       <input type="checkbox" checked={form.targetRole.includes(role)} onChange={() => toggleRole(role)} style={{ accentColor: C.red }} />
-                      {role === 'All' ? '🌐 All' : role === 'Electrician' ? '⚡ Electrician' : role === 'Dealer' ? '🏪 Dealer' : role === 'Customer' ? '👤 Customer' : '🧾 CounterBoy'}
+                      {role === 'All' ? 'All' : role === 'Electrician' ? 'Electrician' : role === 'Dealer' ? 'Dealer' : role === 'Customer' ? 'Customer' : 'CounterBoy'}
                     </label>
                   ))}
                 </div>

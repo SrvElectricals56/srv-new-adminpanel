@@ -5,6 +5,7 @@ import { scanApi, redemptionApi, notificationApi, offerApi, settingsApi, bannerA
 import type { PointsConfig, BannerItem } from '@/lib/types';
 import { useTheme, useThemePalette } from '@/lib/theme';
 import AlertDialog from '@/components/Shared/AlertDialog';
+import { I } from '@/lib/iconMap';
 
 function useSectionStyles() {
   const C = useThemePalette();
@@ -47,30 +48,30 @@ export function ScanHistory() {
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 26, fontWeight: 800, color: C.text, marginBottom: 4 }}>📷 Scan History</h1>
+        <h1 style={{ fontSize: 26, fontWeight: 800, color: C.text, marginBottom: 4 }}>Scan History</h1>
         <p style={{ color: C.muted, fontSize: 14 }}>All product scan events across electricians and dealers</p>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 22 }}>
         {[
-          { label: 'Total Scans', value: data.length, icon: '📷', color: '#3B82F6', bg: '#EFF6FF' },
-          { label: 'By Electricians', value: data.filter(s => s.role === 'electrician').length, icon: '⚡', color: '#C2410C', bg: '#FFF7ED' },
-          { label: 'By Customers', value: data.filter(s => s.role === 'customer').length, icon: '👤', color: '#15803D', bg: '#F0FDF4' },
-          { label: 'Multi-Scan', value: data.filter(s => s.mode === 'multi').length, icon: '🔄', color: '#065F46', bg: '#D1FAE5' },
+          { label: 'Total Scans', value: data.length, icon: 'Camera', color: '#3B82F6', bg: '#EFF6FF' },
+          { label: 'By Electricians', value: data.filter(s => s.role === 'electrician').length, icon: 'Bolt', color: '#C2410C', bg: '#FFF7ED' },
+          { label: 'By Customers', value: data.filter(s => s.role === 'customer').length, icon: 'User', color: '#15803D', bg: '#F0FDF4' },
+          { label: 'Multi-Scan', value: data.filter(s => s.mode === 'multi').length, icon: 'Repeat', color: '#065F46', bg: '#D1FAE5' },
         ].map((s, i) => (
           <div key={i} style={{ background: C.card, borderRadius: 14, padding: '16px 18px', border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-            <div style={{ width: 42, height: 42, borderRadius: 12, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>{s.icon}</div>
+            <div style={{ width: 42, height: 42, borderRadius: 12, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><I name={s.icon} size={20} /></div>
             <div><div style={{ fontSize: 22, fontWeight: 800, color: C.text }}>{s.value}</div><div style={{ fontSize: 12, color: s.color, fontWeight: 700 }}>{s.label}</div></div>
           </div>
         ))}
       </div>
       <div style={{ background: C.card, borderRadius: 14, padding: '14px 18px', border: `1px solid ${C.border}`, marginBottom: 16, display: 'flex', gap: 12, alignItems: 'center' }}>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍  Search user, product, location..." style={{ ...inputStyle, flex: 1 }} onFocus={e => (e.target as HTMLInputElement).style.borderColor = C.red} onBlur={e => (e.target as HTMLInputElement).style.borderColor = C.border} />
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search user, product, location..." style={{ ...inputStyle, flex: 1 }} onFocus={e => (e.target as HTMLInputElement).style.borderColor = C.red} onBlur={e => (e.target as HTMLInputElement).style.borderColor = C.border} />
         <select value={filterRole} onChange={e => setFilterRole(e.target.value)} style={{ ...inputStyle, width: 'auto' }}>
           <option value="all">All Roles</option>
-          <option value="electrician">⚡ Electrician</option>
-          <option value="dealer">🏬 Dealer</option>
-          <option value="customer">👤 Customer</option>
-          <option value="counterboy">🧾 Counterboy</option>
+          <option value="electrician">Electrician</option>
+          <option value="dealer">Dealer</option>
+          <option value="customer">Customer</option>
+          <option value="counterboy">Counterboy</option>
         </select>
       </div>
       {loading ? <div style={{ textAlign: 'center', padding: 40, color: C.muted }}>Loading scans...</div> : (
@@ -90,14 +91,14 @@ export function ScanHistory() {
                 onMouseLeave={ev => (ev.currentTarget as HTMLTableRowElement).style.background = 'transparent'}>
                 <td style={{ padding: '13px 16px' }}>
                   <div style={{ fontSize: 13.5, fontWeight: 700, color: C.text }}>{s.userName || s.userId}</div>
-                  <span style={{ background: s.role === 'electrician' ? '#FFF7ED' : s.role === 'dealer' ? '#EFF6FF' : s.role === 'customer' ? '#F0FDF4' : '#FDF4FF', color: s.role === 'electrician' ? '#C2410C' : s.role === 'dealer' ? '#1D4ED8' : s.role === 'customer' ? '#15803D' : '#7C3AED', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20 }}>{s.role === 'electrician' ? '⚡' : s.role === 'dealer' ? '🏬' : s.role === 'customer' ? '👤' : '🧾'} {s.role}</span>
+                  <span style={{ background: s.role === 'electrician' ? '#FFF7ED' : s.role === 'dealer' ? '#EFF6FF' : s.role === 'customer' ? '#F0FDF4' : '#FDF4FF', color: s.role === 'electrician' ? '#C2410C' : s.role === 'dealer' ? '#1D4ED8' : s.role === 'customer' ? '#15803D' : '#7C3AED', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20 }}>{s.role === 'electrician' ? 'Bolt' : s.role === 'dealer' ? 'Store' : s.role === 'customer' ? 'User' : 'FileText'} {s.role}</span>
                 </td>
                 <td style={{ padding: '13px 16px' }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{s.productName || s.productId}</div>
                 </td>
                 <td style={{ padding: '13px 16px' }}><span style={{ background: '#FFFBEB', color: '#92400E', fontSize: 13, fontWeight: 800, padding: '3px 10px', borderRadius: 8 }}>+{s.points} pts</span></td>
                 <td style={{ padding: '13px 16px' }}><span style={{ background: s.mode === 'multi' ? '#EFF6FF' : '#F0FDF4', color: s.mode === 'multi' ? '#1D4ED8' : '#15803D', fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20 }}>{s.mode || 'single'}</span></td>
-                <td style={{ padding: '13px 16px', fontSize: 12.5, color: C.muted }}>📍 {s.location || '—'}</td>
+                <td style={{ padding: '13px 16px', fontSize: 12.5, color: C.muted }}>{s.location || '—'}</td>
                 <td style={{ padding: '13px 16px', fontSize: 12, color: C.muted }}>{new Date(s.scannedAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</td>
               </tr>
             ))}
@@ -152,17 +153,17 @@ export function Redemptions() {
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 26, fontWeight: 800, color: C.text, marginBottom: 4 }}>🎁 Redemptions</h1>
+        <h1 style={{ fontSize: 26, fontWeight: 800, color: C.text, marginBottom: 4 }}>Redemptions</h1>
         <p style={{ color: C.muted, fontSize: 14 }}>Approve or reject reward redemption requests from users</p>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, marginBottom: 22 }}>
         {[
-          { label: 'Pending', value: data.filter(r => r.status === 'pending').length, icon: '⏳', color: '#92400E', bg: '#FEF3C7' },
-          { label: 'Approved', value: data.filter(r => r.status === 'approved').length, icon: '✅', color: '#065F46', bg: '#D1FAE5' },
-          { label: 'Rejected', value: data.filter(r => r.status === 'rejected').length, icon: '❌', color: '#991B1B', bg: '#FEE2E2' },
+          { label: 'Pending', value: data.filter(r => r.status === 'pending').length, icon: 'Clock', color: '#92400E', bg: '#FEF3C7' },
+          { label: 'Approved', value: data.filter(r => r.status === 'approved').length, icon: 'Check', color: '#065F46', bg: '#D1FAE5' },
+          { label: 'Rejected', value: data.filter(r => r.status === 'rejected').length, icon: 'XCircle', color: '#991B1B', bg: '#FEE2E2' },
         ].map((s, i) => (
           <div key={i} onClick={() => setFilter(s.label.toLowerCase())} style={{ background: C.card, borderRadius: 14, padding: '18px 20px', border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-            <div style={{ width: 48, height: 48, borderRadius: 14, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>{s.icon}</div>
+            <div style={{ width: 48, height: 48, borderRadius: 14, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><I name={s.icon} size={22} /></div>
             <div><div style={{ fontSize: 28, fontWeight: 900, color: C.text }}>{s.value}</div><div style={{ fontSize: 12, color: s.color, fontWeight: 700 }}>{s.label}</div></div>
           </div>
         ))}
@@ -193,12 +194,12 @@ export function Redemptions() {
               </div>
               {r.status === 'pending' && (
                 <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                  <button onClick={() => updateStatus(r.id, 'approved')} style={{ background: '#D1FAE5', color: '#065F46', border: 'none', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>✅ Approve</button>
-                  <button onClick={() => updateStatus(r.id, 'rejected')} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>❌ Reject</button>
+                  <button onClick={() => updateStatus(r.id, 'approved')} style={{ background: '#D1FAE5', color: '#065F46', border: 'none', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Approve</button>
+                  <button onClick={() => updateStatus(r.id, 'rejected')} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Reject</button>
                 </div>
               )}
               {r.status !== 'pending' && (
-                <button onClick={() => handleDelete(r.id)} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 10, padding: '8px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>🗑 Delete</button>
+                <button onClick={() => handleDelete(r.id)} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 10, padding: '8px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>Delete</button>
               )}
             </div>
           );
@@ -253,15 +254,15 @@ export function Notifications() {
     <div style={{ padding: '28px 32px', maxWidth: 1100 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
         <div>
-          <h1 style={{ fontSize: 26, fontWeight: 800, color: C.text, marginBottom: 4 }}>🔔 Notifications</h1>
+          <h1 style={{ fontSize: 26, fontWeight: 800, color: C.text, marginBottom: 4 }}>Notifications</h1>
           <p style={{ color: C.muted, fontSize: 14 }}>Send push notifications to all app users</p>
         </div>
-        <button onClick={() => setShowForm(!showForm)} style={{ background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 12, padding: '11px 22px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)' }}>➕ New Notification</button>
+        <button onClick={() => setShowForm(!showForm)} style={{ background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 12, padding: '11px 22px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)' }}>New Notification</button>
       </div>
 
       {showForm && (
         <div style={{ background: C.card, borderRadius: 16, padding: 24, border: `1px solid ${C.border}`, marginBottom: 24, boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
-          <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 18 }}>📝 Compose Notification</div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 18 }}>Compose Notification</div>
           <div style={{ display: 'grid', gap: 14 }}>
             <div><label style={labelStyle}>Title *</label><input style={inputStyle} value={form.title ?? ''} onChange={e => f('title', e.target.value)} placeholder="e.g. Double Points Weekend!" /></div>
             <div><label style={labelStyle}>Message *</label><textarea style={{ ...inputStyle, resize: 'vertical', minHeight: 80 } as React.CSSProperties} value={form.message ?? ''} onChange={e => f('message', e.target.value)} placeholder="Notification body text..." /></div>
@@ -269,10 +270,10 @@ export function Notifications() {
               <div><label style={labelStyle}>Target Audience</label>
                 <select style={inputStyle} value={form.targetRole ?? 'all'} onChange={e => f('targetRole', e.target.value)}>
                   <option value="all">Everyone</option>
-                  <option value="electrician">⚡ Electricians Only</option>
-                  <option value="dealer">🏬 Dealers Only</option>
-                  <option value="customer">👤 Customers Only</option>
-                  <option value="counterboy">🧾 Counterboys Only</option>
+                  <option value="electrician">Electricians Only</option>
+                  <option value="dealer">Dealers Only</option>
+                  <option value="customer">Customers Only</option>
+                  <option value="counterboy">Counterboys Only</option>
                 </select>
               </div>
               <div><label style={labelStyle}>Send As</label>
@@ -285,7 +286,7 @@ export function Notifications() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-            <button onClick={handleSend} style={{ background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 10, padding: '12px 28px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)' }}>🚀 Send Notification</button>
+            <button onClick={handleSend} style={{ background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 10, padding: '12px 28px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)' }}>Send Notification</button>
             <button onClick={() => setShowForm(false)} style={{ background: C.bg, color: C.muted, border: 'none', borderRadius: 10, padding: '12px 20px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
           </div>
         </div>
@@ -308,8 +309,8 @@ export function Notifications() {
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
                     <span style={{ background: st.bg, color: st.color, fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20 }}>{n.status}</span>
-                    <span style={{ background: tc.bg, color: tc.color, fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20 }}>{n.targetRole === 'all' ? '🌐 Everyone' : n.targetRole === 'electrician' ? '⚡ Electricians' : n.targetRole === 'dealer' ? '🏬 Dealers' : n.targetRole === 'customer' ? '👤 Customers' : '🧾 Counterboys'}</span>
-                    {n.openRate && <span style={{ background: '#F5F3FF', color: '#5B21B6', fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20 }}>📊 {n.openRate}% open rate</span>}
+                    <span style={{ background: tc.bg, color: tc.color, fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20 }}>{n.targetRole === 'all' ? 'Everyone' : n.targetRole === 'electrician' ? 'Electricians' : n.targetRole === 'dealer' ? 'Dealers' : n.targetRole === 'customer' ? 'Customers' : 'Counterboys'}</span>
+                    {n.openRate && <span style={{ background: '#F5F3FF', color: '#5B21B6', fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20 }}><I name='BarChart3' size={12} /> {n.openRate}% open rate</span>}
                   </div>
                   <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 6 }}>{n.title}</div>
                   <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.6 }}>{n.message}</div>
@@ -373,17 +374,17 @@ export function Offers() {
     <div style={{ padding: '28px 32px', maxWidth: 1300 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
         <div>
-          <h1 style={{ fontSize: 26, fontWeight: 800, color: C.text, marginBottom: 4 }}>🏷️ Offers & Promotions</h1>
+          <h1 style={{ fontSize: 26, fontWeight: 800, color: C.text, marginBottom: 4 }}>Offers & Promotions</h1>
           <p style={{ color: C.muted, fontSize: 14 }}>Create and manage special offers, bonus points and promotions</p>
         </div>
-        <button onClick={openAdd} style={{ background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 12, padding: '11px 22px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)' }}>➕ New Offer</button>
+        <button onClick={openAdd} style={{ background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 12, padding: '11px 22px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)' }}>New Offer</button>
       </div>
 
       {showForm && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={() => setShowForm(false)}>
           <div style={{ background: C.card, borderRadius: 20, width: 560, maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 70px rgba(0,0,0,0.2)' }} onClick={e => e.stopPropagation()}>
             <div style={{ padding: '22px 28px', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontSize: 18, fontWeight: 800, color: C.text }}>{editing ? '✏️ Edit Offer' : '➕ New Offer'}</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: C.text }}>{editing ? 'Edit Offer' : 'New Offer'}</div>
               <button onClick={() => setShowForm(false)} style={{ background: C.bg, border: 'none', borderRadius: 10, width: 34, height: 34, cursor: 'pointer', fontSize: 16 }}>✕</button>
             </div>
             <div style={{ padding: 28, display: 'grid', gap: 14 }}>
@@ -397,10 +398,10 @@ export function Offers() {
                 <div><label style={labelStyle}>Target Audience</label>
                   <select style={inputStyle} value={form.targetRole ?? 'all'} onChange={e => f('targetRole', e.target.value)}>
                     <option value="all">Everyone</option>
-                    <option value="electrician">⚡ Electricians Only</option>
-                    <option value="dealer">🏬 Dealers Only</option>
-                    <option value="customer">👤 Customers Only</option>
-                    <option value="counterboy">🧾 Counterboys Only</option>
+                    <option value="electrician">Electricians Only</option>
+                    <option value="dealer">Dealers Only</option>
+                    <option value="customer">Customers Only</option>
+                    <option value="counterboy">Counterboys Only</option>
                   </select>
                 </div>
                 <div><label style={labelStyle}>Status</label>
@@ -412,7 +413,7 @@ export function Offers() {
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
-                <button onClick={handleSave} style={{ flex: 1, background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 10, padding: '13px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)' }}>{editing ? '💾 Save Changes' : '✅ Create Offer'}</button>
+                <button onClick={handleSave} style={{ flex: 1, background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 10, padding: '13px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)' }}>{editing ? 'Save Changes' : 'Create Offer'}</button>
                 <button onClick={() => setShowForm(false)} style={{ background: C.bg, color: C.muted, border: 'none', borderRadius: 10, padding: '13px 20px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
               </div>
             </div>
@@ -427,15 +428,15 @@ export function Offers() {
             <div key={o.id} style={{ background: C.card, borderRadius: 18, padding: 20, border: `1px solid ${C.border}`, boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
                 <span style={{ background: st.bg, color: st.color, fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20 }}>{o.status}</span>
-                <span style={{ background: '#F1F5F9', color: C.muted, fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 20 }}>{o.targetRole === 'all' ? '🌐 All' : o.targetRole === 'electrician' ? '⚡ Electricians' : o.targetRole === 'dealer' ? '🏬 Dealers' : o.targetRole === 'customer' ? '👤 Customers' : '🧾 Counterboys'}</span>
+                <span style={{ background: '#F1F5F9', color: C.muted, fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 20 }}>{o.targetRole === 'all' ? 'All' : o.targetRole === 'electrician' ? 'Electricians' : o.targetRole === 'dealer' ? 'Dealers' : o.targetRole === 'customer' ? 'Customers' : 'Counterboys'}</span>
               </div>
               <div style={{ fontSize: 22, fontWeight: 900, color: C.red, marginBottom: 4 }}>{o.discount}</div>
               <div style={{ fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 6 }}>{o.title}</div>
               <div style={{ fontSize: 12, color: C.muted, marginBottom: 14, lineHeight: 1.5 }}>{o.description}</div>
-              <div style={{ fontSize: 11, color: C.muted, marginBottom: 14 }}>📅 {o.validFrom} → {o.validTo} {o.bonusPoints ? `· +${o.bonusPoints} pts` : ''}</div>
+              <div style={{ fontSize: 11, color: C.muted, marginBottom: 14 }}><I name='Calendar' size={14} /> {o.validFrom} → {o.validTo} {o.bonusPoints ? `· +${o.bonusPoints} pts` : ''}</div>
               <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={() => openEdit(o)} style={{ flex: 1, background: '#FFF7ED', color: '#C2410C', border: 'none', borderRadius: 8, padding: '8px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>✏️ Edit</button>
-                <button onClick={() => handleDelete(String(o.id))} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 8, padding: '8px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>🗑 Delete</button>
+                <button onClick={() => openEdit(o)} style={{ flex: 1, background: '#FFF7ED', color: '#C2410C', border: 'none', borderRadius: 8, padding: '8px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Edit</button>
+                <button onClick={() => handleDelete(String(o.id))} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 8, padding: '8px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Delete</button>
               </div>
             </div>
           );
@@ -477,7 +478,7 @@ export function PointsConfig({ role }: { role?: import('@/lib/types').AdminRole 
     try {
       await productApi.update(product.id, { points: product._points });
       setProducts(prev => prev.map(p => p.id === product.id ? { ...p, points: product._points } : p));
-      setAlertDialog({ show: true, title: '✅ Saved', message: `Points for "${product.name}" updated to ${product._points} pts. New QR codes will use this value.`, type: 'success' });
+      setAlertDialog({ show: true, title: 'Saved', message: `Points for "${product.name}" updated to ${product._points} pts. New QR codes will use this value.`, type: 'success' });
     } catch (err: any) {
       setAlertDialog({ show: true, title: 'Error', message: err.message || 'Failed to save.', type: 'error' });
     }
@@ -494,11 +495,11 @@ export function PointsConfig({ role }: { role?: import('@/lib/types').AdminRole 
     <div style={{ padding: '28px 32px', maxWidth: 1100 }}>
       <AlertDialog show={alertDialog.show} title={alertDialog.title} message={alertDialog.message} type={alertDialog.type} onClose={() => setAlertDialog({ ...alertDialog, show: false })} />
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 26, fontWeight: 800, color: C.text, marginBottom: 4 }}>⭐ Points Configuration</h1>
+        <h1 style={{ fontSize: 26, fontWeight: 800, color: C.text, marginBottom: 4 }}>Points Configuration</h1>
         <p style={{ color: C.muted, fontSize: 14 }}>Set how many points each product earns on scan. QR codes generated after saving will use the updated value.</p>
       </div>
       <div style={{ background: '#FEF3C7', borderRadius: 12, padding: '12px 16px', marginBottom: 20, display: 'flex', gap: 10, alignItems: 'center' }}>
-        <span style={{ fontSize: 18 }}>⚠️</span>
+        <span style={{ fontSize: 18 }}></span>
         <span style={{ fontSize: 13, color: '#92400E', fontWeight: 600 }}>Changing points here updates what electricians earn per scan. Already-generated QR codes keep their product's current points.</span>
       </div>
 
@@ -507,7 +508,7 @@ export function PointsConfig({ role }: { role?: import('@/lib/types').AdminRole 
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="🔍  Search by product name, SKU or category..."
+          placeholder="Search by product name, SKU or category..."
           style={{ ...inputStyle, maxWidth: 420 }}
         />
       </div>
@@ -587,7 +588,7 @@ export function PointsConfig({ role }: { role?: import('@/lib/types').AdminRole 
                           whiteSpace: 'nowrap',
                           opacity: !canEdit || saving === p.id ? 0.7 : 1,
                         }}>
-                        {!canEdit ? 'View Only' : saving === p.id ? '⏳ Saving...' : changed ? '💾 Save' : '✓ Saved'}
+                        {!canEdit ? 'View Only' : saving === p.id ? 'Saving...' : changed ? 'Save' : 'Saved'}
                       </button>
                     </td>
                   </tr>
@@ -656,7 +657,7 @@ export function AppBanners() {
     <div style={{ padding: '28px 32px', maxWidth: 1200 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
         <div>
-          <h1 style={{ fontSize: 26, fontWeight: 800, color: C.text, marginBottom: 4 }}>🖼️ App Banners</h1>
+          <h1 style={{ fontSize: 26, fontWeight: 800, color: C.text, marginBottom: 4 }}>App Banners</h1>
           <p style={{ color: C.muted, fontSize: 14 }}>Manage promotional banners displayed in the mobile app</p>
         </div>
         <button onClick={() => setShowForm(!showForm)} style={{ background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 12, padding: '11px 22px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)', display: 'flex', alignItems: 'center', gap: 6 }}><Plus size={14} /> Add Banner</button>
@@ -664,7 +665,7 @@ export function AppBanners() {
 
       {showForm && (
         <div style={{ background: C.card, borderRadius: 16, padding: 24, border: `1px solid ${C.border}`, marginBottom: 24, boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
-          <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 18 }}>🖼️ New Banner</div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 18 }}>New Banner</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
             <div style={{ gridColumn: '1/-1' }}><label style={labelStyle}>Banner Title *</label><input style={inputStyle} value={form.title ?? ''} onChange={e => f('title', e.target.value)} placeholder="Banner title" /></div>
             <div style={{ gridColumn: '1/-1' }}><label style={labelStyle}>Image URL *</label><input style={inputStyle} value={form.imageUrl ?? ''} onChange={e => f('imageUrl', e.target.value)} placeholder="https://..." /></div>
@@ -675,10 +676,10 @@ export function AppBanners() {
             <div><label style={labelStyle}>Target Audience</label>
               <select style={inputStyle} value={form.targetRole ?? 'all'} onChange={e => f('targetRole', e.target.value)}>
                 <option value="all">Everyone</option>
-                <option value="electrician">⚡ Electricians Only</option>
-                <option value="dealer">🏬 Dealers Only</option>
-                <option value="customer">👤 Customers Only</option>
-                <option value="counterboy">🧾 Counterboys Only</option>
+                <option value="electrician">Electricians Only</option>
+                <option value="dealer">Dealers Only</option>
+                <option value="customer">Customers Only</option>
+                <option value="counterboy">Counterboys Only</option>
               </select>
             </div>
             <div><label style={labelStyle}>Display Order</label><input style={inputStyle} type="number" value={numberInputValue(form.order)} onChange={e => f('order', e.target.value === '' ? 0 : Number(e.target.value))} /></div>
@@ -689,7 +690,7 @@ export function AppBanners() {
             </div>
           )}
           <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
-            <button onClick={handleAdd} style={{ background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 10, padding: '12px 24px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)' }}>✅ Add Banner</button>
+            <button onClick={handleAdd} style={{ background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 10, padding: '12px 24px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)' }}>Add Banner</button>
             <button onClick={() => setShowForm(false)} style={{ background: C.bg, color: C.muted, border: 'none', borderRadius: 10, padding: '12px 20px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
           </div>
         </div>
@@ -706,10 +707,10 @@ export function AppBanners() {
                 <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{b.title}</div>
                 <span style={{ background: b.status === 'active' ? '#D1FAE5' : '#FEE2E2', color: b.status === 'active' ? '#065F46' : '#991B1B', fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 20, flexShrink: 0 }}>{b.status}</span>
               </div>
-              <div style={{ fontSize: 12, color: C.muted, marginBottom: 12 }}>🎯 {b.targetRole === 'all' ? 'Everyone' : b.targetRole} · Order #{b.order} · {b.createdAt}</div>
+              <div style={{ fontSize: 12, color: C.muted, marginBottom: 12 }}><I name='Target' size={14} /> {b.targetRole === 'all' ? 'Everyone' : b.targetRole} · Order #{b.order} · {b.createdAt}</div>
               <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={() => toggleStatus(b.id)} style={{ flex: 1, background: b.status === 'active' ? '#FEE2E2' : '#D1FAE5', color: b.status === 'active' ? '#991B1B' : '#065F46', border: 'none', borderRadius: 8, padding: '8px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>{b.status === 'active' ? '🚫 Deactivate' : '✅ Activate'}</button>
-                <button onClick={() => handleDelete(b.id)} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 8, padding: '8px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>🗑</button>
+                <button onClick={() => toggleStatus(b.id)} style={{ flex: 1, background: b.status === 'active' ? '#FEE2E2' : '#D1FAE5', color: b.status === 'active' ? '#991B1B' : '#065F46', border: 'none', borderRadius: 8, padding: '8px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>{b.status === 'active' ? 'Deactivate' : 'Activate'}</button>
+                <button onClick={() => handleDelete(b.id)} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 8, padding: '8px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Trash</button>
               </div>
             </div>
           </div>
@@ -755,11 +756,11 @@ export function Reports() {
 
   // Build metrics from real data
   const metrics = [
-    { label: 'Total Scans (7d)', value: scanStats?.totalScans?.toLocaleString('en-IN') ?? '—', change: '', up: true, icon: '📷', key: 'scans' },
-    { label: 'Points Awarded', value: dashboard?.totalPointsAwarded?.toLocaleString('en-IN') ?? '—', change: '', up: true, icon: '⭐', key: 'points' },
-    { label: 'Total Electricians', value: dashboard?.totalElectricians?.toLocaleString('en-IN') ?? '—', change: '', up: true, icon: '⚡', key: 'electricians' },
-    { label: 'Total Dealers', value: dashboard?.totalDealers?.toLocaleString('en-IN') ?? '—', change: '', up: true, icon: '🏬', key: 'dealers' },
-    { label: 'Pending Redemptions', value: dashboard?.pendingRedemptions?.toLocaleString('en-IN') ?? '—', change: '', up: false, icon: '🎁', key: 'redemptions' },
+    { label: 'Total Scans (7d)', value: scanStats?.totalScans?.toLocaleString('en-IN') ?? '—', change: '', up: true, icon: 'Camera', key: 'scans' },
+    { label: 'Points Awarded', value: dashboard?.totalPointsAwarded?.toLocaleString('en-IN') ?? '—', change: '', up: true, icon: 'Star', key: 'points' },
+    { label: 'Total Electricians', value: dashboard?.totalElectricians?.toLocaleString('en-IN') ?? '—', change: '', up: true, icon: 'Bolt', key: 'electricians' },
+    { label: 'Total Dealers', value: dashboard?.totalDealers?.toLocaleString('en-IN') ?? '—', change: '', up: true, icon: 'Store', key: 'dealers' },
+    { label: 'Pending Redemptions', value: dashboard?.pendingRedemptions?.toLocaleString('en-IN') ?? '—', change: '', up: false, icon: 'Gift', key: 'redemptions' },
   ];
 
   // Build chart data from real API
@@ -923,7 +924,7 @@ export function Reports() {
             <div style={{ padding: '24px 28px', borderBottom: `1px solid ${C.border}` }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
                 <div style={{ width: 48, height: 48, borderRadius: 12, background: successBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>
-                  {exportFormat === 'excel' ? '📊' : exportFormat === 'pdf' ? '📄' : '📸'}
+                  {exportFormat === 'excel' ? <I name='BarChart3' size={16} /> : exportFormat === 'pdf' ? <I name='FileText' size={16} /> : <I name='Camera' size={16} />}
                 </div>
                 <div>
                   <div style={{ fontSize: 18, fontWeight: 800, color: C.text }}>Export Report</div>
@@ -937,13 +938,13 @@ export function Reports() {
                   <strong>Export Details:</strong>
                 </div>
                 <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.8 }}>
-                  📅 Period: <strong style={{ color: C.text }}>{period.charAt(0).toUpperCase() + period.slice(1)}</strong><br/>
-                  📊 Chart Type: <strong style={{ color: C.text }}>{chartType.charAt(0).toUpperCase() + chartType.slice(1)}</strong><br/>
-                  📈 Metric: <strong style={{ color: C.text }}>{metrics.find(m => m.key === selectedMetric)?.label}</strong><br/>
+                  <I name='Calendar' size={14} /> Period: <strong style={{ color: C.text }}>{period.charAt(0).toUpperCase() + period.slice(1)}</strong><br/>
+                  <I name='BarChart3' size={14} /> Chart Type: <strong style={{ color: C.text }}>{chartType.charAt(0).toUpperCase() + chartType.slice(1)}</strong><br/>
+                  <I name='ChartLine' size={14} /> Metric: <strong style={{ color: C.text }}>{metrics.find(m => m.key === selectedMetric)?.label}</strong><br/>
                   {exportFormat === 'excel' && (
-                    <>📋 Sheets: <strong style={{ color: C.text }}>Metrics Summary, Chart Data, Top Products</strong><br/></>
+                    <><I name='Clipboard' size={14} /> Sheets: <strong style={{ color: C.text }}>Metrics Summary, Chart Data, Top Products</strong><br/></>
                   )}
-                  💾 Format: <strong style={{ color: C.text }}>{exportFormat.toUpperCase()}</strong>
+                  <I name='Save' size={14} /> Format: <strong style={{ color: C.text }}>{exportFormat.toUpperCase()}</strong>
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 12 }}>
@@ -951,7 +952,7 @@ export function Reports() {
                   Cancel
                 </button>
                 <button onClick={handleExport} style={{ flex: 1, padding: '12px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, #10B981, #059669)', color: 'white', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(16,185,129,0.3)' }}>
-                  ✅ Confirm Export
+                  Confirm Export
                 </button>
               </div>
             </div>
@@ -961,7 +962,7 @@ export function Reports() {
       
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
         <div>
-          <h1 style={{ fontSize: 26, fontWeight: 800, color: C.text, marginBottom: 4 }}>📈 Advanced Reports & Analytics</h1>
+          <h1 style={{ fontSize: 26, fontWeight: 800, color: C.text, marginBottom: 4 }}>Advanced Reports & Analytics</h1>
           <p style={{ color: C.muted, fontSize: 14 }}>Comprehensive business insights with multiple chart types and export options</p>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -985,7 +986,7 @@ export function Reports() {
             onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'}
             onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)'}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-              <div style={{ width: 42, height: 42, borderRadius: 12, background: selectedMetric === m.key ? C.accentSoft : C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>{m.icon}</div>
+              <div style={{ width: 42, height: 42, borderRadius: 12, background: selectedMetric === m.key ? C.accentSoft : C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><I name={m.icon} size={20} /></div>
               <span style={{ background: m.up ? successBg : dangerBg, color: m.up ? successText : dangerText, fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 20 }}>{m.change}</span>
             </div>
             <div style={{ fontSize: 26, fontWeight: 900, color: C.text }}>{m.value}</div>
@@ -997,24 +998,24 @@ export function Reports() {
       {/* Chart Controls */}
       <div style={{ background: C.card, borderRadius: 16, padding: '20px 24px', border: `1px solid ${C.border}`, marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16, boxShadow: C.shadow }}>
         <div>
-          <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 8 }}>📊 Chart Visualization</div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 8 }}>Chart Visualization</div>
           <div style={{ fontSize: 13, color: C.muted }}>Select chart type and enable comparison mode</div>
         </div>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', gap: 8 }}>
             {[
-              { type: 'bar', icon: '📊', label: 'Bar' },
-              { type: 'line', icon: '📈', label: 'Line' },
-              { type: 'area', icon: '🏔️', label: 'Area' },
-              { type: 'pie', icon: '🥧', label: 'Pie' },
+              { type: 'bar', icon: 'BarChart3', label: 'Bar' },
+              { type: 'line', icon: 'ChartLine', label: 'Line' },
+              { type: 'area', icon: 'TrendingUp', label: 'Area' },
+              { type: 'pie', icon: 'PieChart', label: 'Pie' },
             ].map(ct => (
               <button key={ct.type} onClick={() => setChartType(ct.type)} style={{ padding: '8px 14px', borderRadius: 10, border: `1.5px solid ${chartType === ct.type ? C.red : C.border}`, background: chartType === ct.type ? accentBg : C.surface, color: chartType === ct.type ? C.red : C.text, fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span>{ct.icon}</span> {ct.label}
+                <span><I name={ct.icon} size={16} /></span> {ct.label}
               </button>
             ))}
           </div>
           <button onClick={() => setComparison(!comparison)} style={{ padding: '8px 16px', borderRadius: 10, border: `1.5px solid ${comparison ? C.red : C.border}`, background: comparison ? accentBg : C.surface, color: comparison ? C.red : C.text, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
-            {comparison ? '✅' : '⬜'} Compare with Previous
+            {comparison ? 'On' : 'Off'} Compare with Previous
           </button>
         </div>
       </div>
@@ -1022,7 +1023,7 @@ export function Reports() {
       {/* Main Chart */}
       <div style={{ background: C.card, borderRadius: 16, padding: 24, border: `1px solid ${C.border}`, marginBottom: 20, boxShadow: C.shadow }}>
         <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 20 }}>
-          {metrics.find(m => m.key === selectedMetric)?.icon} {metrics.find(m => m.key === selectedMetric)?.label} - {period.charAt(0).toUpperCase() + period.slice(1)} Trend
+          <I name={metrics.find(m => m.key === selectedMetric)?.icon ?? ''} size={16} /> {metrics.find(m => m.key === selectedMetric)?.label} - {period.charAt(0).toUpperCase() + period.slice(1)} Trend
         </div>
         
         {chartType === 'pie' ? (
@@ -1127,7 +1128,7 @@ export function Reports() {
         {/* Top products */}
         <div style={{ background: C.card, borderRadius: 16, padding: 22, border: `1px solid ${C.border}`, boxShadow: C.shadow }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
-            <div style={{ fontSize: 16, fontWeight: 800, color: C.text }}>🏆 Top Scanned Products</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: C.text }}>Top Scanned Products</div>
             <button onClick={() => handleExportClick('png')} style={{ padding: '6px 12px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.surface, color: C.muted, fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}><Image size={12} /> Export</button>
           </div>
           {topProducts.map((p, i) => (
@@ -1150,7 +1151,7 @@ export function Reports() {
         {/* State breakdown */}
         <div style={{ background: C.card, borderRadius: 16, padding: 22, border: `1px solid ${C.border}`, boxShadow: C.shadow }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
-            <div style={{ fontSize: 16, fontWeight: 800, color: C.text }}>🗺️ State-wise Distribution</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: C.text }}>State-wise Distribution</div>
             <button onClick={() => handleExportClick('png')} style={{ padding: '6px 12px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.surface, color: C.muted, fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}><Image size={12} /> Export</button>
           </div>
           {[
@@ -1164,7 +1165,7 @@ export function Reports() {
             return (
               <div key={s.state} style={{ marginBottom: 14 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>📍 {s.state}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{s.state}</span>
                   <span style={{ fontSize: 13, fontWeight: 800, color: C.text }}>{s.count} <span style={{ fontSize: 11, color: C.muted, fontWeight: 400 }}>({s.pct}%)</span></span>
                 </div>
                 <div style={{ height: 7, background: C.bg, borderRadius: 4, overflow: 'hidden' }}>
@@ -1198,11 +1199,11 @@ export function Settings() {
   };
 
   const sections = [
-    { title: '🏢 App Information', fields: [
+    { title: 'App Information', fields: [
       { key: 'appName', label: 'App Name', type: 'text', placeholder: 'SRV Electricals' },
       { key: 'tagline', label: 'Tagline', type: 'text', placeholder: 'Power Your Rewards' },
     ]},
-    { title: '📞 Support Contact', fields: [
+    { title: 'Support Contact', fields: [
       { key: 'supportPhone', label: 'Support Phone', type: 'text', placeholder: '+91 88376 84004' },
       { key: 'supportEmail', label: 'Support Email', type: 'email', placeholder: 'info@srvelectricals.com' },
       { key: 'whatsapp', label: 'WhatsApp Number', type: 'text', placeholder: '918837684004' },
@@ -1218,13 +1219,13 @@ export function Settings() {
   return (
     <div style={{ padding: '28px 32px', maxWidth: 800 }}>
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 26, fontWeight: 800, color: C.text, marginBottom: 4 }}>⚙️ Settings</h1>
+        <h1 style={{ fontSize: 26, fontWeight: 800, color: C.text, marginBottom: 4 }}>Settings</h1>
         <p style={{ color: C.muted, fontSize: 14 }}>Configure app-wide settings, support contacts and rewards rules</p>
       </div>
 
       {saved && (
         <div style={{ background: '#D1FAE5', borderRadius: 12, padding: '12px 18px', marginBottom: 20, display: 'flex', gap: 10, alignItems: 'center', border: '1px solid #A7F3D0' }}>
-          <span style={{ fontSize: 18 }}>✅</span>
+          <span style={{ fontSize: 18 }}></span>
           <span style={{ fontSize: 14, color: '#065F46', fontWeight: 700 }}>Settings saved successfully!</span>
         </div>
       )}
@@ -1245,7 +1246,7 @@ export function Settings() {
 
       {/* Admin Accounts section */}
       <div style={{ background: C.card, borderRadius: 16, padding: 24, border: `1px solid ${C.border}`, marginBottom: 18, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-        <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 20 }}>👤 Admin Accounts</div>
+        <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 20 }}>Admin Accounts</div>
         {[
           { name: 'Super Admin', email: 'admin@srvelectricals.com', role: 'Super Admin', active: true },
           { name: 'Operations Manager', email: 'ops@srvelectricals.com', role: 'Manager', active: true },
@@ -1263,7 +1264,7 @@ export function Settings() {
         ))}
       </div>
 
-      <button onClick={handleSave} style={{ background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 12, padding: '14px 36px', fontSize: 15, fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 16px rgba(29,78,216,0.35)' }}>💾 Save All Settings</button>
+      <button onClick={handleSave} style={{ background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 12, padding: '14px 36px', fontSize: 15, fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 16px rgba(29,78,216,0.35)' }}>Save All Settings</button>
     </div>
   );
 }

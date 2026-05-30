@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { Store, CheckCircle, FileCheck, Wallet, Gift, Users, CreditCard, Trophy, Landmark } from 'lucide-react';
+import { Store, CheckCircle, FileCheck, Wallet, Gift, Users, CreditCard, Medal, Landmark } from 'lucide-react';
 import Dealers from './AllDealers';
 import DealerApprovals from './pages/Approvals';
 import KYCManagement from './pages/KYC';
@@ -22,7 +22,7 @@ interface DealerHubProps {
 
 const subPages = [
   { id: 'dealers', label: 'All Dealers', Icon: Store, description: 'Manage dealer network' },
-  { id: 'top', label: 'Top Dealers', Icon: Trophy, description: 'Leaderboard' },
+  { id: 'top', label: 'Top Dealers', Icon: Medal, description: 'Leaderboard' },
   { id: 'approvals', label: 'Approvals', Icon: CheckCircle, description: 'Review new applications' },
   { id: 'kyc', label: 'KYC Management', Icon: FileCheck, description: 'Verify documents' },
   { id: 'wallet', label: 'Wallet History', Icon: Wallet, description: 'Track transactions' },

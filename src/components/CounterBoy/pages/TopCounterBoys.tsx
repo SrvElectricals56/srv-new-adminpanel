@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
-import { Trophy, TrendingUp, FileSpreadsheet } from 'lucide-react';
+import { Medal, TrendingUp, FileSpreadsheet } from 'lucide-react';
 import { counterboyApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
 import type { CounterBoy } from '@/lib/types';
@@ -37,7 +37,7 @@ export default function TopCounterBoys() {
       <ExportModal show={showExport} onClose={() => setShowExport(false)} title="Top Counter Boys" fileName="top-counter-boys" getData={() => topRows.map((row, index) => ({ Rank: index + 1, Name: row.name, Code: row.counterboyCode, Dealer: row.dealerName ?? '', City: row.city ?? '', State: row.state ?? '', Points: row.totalPoints ?? 0, Scans: row.totalScans ?? 0, Redemptions: row.totalRedemptions ?? 0, WalletBalance: row.walletBalance ?? 0 }))} />
       <div style={{ background: 'linear-gradient(135deg,#F59E0B,#D97706)', borderRadius: 18, padding: '22px 28px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <div style={{ fontSize: 22, fontWeight: 900, color: 'white', display: 'flex', alignItems: 'center', gap: 10 }}><Trophy size={26} /> Top Counter Boys</div>
+          <div style={{ fontSize: 22, fontWeight: 900, color: 'white', display: 'flex', alignItems: 'center', gap: 10 }}><Medal size={26} /> Top Counter Boys</div>
           <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.78)', marginTop: 4 }}>Top 10 active counter staff by {sortBy}</div>
         </div>
         <button onClick={() => setShowExport(true)} style={{ background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.35)', borderRadius: 10, padding: '9px 18px', color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}><FileSpreadsheet size={14} /> Export</button>
