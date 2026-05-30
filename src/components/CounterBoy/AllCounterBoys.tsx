@@ -27,6 +27,8 @@ const STATUS_CONFIG: Record<string, { bg: string; color: string; label: string }
   suspended: { bg: '#FEE2E2', color: '#7F1D1D', label: 'Suspended' },
 };
 
+const SELECTABLE_USER_STATUSES: UserStatus[] = ['active', 'pending', 'inactive'];
+
 const TIER_CONFIG: Record<MemberTier, { bg: string; color: string }> = {
   Silver: { bg: '#F1F5F9', color: '#475569' },
   Gold: { bg: '#FFFBEB', color: '#92400E' },
@@ -338,7 +340,7 @@ function EditModal({
           <div>
             <label style={labelStyle}>Status</label>
             <select style={inputStyle} value={form.status ?? 'active'} onChange={e => setField('status', e.target.value as UserStatus)}>
-              {(['active', 'pending', 'inactive', 'suspended'] as UserStatus[]).map(status => <option key={status} value={status}>{status}</option>)}
+              {SELECTABLE_USER_STATUSES.map(status => <option key={status} value={status}>{status}</option>)}
             </select>
           </div>
           <div>
@@ -684,7 +686,6 @@ export default function AllCounterBoys({ role }: AllCounterBoysProps) {
           <option value="active">Active</option>
           <option value="pending">Pending</option>
           <option value="inactive">Inactive</option>
-          <option value="suspended">Suspended</option>
         </select>
         <select
           value={stateFilter}
@@ -761,10 +762,9 @@ export default function AllCounterBoys({ role }: AllCounterBoysProps) {
                           onChange={e => handleStatusChange(counterBoy.id, e.target.value)}
                           style={{ padding: '4px 8px', borderRadius: 8, border: `1px solid ${C.border}`, background: status.bg, color: status.color, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
                         >
-                          <option value="active">Active</option>
-                          <option value="pending">Pending</option>
-                          <option value="inactive">Inactive</option>
-                          <option value="suspended">Suspended</option>
+                          {SELECTABLE_USER_STATUSES.map((statusOption) => (
+                            <option key={statusOption} value={statusOption}>{statusOption}</option>
+                          ))}
                         </select>
                       ) : (
                         <span style={{ background: status.bg, color: status.color, fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 999 }}>{status.label}</span>
