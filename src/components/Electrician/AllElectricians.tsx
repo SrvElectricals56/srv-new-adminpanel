@@ -10,6 +10,7 @@ import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 import AlertDialog from '@/components/Shared/AlertDialog';
 import ExportModal from '@/components/Shared/ExportModal';
 import ImportModal from '@/components/Shared/ImportModal';
+import { ViewModeToggle, type ListViewMode } from '@/components/Shared/ViewModeToggle';
 import PasswordInputField from '@/components/Shared/PasswordInputField';
 
 interface ElectriciansProps {
@@ -573,6 +574,7 @@ export default function Electricians({ role }: ElectriciansProps) {
   const [viewing, setViewing] = useState<Electrician | null>(null);
   const [editing, setEditing] = useState<Electrician | null | undefined>(undefined);
   const [showAdd, setShowAdd] = useState(false);
+  const [viewMode, setViewMode] = useState<ListViewMode>('table');
   const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; id: string | null }>({ show: false, id: null });
   const [alertDialog, setAlertDialog] = useState<{ show: boolean; title: string; message: string; type: 'error' | 'success' | 'warning' | 'info' }>({ show: false, title: '', message: '', type: 'error' });
 
@@ -870,7 +872,8 @@ export default function Electricians({ role }: ElectriciansProps) {
           )}
         </div>
 
-        <span style={{ fontSize: 13, color: C.muted, whiteSpace: 'nowrap' }}>{filtered.length} of {totalCount} total</span>
+        <ViewModeToggle value={viewMode} onChange={setViewMode} accent={C.red} border={C.border} activeBg="#FFF0F0" inactiveBg={C.card} muted={C.muted} />
+        <span style={{ fontSize: 13, color: C.muted, whiteSpace: 'nowrap', flexShrink: 0 }}>{filtered.length} of {totalCount} total</span>
       </div>
 
       {/* Error banner */}
@@ -882,8 +885,68 @@ export default function Electricians({ role }: ElectriciansProps) {
         </div>
       )}
 
-      {/* Table */}
       {loading && <div style={{ textAlign: 'center', padding: 40, color: C.muted }}>Loading electricians...</div>}
+      {viewMode === 'grid' ? (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16, marginBottom: 16 }}>
+          {!loading && filtered.length === 0 ? (
+            <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: 48, color: C.muted, background: C.card, borderRadius: 16, border: `1px solid ${C.border}` }}>
+              <div style={{ fontSize: 40, marginBottom: 10 }}>🔍</div>
+              <div style={{ fontSize: 15, fontWeight: 700 }}>No electricians found</div>
+            </div>
+          ) : filtered.map((e) => {
+            const tier = TIER_CONFIG[e.tier] ?? TIER_CONFIG['Silver'];
+            const status = STATUS_CONFIG[e.status] ?? STATUS_CONFIG['inactive'];
+            return (
+              <div
+                key={e.id}
+                style={{ background: C.card, borderRadius: 18, padding: 20, border: `1px solid ${C.border}`, boxShadow: '0 2px 10px rgba(0,0,0,0.04)', transition: 'all 0.2s' }}
+                onMouseEnter={ev => { (ev.currentTarget as HTMLDivElement).style.transform = 'translateY(-3px)'; (ev.currentTarget as HTMLDivElement).style.boxShadow = '0 12px 30px rgba(0,0,0,0.1)'; }}
+                onMouseLeave={ev => { (ev.currentTarget as HTMLDivElement).style.transform = 'translateY(0)'; (ev.currentTarget as HTMLDivElement).style.boxShadow = '0 2px 10px rgba(0,0,0,0.04)'; }}
+              >
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 46, height: 46, borderRadius: 14, overflow: 'hidden', background: 'linear-gradient(135deg, #FFF0F0, #FFD5D3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 800, color: C.red }}>
+                      {e.profileImage ? <img src={e.profileImage} alt={e.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : e.name[0]}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{e.name}</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>{e.electricianCode}</div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
+                    <span style={{ background: tier.bg, color: tier.color, fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20 }}>{tier.icon} {e.tier}</span>
+                    <span style={{ background: status.bg, color: status.color, fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20 }}>{status.label}</span>
+                  </div>
+                </div>
+                <div style={{ fontSize: 12, color: C.muted, marginBottom: 8 }}>{e.city}, {e.state}</div>
+                {e.dealerName ? <div style={{ fontSize: 11, color: C.muted, marginBottom: 12 }}>Dealer: {e.dealerName}</div> : <div style={{ marginBottom: 12 }} />}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 14 }}>
+                  <div style={{ background: C.bg, borderRadius: 10, padding: '10px 8px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 10, color: C.muted }}>Points</div>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: C.text }}>{e.totalPoints.toLocaleString('en-IN')}</div>
+                  </div>
+                  <div style={{ background: C.bg, borderRadius: 10, padding: '10px 8px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 10, color: C.muted }}>Scans</div>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: C.text }}>{e.totalScans}</div>
+                  </div>
+                  <div style={{ background: C.bg, borderRadius: 10, padding: '10px 8px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 10, color: C.muted }}>Wallet</div>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: '#10B981' }}>₹{e.walletBalance}</div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ fontSize: 12, color: C.muted }}>{e.phone}</div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button onClick={() => setViewing(e)} style={{ background: '#EFF6FF', color: '#1D4ED8', border: 'none', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>View</button>
+                    {permissions.canEdit && <button onClick={() => setEditing(e)} style={{ background: '#FFF7ED', color: '#C2410C', border: 'none', borderRadius: 8, padding: '6px 11px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Edit</button>}
+                    {permissions.canDelete && <button onClick={() => handleDelete(e.id)} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 8, padding: '6px 8px', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Trash2 size={13} /></button>}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
       <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, overflowX: 'auto', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 1120 }}>
           <thead>
@@ -958,7 +1021,7 @@ export default function Electricians({ role }: ElectriciansProps) {
             })}
           </tbody>
         </table>
-        {filtered.length === 0 && (
+        {!loading && filtered.length === 0 && (
           <div style={{ textAlign: 'center', padding: 60, color: C.muted }}>
             <div style={{ fontSize: 40, marginBottom: 10 }}>🔍</div>
             <div style={{ fontSize: 15, fontWeight: 700 }}>No electricians found</div>
@@ -966,6 +1029,7 @@ export default function Electricians({ role }: ElectriciansProps) {
           </div>
         )}
       </div>
+      )}
 
       {/* ── Pagination ─────────────────────────────────────────────────────── */}
       {totalCount > PAGE_SIZE && (

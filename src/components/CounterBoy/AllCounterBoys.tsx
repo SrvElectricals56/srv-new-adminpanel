@@ -10,6 +10,7 @@ import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 import AlertDialog from '@/components/Shared/AlertDialog';
 import ExportModal from '@/components/Shared/ExportModal';
 import ImportModal from '@/components/Shared/ImportModal';
+import { ViewModeToggle, type ListViewMode } from '@/components/Shared/ViewModeToggle';
 import PasswordInputField from '@/components/Shared/PasswordInputField';
 
 interface AllCounterBoysProps {
@@ -425,6 +426,7 @@ export default function AllCounterBoys({ role }: AllCounterBoysProps) {
   const [viewing, setViewing] = useState<CounterBoy | null>(null);
   const [editing, setEditing] = useState<CounterBoy | null>(null);
   const [showAdd, setShowAdd] = useState(false);
+  const [viewMode, setViewMode] = useState<ListViewMode>('table');
   const [deleteTarget, setDeleteTarget] = useState<CounterBoy | null>(null);
   const [alert, setAlert] = useState<{ show: boolean; type: 'success' | 'error'; title: string; message: string }>({ show: false, type: 'success', title: '', message: '' });
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -715,11 +717,75 @@ export default function AllCounterBoys({ role }: AllCounterBoysProps) {
             Clear Filters
           </button>
         )}
-        <button onClick={() => load()} style={{ padding: '9px 16px', borderRadius: 10, border: `1px solid ${C.border}`, background: C.bg, color: C.muted, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+          <ViewModeToggle value={viewMode} onChange={setViewMode} accent={C.red} border={C.border} activeBg="#FFF0F0" inactiveBg={C.card} muted={C.muted} />
+          <span style={{ fontSize: 13, color: C.muted, whiteSpace: 'nowrap' }}>{counterBoys.length} of {total}</span>
+        </div>
+        <button onClick={() => load()} style={{ padding: '9px 16px', borderRadius: 10, border: `1px solid ${C.border}`, background: C.bg, color: C.muted, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, flexShrink: 0 }}>
           <RefreshCw size={14} /> Refresh
         </button>
       </div>
 
+      {loading && <div style={{ textAlign: 'center', padding: 40, color: C.muted, marginBottom: 12 }}>Loading counter boys...</div>}
+      {viewMode === 'grid' ? (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16, marginBottom: 20 }}>
+          {!loading && counterBoys.length === 0 ? (
+            <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: 48, color: C.muted, background: C.card, borderRadius: 16, border: `1px solid ${C.border}` }}>
+              <div style={{ fontSize: 15, fontWeight: 700 }}>No counter boys found</div>
+            </div>
+          ) : counterBoys.map((counterBoy) => {
+            const status = STATUS_CONFIG[counterBoy.status] ?? STATUS_CONFIG.pending;
+            const tier = TIER_CONFIG[counterBoy.tier ?? 'Silver'] ?? TIER_CONFIG.Silver;
+            return (
+              <div
+                key={counterBoy.id}
+                style={{ background: C.card, borderRadius: 18, padding: 20, border: `1px solid ${C.border}`, boxShadow: '0 2px 10px rgba(0,0,0,0.04)', transition: 'all 0.2s' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-3px)'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 12px 30px rgba(0,0,0,0.1)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 2px 10px rgba(0,0,0,0.04)'; }}
+              >
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 46, height: 46, borderRadius: 14, overflow: 'hidden', background: '#F5F3FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#7C3AED', fontSize: 18, fontWeight: 800 }}>
+                      {counterBoy.profileImage ? <img src={counterBoy.profileImage} alt={counterBoy.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (counterBoy.name || '?').charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{counterBoy.name}</div>
+                      <div style={{ fontSize: 11, color: C.muted, fontFamily: 'monospace' }}>{counterBoy.counterboyCode}</div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
+                    <span style={{ background: tier.bg, color: tier.color, fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20 }}>{counterBoy.tier ?? 'Silver'}</span>
+                    <span style={{ background: status.bg, color: status.color, fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20 }}>{status.label}</span>
+                  </div>
+                </div>
+                <div style={{ fontSize: 12, color: C.muted, marginBottom: 12 }}>{[counterBoy.city, counterBoy.state].filter(Boolean).join(', ') || '—'}</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 14 }}>
+                  <div style={{ background: C.bg, borderRadius: 10, padding: '10px 8px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 10, color: C.muted }}>Scans</div>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: '#3B82F6' }}>{(counterBoy.totalScans ?? 0).toLocaleString('en-IN')}</div>
+                  </div>
+                  <div style={{ background: C.bg, borderRadius: 10, padding: '10px 8px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 10, color: C.muted }}>Points</div>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: '#F59E0B' }}>{(counterBoy.totalPoints ?? 0).toLocaleString('en-IN')}</div>
+                  </div>
+                  <div style={{ background: C.bg, borderRadius: 10, padding: '10px 8px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 10, color: C.muted }}>Wallet</div>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: '#10B981' }}>{(counterBoy.walletBalance ?? 0).toLocaleString('en-IN')}</div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ fontSize: 12, color: C.muted }}>{counterBoy.phone}</div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button onClick={() => loadOne(counterBoy.id, 'view')} style={{ background: '#EFF6FF', color: '#1D4ED8', border: 'none', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>View</button>
+                    {canEdit && <button onClick={() => loadOne(counterBoy.id, 'edit')} style={{ background: '#FFF7ED', color: '#C2410C', border: 'none', borderRadius: 8, padding: '6px 11px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Edit</button>}
+                    {canDelete && <button onClick={() => { setDeleteTarget(counterBoy); setConfirmDelete(true); }} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 8, padding: '6px 8px', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Trash2 size={13} /></button>}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
       <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -731,9 +797,7 @@ export default function AllCounterBoys({ role }: AllCounterBoysProps) {
               </tr>
             </thead>
             <tbody>
-              {loading ? (
-                <tr><td colSpan={10} style={{ padding: 40, textAlign: 'center', color: C.muted }}>Loading...</td></tr>
-              ) : counterBoys.length === 0 ? (
+              {!loading && counterBoys.length === 0 ? (
                 <tr><td colSpan={10} style={{ padding: 40, textAlign: 'center', color: C.muted }}>No counter boys found</td></tr>
               ) : counterBoys.map((counterBoy, index) => {
                 const status = STATUS_CONFIG[counterBoy.status] ?? STATUS_CONFIG.pending;
@@ -807,6 +871,17 @@ export default function AllCounterBoys({ role }: AllCounterBoysProps) {
           </div>
         )}
       </div>
+      )}
+
+      {totalPages > 1 && viewMode === 'grid' && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, padding: '12px 20px', background: C.card, borderRadius: 12, border: `1px solid ${C.border}` }}>
+          <span style={{ fontSize: 13, color: C.muted }}>Showing {((page - 1) * LIMIT) + 1}-{Math.min(page * LIMIT, total)} of {total}</span>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} style={{ padding: '6px 14px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.bg, color: C.text, cursor: page === 1 ? 'not-allowed' : 'pointer', opacity: page === 1 ? 0.5 : 1, fontSize: 13 }}>Prev</button>
+            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} style={{ padding: '6px 14px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.bg, color: C.text, cursor: page === totalPages ? 'not-allowed' : 'pointer', opacity: page === totalPages ? 0.5 : 1, fontSize: 13 }}>Next</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
