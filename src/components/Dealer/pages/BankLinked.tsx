@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Landmark, Search, Eye, Pencil, Check, X, SlidersHorizontal, FileSpreadsheet } from 'lucide-react';
+import { Landmark, Search, Eye, Pencil, Check, X, SlidersHorizontal, FileSpreadsheet, Trash2 } from 'lucide-react';
 import { dealerApi } from '@/lib/api';
 import type { Dealer, MemberTier } from '@/lib/types';
 import { useThemePalette } from '@/lib/theme';
@@ -34,6 +34,10 @@ function ViewModal({ d, onClose, C }: { d: Dealer; onClose: () => void; C: any }
             { label: 'Tier', value: `${tier.icon} ${d.tier}` },
             { label: 'Bank Linked', value: d.bankLinked ? '✅ Yes' : '❌ No' },
             { label: 'UPI ID', value: d.upiId ?? '—' },
+            { label: 'Bank Name', value: (d as any).bankName ?? '—' },
+            { label: 'Account Holder', value: (d as any).accountHolderName ?? '—' },
+            { label: 'Bank Account', value: (d as any).bankAccount ?? '—' },
+            { label: 'IFSC', value: (d as any).ifsc ?? '—' },
             { label: 'GST Number', value: d.gstNumber ?? '—' },
             { label: 'Electricians', value: d.electricianCount.toString() },
           ].map(item => (
@@ -107,6 +111,14 @@ function EditModal({ d, onClose, onSave, C }: { d: Dealer; onClose: () => void; 
             <input style={inputStyle} value={form.upiId ?? ''} onChange={e => f('upiId', e.target.value)} placeholder="e.g. dealer@upi" />
           </div>
           <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: C.muted, display: 'block', marginBottom: 6, textTransform: 'uppercase' }}>Account Holder Name</label>
+            <input style={inputStyle} value={(form as any).accountHolderName ?? ''} onChange={e => f('accountHolderName' as any, e.target.value)} placeholder="Account holder name" />
+          </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: C.muted, display: 'block', marginBottom: 6, textTransform: 'uppercase' }}>Bank Name</label>
+            <input style={inputStyle} value={(form as any).bankName ?? ''} onChange={e => f('bankName' as any, e.target.value)} placeholder="Bank name" />
+          </div>
+          <div>
             <label style={{ fontSize: 12, fontWeight: 700, color: C.muted, display: 'block', marginBottom: 6, textTransform: 'uppercase' }}>Bank Account Number</label>
             <input style={inputStyle} value={(form as any).bankAccount ?? ''} onChange={e => f('bankAccount' as any, e.target.value)} placeholder="Account number" />
           </div>
@@ -146,6 +158,7 @@ export default function DealerBankLinked() {
   const [viewing, setViewing] = useState<Dealer | null>(null);
   const [editing, setEditing] = useState<Dealer | null>(null);
   const [confirmState, setConfirmState] = useState<{ show: boolean; id: string; linked: boolean }>({ show: false, id: '', linked: false });
+  const [clearState, setClearState] = useState<{ show: boolean; row: Dealer | null }>({ show: false, row: null });
 
   const filtered = data.filter(d => {
     const q = search.toLowerCase();
@@ -171,11 +184,23 @@ export default function DealerBankLinked() {
     setConfirmState({ show: false, id: '', linked: false });
   };
 
+  const clearBankDetails = async () => {
+    const row = clearState.row;
+    if (!row) return;
+    const cleared = { ...row, bankLinked: false, upiId: undefined, bankAccount: undefined, ifsc: undefined, bankName: undefined, accountHolderName: undefined } as Dealer;
+    try {
+      await dealerApi.update(row.id, { bankLinked: false, upiId: null, bankAccount: null, ifsc: null, bankName: null, accountHolderName: null });
+      setData(prev => prev.map(d => d.id === row.id ? cleared : d));
+    } catch (err) { console.error(err); }
+    setClearState({ show: false, row: null });
+  };
+
   const inputStyle: React.CSSProperties = { padding: '8px 12px', border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 13, outline: 'none', background: C.inputBg, color: C.text };
 
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
       <ConfirmDialog show={confirmState.show} title={confirmState.linked ? 'Unlink Bank Account' : 'Link Bank Account'} message={`Are you sure you want to ${confirmState.linked ? 'unlink' : 'link'} this dealer's bank account?`} onConfirm={confirmToggle} onCancel={() => setConfirmState({ show: false, id: '', linked: false })} type={confirmState.linked ? 'danger' : 'success'} />
+      <ConfirmDialog show={clearState.show} title="Delete Bank Details" message={`Clear all bank and UPI details for ${clearState.row?.name ?? 'this dealer'}?`} onConfirm={clearBankDetails} onCancel={() => setClearState({ show: false, row: null })} type="danger" />
       {viewing && <ViewModal d={viewing} onClose={() => setViewing(null)} C={C} />}
       {editing && <EditModal d={editing} onClose={() => setEditing(null)} onSave={async d => {
         try {
@@ -194,7 +219,6 @@ export default function DealerBankLinked() {
             bankName: (d as any).bankName ?? null,
             accountHolderName: (d as any).accountHolderName ?? null,
             gstNumber: d.gstNumber ?? null,
-            electricianCount: d.electricianCount,
           };
           await dealerApi.update(d.id, payload);
           setData(prev => prev.map(x => x.id === d.id ? d : x));
@@ -311,6 +335,7 @@ export default function DealerBankLinked() {
                     <div style={{ display: 'flex', gap: 6 }}>
                       <button onClick={() => setViewing(d)} title="View" style={{ background: '#EFF6FF', color: '#1D4ED8', border: 'none', borderRadius: 7, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Eye size={14} /></button>
                       <button onClick={() => setEditing(d)} title="Edit" style={{ background: '#FFF7ED', color: '#C2410C', border: 'none', borderRadius: 7, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Pencil size={14} /></button>
+                      <button onClick={() => setClearState({ show: true, row: d })} title="Delete bank details" style={{ background: '#FEF2F2', color: '#B91C1C', border: 'none', borderRadius: 7, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Trash2 size={14} /></button>
                     </div>
                   </td>
                 </tr>

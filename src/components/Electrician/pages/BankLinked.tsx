@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Landmark, Search, Eye, Pencil, Check, X, SlidersHorizontal, FileSpreadsheet } from 'lucide-react';
+import { Landmark, Search, Eye, Pencil, Check, X, SlidersHorizontal, FileSpreadsheet, Trash2 } from 'lucide-react';
 import { electricianApi } from '@/lib/api';
 import type { Electrician, MemberTier } from '@/lib/types';
 import { useThemePalette } from '@/lib/theme';
@@ -39,6 +39,8 @@ function ViewModal({ el, onClose, C }: { el: Electrician; onClose: () => void; C
             { label: 'Dealer', value: el.dealerName },
             { label: 'Bank Linked', value: el.bankLinked ? '✅ Yes' : '❌ No' },
             { label: 'UPI ID', value: el.upiId ?? '—' },
+            { label: 'Bank Name', value: el.bankName ?? '—' },
+            { label: 'Account Holder', value: el.accountHolderName ?? '—' },
             { label: 'Bank Account', value: el.bankAccount ?? '—' },
             { label: 'IFSC', value: el.ifsc ?? '—' },
             { label: 'Wallet Balance', value: `₹${el.walletBalance.toLocaleString('en-IN')}` },
@@ -110,6 +112,14 @@ function EditModal({ el, onClose, onSave, C }: { el: Electrician; onClose: () =>
             <input style={inputStyle} value={form.upiId ?? ''} onChange={e => f('upiId', e.target.value)} placeholder="e.g. name@upi" />
           </div>
           <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: C.muted, display: 'block', marginBottom: 6, textTransform: 'uppercase' }}>Account Holder Name</label>
+            <input style={inputStyle} value={form.accountHolderName ?? ''} onChange={e => f('accountHolderName', e.target.value)} placeholder="Account holder name" />
+          </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: C.muted, display: 'block', marginBottom: 6, textTransform: 'uppercase' }}>Bank Name</label>
+            <input style={inputStyle} value={form.bankName ?? ''} onChange={e => f('bankName', e.target.value)} placeholder="Bank name" />
+          </div>
+          <div>
             <label style={{ fontSize: 12, fontWeight: 700, color: C.muted, display: 'block', marginBottom: 6, textTransform: 'uppercase' }}>Bank Account</label>
             <input style={inputStyle} value={form.bankAccount ?? ''} onChange={e => f('bankAccount', e.target.value)} placeholder="Account number" />
           </div>
@@ -153,6 +163,7 @@ export default function ElectricianBankLinked() {
   const [viewing, setViewing] = useState<Electrician | null>(null);
   const [editing, setEditing] = useState<Electrician | null>(null);
   const [confirmState, setConfirmState] = useState<{ show: boolean; id: string; linked: boolean }>({ show: false, id: '', linked: false });
+  const [clearState, setClearState] = useState<{ show: boolean; row: Electrician | null }>({ show: false, row: null });
 
   const filtered = data.filter(e => {
     const q = search.toLowerCase();
@@ -178,11 +189,23 @@ export default function ElectricianBankLinked() {
     setConfirmState({ show: false, id: '', linked: false });
   };
 
+  const clearBankDetails = async () => {
+    const row = clearState.row;
+    if (!row) return;
+    const cleared = { ...row, bankLinked: false, upiId: undefined, bankAccount: undefined, ifsc: undefined, bankName: undefined, accountHolderName: undefined } as Electrician;
+    try {
+      await electricianApi.update(row.id, { bankLinked: false, upiId: null, bankAccount: null, ifsc: null, bankName: null, accountHolderName: null });
+      setData(prev => prev.map(e => e.id === row.id ? cleared : e));
+    } catch (err) { console.error(err); }
+    setClearState({ show: false, row: null });
+  };
+
   const inputStyle: React.CSSProperties = { padding: '8px 12px', border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 13, outline: 'none', background: C.inputBg, color: C.text };
 
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
       <ConfirmDialog show={confirmState.show} title={confirmState.linked ? 'Unlink Bank Account' : 'Link Bank Account'} message={`Are you sure you want to ${confirmState.linked ? 'unlink' : 'link'} this electrician's bank account?`} onConfirm={confirmToggle} onCancel={() => setConfirmState({ show: false, id: '', linked: false })} type={confirmState.linked ? 'danger' : 'success'} />
+      <ConfirmDialog show={clearState.show} title="Delete Bank Details" message={`Clear all bank and UPI details for ${clearState.row?.name ?? 'this electrician'}?`} onConfirm={clearBankDetails} onCancel={() => setClearState({ show: false, row: null })} type="danger" />
       {viewing && <ViewModal el={viewing} onClose={() => setViewing(null)} C={C} />}
       {editing && <EditModal el={editing} onClose={() => setEditing(null)} onSave={async e => {
         try {
@@ -283,60 +306,41 @@ export default function ElectricianBankLinked() {
       </div>
 
       {/* Table */}
-      <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+      <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
-            <tr style={{ background: C.bg, borderBottom: `2px solid ${C.border}` }}>
-              {['Electrician', 'Code', 'Phone', 'City', 'Tier', 'Bank Status', 'UPI / Account', 'Actions'].map(h => (
-                <th key={h} style={{ padding: '14px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
-              ))}
+            <tr style={{ background: C.bg, borderBottom: `1px solid ${C.border}` }}>
+              {['Electrician', 'Code', 'Phone', 'Bank Status', 'UPI / Account', 'Actions'].map(head => <th key={head} style={{ padding: '14px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase' }}>{head}</th>)}
             </tr>
           </thead>
           <tbody>
-            {filtered.map(e => {
-              const tier = TIER_CONFIG[e.tier as MemberTier] ?? TIER_CONFIG['Silver'];
-              return (
-                <tr key={e.id} style={{ borderBottom: `1px solid ${C.border}`, transition: 'background 0.2s' }}
-                  onMouseEnter={ev => (ev.currentTarget as HTMLTableRowElement).style.background = C.bg}
-                  onMouseLeave={ev => (ev.currentTarget as HTMLTableRowElement).style.background = 'transparent'}>
-                  <td style={{ padding: '14px 16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{ width: 36, height: 36, borderRadius: 10, background: `linear-gradient(135deg, ${C.red}22, ${C.red}11)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: C.red, fontSize: 14 }}>{e.name[0]}</div>
-                      <div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{e.name}</div>
-                        <div style={{ fontSize: 11, color: C.muted }}>{e.dealerName}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td style={{ padding: '14px 16px', fontSize: 12, fontWeight: 600, color: C.muted, fontFamily: 'monospace' }}>{e.electricianCode}</td>
-                  <td style={{ padding: '14px 16px', fontSize: 13, color: C.text }}>{e.phone}</td>
-                  <td style={{ padding: '14px 16px', fontSize: 12, color: C.muted }}>{e.city}, {e.state}</td>
-                  <td style={{ padding: '14px 16px' }}>
-                    <span style={{ background: tier.bg, color: tier.color, fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20 }}>{tier.icon} {e.tier}</span>
-                  </td>
-                  <td style={{ padding: '14px 16px' }}>
-                    <button onClick={() => toggleBank(e.id, e.bankLinked)} style={{ background: e.bankLinked ? '#D1FAE5' : '#FEE2E2', color: e.bankLinked ? '#065F46' : '#991B1B', border: 'none', borderRadius: 20, padding: '5px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
-                      {e.bankLinked ? <><Check size={12} /> Linked</> : <><X size={12} /> Not Linked</>}
-                    </button>
-                  </td>
-                  <td style={{ padding: '14px 16px' }}>
-                    <div style={{ fontSize: 12, color: C.text, fontFamily: 'monospace' }}>{e.upiId ?? e.bankAccount ?? <span style={{ color: C.muted }}>—</span>}</div>
-                  </td>
-                  <td style={{ padding: '14px 16px' }}>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button onClick={() => setViewing(e)} title="View" style={{ background: '#EFF6FF', color: '#1D4ED8', border: 'none', borderRadius: 7, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Eye size={14} /></button>
-                      <button onClick={() => setEditing(e)} title="Edit" style={{ background: '#FFF7ED', color: '#C2410C', border: 'none', borderRadius: 7, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Pencil size={14} /></button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-            {filtered.length === 0 && (
-              <tr><td colSpan={8} style={{ padding: '60px 20px', textAlign: 'center', color: C.muted }}>
-                <Landmark size={40} style={{ margin: '0 auto 12px', opacity: 0.3 }} />
-                <div style={{ fontSize: 14, fontWeight: 600 }}>No results found</div>
-              </td></tr>
-            )}
+            {filtered.length === 0 ? (
+              <tr><td colSpan={6} style={{ padding: 40, textAlign: 'center', color: C.muted }}>No results found</td></tr>
+            ) : filtered.map(e => (
+              <tr key={e.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                <td style={{ padding: '14px 16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{e.name}</span>
+                    {e.dealerName && <span style={{ fontSize: 10, color: C.muted }}>({e.dealerName})</span>}
+                  </div>
+                </td>
+                <td style={{ padding: '14px 16px', fontSize: 12, color: C.muted, fontFamily: 'monospace' }}>{e.electricianCode}</td>
+                <td style={{ padding: '14px 16px', fontSize: 13, color: C.text }}>{e.phone}</td>
+                <td style={{ padding: '14px 16px' }}>
+                  <button onClick={() => toggleBank(e.id, e.bankLinked)} style={{ background: e.bankLinked ? '#D1FAE5' : '#FEE2E2', color: e.bankLinked ? '#065F46' : '#991B1B', border: 'none', borderRadius: 20, padding: '5px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+                    {e.bankLinked ? <><Check size={12} /> Linked</> : <><X size={12} /> Not Linked</>}
+                  </button>
+                </td>
+                <td style={{ padding: '14px 16px', fontSize: 12, color: C.text }}>{e.upiId ?? e.bankAccount ?? '—'}</td>
+                <td style={{ padding: '14px 16px' }}>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button onClick={() => setViewing(e)} title="View" style={{ background: '#EFF6FF', color: '#1D4ED8', border: 'none', borderRadius: 7, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Eye size={14} /></button>
+                    <button onClick={() => setEditing(e)} title="Edit" style={{ background: '#FFF7ED', color: '#C2410C', border: 'none', borderRadius: 7, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Pencil size={14} /></button>
+                    <button onClick={() => setClearState({ show: true, row: e })} title="Delete bank details" style={{ background: '#FEF2F2', color: '#B91C1C', border: 'none', borderRadius: 7, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Trash2 size={14} /></button>
+                  </div>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>

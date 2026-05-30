@@ -1,6 +1,6 @@
 'use client';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Eye, FileSpreadsheet, Pencil, Plus, RefreshCw, Search, Trash2, Users, Wallet } from 'lucide-react';
+import { Eye, FileSpreadsheet, Pencil, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
 import { appUserApi } from '@/lib/api';
 import type { AdminRole, AppUser, MemberTier, UserStatus } from '@/lib/types';
 import { useAppContext } from '@/lib/appContext';
@@ -866,18 +866,7 @@ export default function AllAppUsers({ role }: AllAppUsersProps) {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginTop: 24 }}>
-        {[
-          { title: 'Customer Wallet', value: `${users.filter(user => (user.walletBalance ?? 0) > 0).length} active wallets`, icon: <Wallet size={18} color="#10B981" /> },
-          { title: 'KYC Pending', value: `${users.filter(user => user.kycStatus !== 'approved').length} customers`, icon: <Users size={18} color="#F59E0B" /> },
-          { title: 'Bank Linked', value: `${users.filter(user => user.bankLinked).length} customers`, icon: <Users size={18} color="#1D4ED8" /> },
-        ].map(card => (
-          <div key={card.title} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: '18px 20px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>{card.icon}<span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{card.title}</span></div>
-            <div style={{ fontSize: 13, color: C.muted }}>{card.value}</div>
-          </div>
-        ))}
-      </div>
+
     </div>
   );
 }

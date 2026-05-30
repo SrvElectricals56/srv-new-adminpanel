@@ -54,7 +54,7 @@ const INITIAL: AppConfig = {
   dealerCatalogPdfUrl: '',
 };
 
-function CatalogPdfUploader({ onUploaded, C, lbl }: { onUploaded: (url: string) => void; C: any; lbl: React.CSSProperties }) {
+function CatalogPdfUploader({ onUploaded, C, lbl }: { onUploaded: (url: string) => void | Promise<void>; C: any; lbl: React.CSSProperties }) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -81,7 +81,7 @@ function CatalogPdfUploader({ onUploaded, C, lbl }: { onUploaded: (url: string) 
       });
       if (!res.ok) throw new Error('Upload failed');
       const data = await res.json();
-      onUploaded(data.url);
+      await onUploaded(data.url);
       setSuccess(`✅ Uploaded: ${file.name}`);
     } catch (err: any) {
       setError(err.message || 'Upload failed');
@@ -153,6 +153,16 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
   }, []);
 
   const f = (k: keyof AppConfig, v: any) => setConfig(p => ({ ...p, [k]: v }));
+
+  const saveCatalogUrl = async (key: 'generalCatalogPdfUrl' | 'dealerCatalogPdfUrl', url: string) => {
+    f(key, url);
+    await settingsApi.update(key, url);
+    if (key === 'generalCatalogPdfUrl') {
+      await settingsApi.update('catalogPdfUrl', url);
+    }
+    setSaved(true);
+    setTimeout(() => setSaved(false), 3000);
+  };
 
   const handleSave = async () => {
     if (!canEdit) return;
@@ -540,7 +550,7 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
               {/* Upload new PDF */}
               {canEdit && (
                 <CatalogPdfUploader
-                  onUploaded={(url) => f('generalCatalogPdfUrl', url)}
+                  onUploaded={(url) => saveCatalogUrl('generalCatalogPdfUrl', url)}
                   C={C}
                   lbl={lbl}
                 />
@@ -565,14 +575,14 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
 
               {canEdit && (
                 <CatalogPdfUploader
-                  onUploaded={(url) => f('dealerCatalogPdfUrl', url)}
+                  onUploaded={(url) => saveCatalogUrl('dealerCatalogPdfUrl', url)}
                   C={C}
                   lbl={lbl}
                 />
               )}
 
               <div style={{ padding: '14px', background: '#DBEAFE', borderRadius: 10, border: '1px solid #93C5FD', fontSize: 12, color: '#1E40AF' }}>
-                <strong>💡 How it works:</strong> Upload dealer and general PDFs here → click &quot;Save All&quot; → dealer users get the dealer catalog, while electrician, customer and counter boy users get the general catalog.
+                <strong>How it works:</strong> Uploaded PDFs are saved automatically. Dealer users get the dealer catalog, while electrician, customer and counter boy users get the general catalog.
               </div>
             </div>
           )}
