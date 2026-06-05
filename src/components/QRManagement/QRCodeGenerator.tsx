@@ -50,7 +50,7 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
     if (!product) return;
 
     setGenerating(true);
-    setProgress(0);
+    setProgress(10);
 
     try {
       // Call backend — saves all QR codes to database, returns code strings
@@ -60,42 +60,65 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
         batchId: `BATCH-${Date.now().toString(36).toUpperCase()}`,
       });
 
+      setProgress(60);
+
       const codes: any[] = (result as any).codes ?? [];
       const total = codes.length;
 
-      // Generate QR images on frontend from the code strings (in batches to show progress)
-      const newQRs: GeneratedQR[] = [];
+      // For large batches: store only metadata (no QR images yet — generate on demand)
+      // For small batches (≤200): pre-generate QR images for immediate preview
+      const PREVIEW_LIMIT = 200;
       const BATCH = 50;
-      for (let i = 0; i < total; i += BATCH) {
-        const slice = codes.slice(i, i + BATCH);
-        const batch = await Promise.all(
-          slice.map(async (qr: any) => {
-            const codeStr = qr.code ?? String(qr.id);
-            const qrData = await QRCodeLib.toDataURL(codeStr, {
-              width: 300, margin: 2,
-              color: { dark: '#000000', light: '#FFFFFF' },
-              errorCorrectionLevel: 'H',
-            }).catch(() => '');
-            return {
-              id: codeStr,
-              productId: product.sku || product.id,
-              productName: product.name,
-              points: product.points,
-              qrData,
-              generatedAt: qr.createdAt || new Date().toISOString(),
-              status: 'active' as const,
-            };
-          })
-        );
-        newQRs.push(...batch);
-        setProgress(Math.round(((i + BATCH) / total) * 100));
+      const newQRs: GeneratedQR[] = [];
+
+      if (total <= PREVIEW_LIMIT) {
+        // Small batch — generate all images for preview
+        for (let i = 0; i < total; i += BATCH) {
+          const slice = codes.slice(i, i + BATCH);
+          const batch = await Promise.all(
+            slice.map(async (qr: any) => {
+              const codeStr = qr.code ?? String(qr.id);
+              const qrData = await QRCodeLib.toDataURL(codeStr, {
+                width: 200, margin: 1,
+                color: { dark: '#000000', light: '#FFFFFF' },
+                errorCorrectionLevel: 'M',
+              }).catch(() => '');
+              return {
+                id: codeStr,
+                productId: product.sku || product.id,
+                productName: product.name,
+                points: product.points,
+                qrData,
+                generatedAt: qr.createdAt || new Date().toISOString(),
+                status: 'active' as const,
+              };
+            })
+          );
+          newQRs.push(...batch);
+          setProgress(60 + Math.round(((i + BATCH) / total) * 35));
+        }
+      } else {
+        // Large batch — store codes without images (images generated on download)
+        for (const qr of codes) {
+          const codeStr = qr.code ?? String(qr.id);
+          newQRs.push({
+            id: codeStr,
+            productId: product.sku || product.id,
+            productName: product.name,
+            points: product.points,
+            qrData: '', // empty — will be generated on download
+            generatedAt: qr.createdAt || new Date().toISOString(),
+            status: 'active' as const,
+          });
+        }
       }
 
+      setProgress(100);
       setGeneratedQRs(prev => [...newQRs, ...prev]);
       setAlertDialog({
         show: true,
         title: 'QR Codes Generated',
-        message: `${count} QR codes for "${product.name}" saved to database successfully.`,
+        message: `${count} QR codes for "${product.name}" saved to database successfully.${total > PREVIEW_LIMIT ? ' Download to get QR images.' : ''}`,
         type: 'success',
       });
     } catch (err: any) {
@@ -119,6 +142,33 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  // ── Helper: ensure QR image exists, generate if missing ──────────
+  const ensureQrData = async (qr: GeneratedQR): Promise<string> => {
+    if (qr.qrData) return qr.qrData;
+    return QRCodeLib.toDataURL(qr.id, {
+      width: 300, margin: 2,
+      color: { dark: '#000000', light: '#FFFFFF' },
+      errorCorrectionLevel: 'M',
+    }).catch(() => '');
+  };
+
+  const resolveAllQrData = async (
+    qrs: GeneratedQR[],
+    onProgress?: (pct: number) => void,
+  ): Promise<GeneratedQR[]> => {
+    const CHUNK = 100;
+    const result: GeneratedQR[] = [];
+    for (let i = 0; i < qrs.length; i += CHUNK) {
+      const slice = qrs.slice(i, i + CHUNK);
+      const resolved = await Promise.all(slice.map(async (q) => ({
+        ...q, qrData: await ensureQrData(q),
+      })));
+      result.push(...resolved);
+      onProgress?.(Math.round(((i + CHUNK) / qrs.length) * 100));
+    }
+    return result;
+  };
+
   // ── Download All as ZIP (PNG images + Excel) ──────────────────────
   const downloadZip = async () => {
     if (!generatedQRs.length) return;
@@ -131,9 +181,12 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
 
       const zip = new JSZipModule();
 
+      // Resolve QR images (generate missing ones)
+      const resolved = await resolveAllQrData(generatedQRs);
+
       // 1. Images folder
       const imgFolder = zip.folder('QR_Images')!;
-      generatedQRs.forEach(qr => {
+      resolved.forEach(qr => {
         const base64 = qr.qrData.replace(/^data:image\/\w+;base64,/, '');
         if (base64) imgFolder.file(`${qr.id}.png`, base64, { base64: true });
       });
@@ -141,7 +194,7 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
       // 2. Excel file inside zip
       const wsData = [
         ['QR ID', 'Product Name', 'SKU Code', 'Points', 'Generated At', 'Status'],
-        ...generatedQRs.map(q => [
+        ...resolved.map(q => [
           q.id,
           q.productName,
           q.productId,
@@ -157,7 +210,6 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
       ];
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'QR Codes');
-      // Write excel as array buffer and add to zip
       const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
       zip.file('QR_Codes_Data.xlsx', excelBuffer);
 
@@ -451,15 +503,21 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
           )}
 
           <div style={{ display: 'grid', gap: 12, maxHeight: 600, overflowY: 'auto' }}>
-            {generatedQRs.map(qr => (
+            {generatedQRs.slice(0, 100).map(qr => (
               <div key={qr.id} style={{ background: C.bg, borderRadius: 12, padding: 16, border: `1px solid ${C.border}`, transition: 'all 0.2s' }}
                 onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'}
                 onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.boxShadow = 'none'}>
                 <div style={{ display: 'flex', gap: 16 }}>
-                  <img src={qr.qrData} alt={qr.id}
-                    style={{ width: 100, height: 100, borderRadius: 8, border: `2px solid ${C.red}`, flexShrink: 0, objectFit: 'contain', background: 'white', cursor: 'pointer' }}
-                    onClick={() => { const w = window.open(); if (w) w.document.write(`<img src="${qr.qrData}" style="max-width:100%;height:auto;" />`); }}
-                  />
+                  {qr.qrData ? (
+                    <img src={qr.qrData} alt={qr.id}
+                      style={{ width: 100, height: 100, borderRadius: 8, border: `2px solid ${C.red}`, flexShrink: 0, objectFit: 'contain', background: 'white', cursor: 'pointer' }}
+                      onClick={() => { const w = window.open(); if (w) w.document.write(`<img src="${qr.qrData}" style="max-width:100%;height:auto;" />`); }}
+                    />
+                  ) : (
+                    <div style={{ width: 100, height: 100, borderRadius: 8, border: `2px solid ${C.border}`, flexShrink: 0, background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: C.muted, textAlign: 'center', padding: 4 }}>
+                      Download to view image
+                    </div>
+                  )}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                       <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{qr.productName}</div>
@@ -474,10 +532,12 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
                       <div>Generated: {new Date(qr.generatedAt).toLocaleDateString('en-IN')}</div>
                     </div>
                     <div style={{ display: 'flex', gap: 8 }}>
-                      <button onClick={() => downloadSingle(qr)}
-                        style={{ background: C.red, color: 'white', border: 'none', borderRadius: 8, padding: '6px 12px', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <Download size={12} /> Download
-                      </button>
+                      {qr.qrData && (
+                        <button onClick={() => downloadSingle(qr)}
+                          style={{ background: C.red, color: 'white', border: 'none', borderRadius: 8, padding: '6px 12px', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <Download size={12} /> Download
+                        </button>
+                      )}
                       <button onClick={() => copyQRData(qr)}
                         style={{ background: copiedId === qr.id ? '#10B981' : C.border, color: copiedId === qr.id ? 'white' : C.text, border: 'none', borderRadius: 8, padding: '6px 12px', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
                         {copiedId === qr.id ? <Check size={12} /> : <Copy size={12} />}
@@ -488,6 +548,11 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
                 </div>
               </div>
             ))}
+            {generatedQRs.length > 100 && (
+              <div style={{ textAlign: 'center', padding: '16px', background: C.bg, borderRadius: 12, border: `1px solid ${C.border}`, color: C.muted, fontSize: 13, fontWeight: 600 }}>
+                Showing 100 of {generatedQRs.length} QR codes. Use the Download buttons above to get all codes.
+              </div>
+            )}
           </div>
         </div>
       </div>

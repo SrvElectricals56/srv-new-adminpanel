@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowDownLeft, ArrowUpRight, Eye, FileSpreadsheet, Pencil, QrCode, Gift, CreditCard, Wallet } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, Eye, FileSpreadsheet, Pencil, Trash2, QrCode, Gift, CreditCard, Wallet } from 'lucide-react';
 import ExportModal from '@/components/Shared/ExportModal';
 import { redemptionApi, walletApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
@@ -134,6 +134,7 @@ export default function RoleWalletHistoryPage({
   const [editState, setEditState] = useState<{ open: boolean; row: WalletTransaction | null }>({ open: false, row: null });
   const [editStatus, setEditStatus] = useState<'pending' | 'approved' | 'rejected'>('pending');
   const [editReason, setEditReason] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState<{ row: WalletTransaction | null }>({ row: null });
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -270,6 +271,22 @@ export default function RoleWalletHistoryPage({
       await loadData();
     } catch (error) {
       setFeedback({ type: 'error', message: error instanceof Error ? error.message : 'Failed to update withdrawal request.' });
+    } finally {
+      setSubmittingId(null);
+    }
+  };
+
+  const handleDelete = async () => {
+    const linked = deleteConfirm.row?.linkedRedemption;
+    if (!linked) return;
+    setSubmittingId(deleteConfirm.row!.id);
+    try {
+      await redemptionApi.delete(linked.id);
+      setDeleteConfirm({ row: null });
+      setFeedback({ type: 'success', message: 'Redemption record delete kar diya gaya.' });
+      await loadData();
+    } catch (error) {
+      setFeedback({ type: 'error', message: error instanceof Error ? error.message : 'Delete failed.' });
     } finally {
       setSubmittingId(null);
     }
@@ -415,7 +432,6 @@ export default function RoleWalletHistoryPage({
               ) : (
                 filtered.map((row) => {
                   const statusConfig = getStatusConfig(row);
-                  const withdrawalRequest = isWithdrawalRequest(row);
                   return (
                     <tr key={row.id} style={{ borderBottom: `1px solid ${C.border}` }}
                       onMouseEnter={(e) => ((e.currentTarget as HTMLTableRowElement).style.background = C.hoverRow)}
@@ -458,11 +474,18 @@ export default function RoleWalletHistoryPage({
                       </td>
                       <td style={{ padding: '13px 16px' }}>
                         <div style={{ display: 'flex', gap: 8 }}>
-                          {/* Edit button only on Payments tab for withdrawal requests */}
-                          {walletTab === 'payments' && withdrawalRequest && (
+                          {/* Edit — for any row with a linked redemption (gift or withdrawal) */}
+                          {row.linkedRedemption && (
                             <button onClick={() => openEditModal(row)} disabled={submittingId === row.id}
                               style={{ background: '#EFF6FF', color: '#1D4ED8', border: 'none', borderRadius: 8, padding: '7px 12px', fontSize: 12, fontWeight: 700, cursor: submittingId === row.id ? 'wait' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                               <Pencil size={13} /> Edit
+                            </button>
+                          )}
+                          {/* Delete — for any row with a linked redemption */}
+                          {row.linkedRedemption && (
+                            <button onClick={() => setDeleteConfirm({ row })} disabled={submittingId === row.id}
+                              style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 8, padding: '7px 10px', cursor: submittingId === row.id ? 'wait' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                              <Trash2 size={13} /> Delete
                             </button>
                           )}
                           <button onClick={() => setViewItem(row)}
@@ -526,12 +549,12 @@ export default function RoleWalletHistoryPage({
         </div>
       )}
 
-      {/* Edit Modal — only for Payments tab withdrawal requests */}
+      {/* Edit Modal */}
       {editState.open && (
         <div style={{ position: 'fixed', inset: 0, background: C.overlay, backdropFilter: 'blur(6px)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={closeEditModal}>
           <div style={{ background: C.card, borderRadius: 16, width: 520, maxWidth: '95vw', boxShadow: '0 25px 70px rgba(0,0,0,0.2)', border: `1px solid ${C.border}` }} onClick={(e) => e.stopPropagation()}>
             <div style={{ padding: '18px 22px', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontSize: 16, fontWeight: 800, color: C.text }}>Edit Payment Status</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: C.text }}>Edit Status</div>
               <button onClick={closeEditModal} style={{ background: C.bg, border: 'none', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', color: C.muted, fontSize: 15 }}>×</button>
             </div>
             <div style={{ padding: 22 }}>
@@ -552,6 +575,36 @@ export default function RoleWalletHistoryPage({
               <button onClick={() => void handleSaveEdit()} disabled={submittingId === editState.row?.id}
                 style={{ background: C.red, color: '#fff', border: 'none', borderRadius: 10, padding: '10px 16px', fontSize: 13, fontWeight: 700, cursor: submittingId === editState.row?.id ? 'wait' : 'pointer' }}>
                 Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Delete Modal */}
+      {deleteConfirm.row && (
+        <div style={{ position: 'fixed', inset: 0, background: C.overlay, backdropFilter: 'blur(6px)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={() => setDeleteConfirm({ row: null })}>
+          <div style={{ background: C.card, borderRadius: 16, width: 440, maxWidth: '95vw', boxShadow: '0 25px 70px rgba(0,0,0,0.2)', border: `1px solid ${C.border}` }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ padding: '18px 22px', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontSize: 16, fontWeight: 800, color: C.text }}>Delete Confirmation</div>
+              <button onClick={() => setDeleteConfirm({ row: null })} style={{ background: C.bg, border: 'none', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', color: C.muted, fontSize: 15 }}>×</button>
+            </div>
+            <div style={{ padding: 22 }}>
+              <div style={{ fontSize: 14, color: C.text, marginBottom: 12 }}>
+                Kya aap is record ko delete karna chahte hain?
+              </div>
+              <div style={{ background: C.bg, borderRadius: 12, padding: 14, border: `1px solid ${C.border}`, fontSize: 13, color: C.muted, lineHeight: 1.6 }}>
+                <strong>User:</strong> {deleteConfirm.row.userName || 'N/A'}<br />
+                <strong>Type:</strong> {deleteConfirm.row.linkedRedemption?.type ?? deleteConfirm.row.source}<br />
+                <strong>Amount:</strong> ₹{Number(deleteConfirm.row.amount ?? 0).toLocaleString('en-IN')}<br />
+                <strong>Date:</strong> {new Date(deleteConfirm.row.createdAt).toLocaleDateString('en-IN')}
+              </div>
+            </div>
+            <div style={{ padding: '0 22px 22px', display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button onClick={() => setDeleteConfirm({ row: null })} style={{ background: C.surface, color: C.muted, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={() => void handleDelete()} disabled={submittingId === deleteConfirm.row?.id}
+                style={{ background: '#DC2626', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 16px', fontSize: 13, fontWeight: 700, cursor: submittingId === deleteConfirm.row?.id ? 'wait' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <Trash2 size={13} /> Delete
               </button>
             </div>
           </div>

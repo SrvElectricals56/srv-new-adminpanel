@@ -8,6 +8,7 @@ import {
   ChevronLeft, ChevronRight, ArrowLeftRight, Percent,
   Image as ImageIcon, MessageCircle, FileText,
   UserCheck, ShieldCheck, AppWindow, Play, Activity,
+  ShoppingCart,
 } from 'lucide-react';
 
 const NAV_GROUPS = [
@@ -33,6 +34,7 @@ const NAV_GROUPS = [
       { id: 'products', label: 'Products', Icon: Package },
       { id: 'product-categories', label: 'Product Categories', Icon: Tags },
       { id: 'points-config', label: 'Products Points', Icon: Star },
+      { id: 'product-orders', label: 'Product Orders', Icon: ShoppingCart },
     ]
   },
   {

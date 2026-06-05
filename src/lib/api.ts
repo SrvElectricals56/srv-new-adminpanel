@@ -449,6 +449,19 @@ export const giftApi = {
     request<any>(`/gifts/orders/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
 };
 
+// ─── Product Orders ────────────────────────────────────────────────────────────
+export const productOrderApi = {
+  getAll: (params?: Record<string, string>) => {
+    const q = params ? '?' + new URLSearchParams(params).toString() : '';
+    return request<{ data: any[]; total: number; page: number; limit: number; totalPages: number }>(`/product-orders${q}`);
+  },
+  getById: (id: string) => request<any>(`/product-orders/${id}`),
+  updateStatus: (id: string, body: { status: string; rejectionReason?: string; trackingNumber?: string }) =>
+    request<any>(`/product-orders/${id}/status`, { method: 'PATCH', body: JSON.stringify(body) }),
+  getStats: () => request<any>('/product-orders/stats/summary'),
+  delete: (id: string) => request<void>(`/product-orders/${id}`, { method: 'DELETE' }),
+};
+
 // ─── Finance ──────────────────────────────────────────────────────────────────
 export const financeApi = {
   getSummary: () => request<any>('/finance/summary'),

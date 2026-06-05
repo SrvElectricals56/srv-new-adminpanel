@@ -24,6 +24,7 @@ const QRCodes            = lazy(() => import('@/components/QRManagement/QRCodes'
 const QRCodeGenerator    = lazy(() => import('@/components/QRManagement/QRCodeGenerator'));
 const GiftProducts       = lazy(() => import('@/components/GiftManagement/GiftProducts'));
 const GiftOrders         = lazy(() => import('@/components/GiftManagement/GiftOrders'));
+const ProductOrders      = lazy(() => import('@/components/Orders/ProductOrders'));
 const NotificationsPage  = lazy(() => import('@/components/Engagement/Notifications'));
 const Banners            = lazy(() => import('@/components/Content/Banners'));
 const TransferPoints     = lazy(() => import('@/components/Financial/TransferPoints'));
@@ -57,6 +58,7 @@ const preloadPageChunk = (id: string) => {
     case 'qr-generator': return import('@/components/QRManagement/QRCodeGenerator');
     case 'gift-products': return import('@/components/GiftManagement/GiftProducts');
     case 'gift-orders': return import('@/components/GiftManagement/GiftOrders');
+    case 'product-orders': return import('@/components/Orders/ProductOrders');
     case 'notifications': return import('@/components/Engagement/Notifications');
     case 'banners': return import('@/components/Content/Banners');
     case 'transfer-points': return import('@/components/Financial/TransferPoints');
@@ -87,8 +89,9 @@ const DEFAULT_PRELOAD_PAGES = [
   'qr-hub',
   'qr-codes',
   'qr-generator',
-  'gift-products',
+   'gift-products',
   'gift-orders',
+  'product-orders',
   'transfer-points',
   'notifications',
   'reports',
@@ -148,6 +151,7 @@ const PAGE_LABELS: Record<string, { title: string; Icon: React.ElementType }> = 
   'qr-generator': { title: 'QR Generator', Icon: QrCode },
   'gift-products': { title: 'Gift Products', Icon: Gift },
   'gift-orders': { title: 'Gift Orders', Icon: Gift },
+  'product-orders': { title: 'Product Orders', Icon: Package },
   'redemption-requests': { title: 'Redemption Requests', Icon: ClipboardList },
   'pending-registrations': { title: 'Pending Registrations', Icon: UserCheck },
   'notifications': { title: 'Notifications', Icon: Bell },
@@ -493,6 +497,7 @@ export default function Home() {
       case 'qr-generator': return <QRCodeGenerator role={role} />;
       case 'gift-products': return <GiftProducts role={role} />;
       case 'gift-orders': return <GiftOrders role={role} />;
+      case 'product-orders': return <ProductOrders role={role} />;
       case 'notifications': return <NotificationsPage role={role} />;
       case 'banners': return <Banners role={role} />;
       case 'transfer-points': return <TransferPoints role={role} />;

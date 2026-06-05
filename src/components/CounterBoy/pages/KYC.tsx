@@ -311,6 +311,13 @@ export default function CounterBoyKYC() {
     not_submitted: { bg: '#F1F5F9', color: '#475569', label: 'Not Submitted' },
   };
 
+  const stats = [
+    { label: 'Total', value: documents.length, color: '#3B82F6', bg: '#EFF6FF', filter: 'all' },
+    { label: 'Verified', value: documents.filter(d => d.kycStatus === 'verified').length, color: '#10B981', bg: '#D1FAE5', filter: 'verified' },
+    { label: 'Pending', value: documents.filter(d => d.kycStatus === 'pending').length, color: '#F59E0B', bg: '#FFFBEB', filter: 'pending' },
+    { label: 'Rejected', value: documents.filter(d => d.kycStatus === 'rejected').length, color: '#EF4444', bg: '#FEE2E2', filter: 'rejected' },
+  ];
+
   const inputStyle: React.CSSProperties = { width: '100%', padding: '9px 12px', border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 13.5, outline: 'none', background: C.surface, color: C.text, boxSizing: 'border-box' };
 
   return (
@@ -326,6 +333,30 @@ export default function CounterBoyKYC() {
         <button onClick={() => setShowExport(true)} style={{ background: C.red, color: 'white', border: 'none', borderRadius: 10, padding: '10px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}><FileSpreadsheet size={14} /> Export</button>
       </div>
       <ExportModal show={showExport} onClose={() => setShowExport(false)} title="Counter Boy KYC" fileName="counterboy-kyc" getData={() => documents.map(item => ({ Name: item.name, Code: item.counterboyCode, KYCStatus: item.kycStatus, AadhaarImage: item.aadharFrontImage ?? '' }))} />
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 24 }}>
+        {stats.map((s, i) => (
+          <div
+            key={i}
+            onClick={() => setFilterStatus(s.filter)}
+            style={{
+              background: filterStatus === s.filter ? s.bg : C.card,
+              borderRadius: 14,
+              padding: '16px 18px',
+              border: `2px solid ${filterStatus === s.filter ? s.color : C.border}`,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+              cursor: 'pointer',
+              transition: 'all 0.15s',
+              userSelect: 'none',
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 6px 16px rgba(0,0,0,0.10)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)'; }}
+          >
+            <div style={{ fontSize: 28, fontWeight: 800, color: s.color, marginBottom: 4 }}>{s.value}</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.muted }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
 
       <div style={{ background: C.card, borderRadius: 14, padding: '14px 18px', border: `1px solid ${C.border}`, marginBottom: 18, display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name, code or phone..." style={{ ...inputStyle, flex: 1, minWidth: 220 }} />

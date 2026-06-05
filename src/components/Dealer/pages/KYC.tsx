@@ -201,8 +201,8 @@ export default function KYCManagement() {
       type: 'success',
       onConfirm: async () => {
         try {
-          await dealerApi.update(doc.id, { kycStatus: 'verified' });
-          setDocuments(prev => prev.map(d => d.id === doc.id ? { ...d, kycStatus: 'verified' } : d));
+          await dealerApi.update(doc.id, { kycStatus: 'verified', kycRejectionReason: null });
+          setDocuments(prev => prev.map(d => d.id === doc.id ? { ...d, kycStatus: 'verified', kycRejectionReason: undefined } : d));
         } catch (err) { console.error(err); }
         setConfirmState(s => ({ ...s, show: false }));
       }
@@ -210,14 +210,20 @@ export default function KYCManagement() {
   };
 
   const handleReject = (doc: DealerKYC) => {
+    const reason = window.prompt(`Rejection reason for ${doc.dealerName} (required):`);
+    if (reason === null) return; // cancelled
+    if (!reason.trim()) {
+      window.alert('Please enter a rejection reason so the user knows what to fix.');
+      return;
+    }
     setConfirmState({
       show: true, title: 'Reject KYC',
-      message: `Reject KYC for ${doc.dealerName}?`,
+      message: `Reject KYC for ${doc.dealerName}? Reason: "${reason.trim()}"`,
       type: 'danger',
       onConfirm: async () => {
         try {
-          await dealerApi.update(doc.id, { kycStatus: 'rejected' });
-          setDocuments(prev => prev.map(d => d.id === doc.id ? { ...d, kycStatus: 'rejected' } : d));
+          await dealerApi.update(doc.id, { kycStatus: 'rejected', kycRejectionReason: reason.trim() });
+          setDocuments(prev => prev.map(d => d.id === doc.id ? { ...d, kycStatus: 'rejected', kycRejectionReason: reason.trim() } : d));
         } catch (err) { console.error(err); }
         setConfirmState(s => ({ ...s, show: false }));
       }
@@ -268,10 +274,10 @@ export default function KYCManagement() {
   };
 
   const stats = [
-    { label: 'Total', value: documents.length, color: '#3B82F6', bg: '#EFF6FF' },
-    { label: 'Verified', value: documents.filter(d => d.kycStatus === 'verified').length, color: '#10B981', bg: '#D1FAE5' },
-    { label: 'Pending', value: documents.filter(d => d.kycStatus === 'pending').length, color: '#F59E0B', bg: '#FFFBEB' },
-    { label: 'Rejected', value: documents.filter(d => d.kycStatus === 'rejected').length, color: '#EF4444', bg: '#FEE2E2' },
+    { label: 'Total', value: documents.length, color: '#3B82F6', bg: '#EFF6FF', filter: 'all' },
+    { label: 'Verified', value: documents.filter(d => d.kycStatus === 'verified').length, color: '#10B981', bg: '#D1FAE5', filter: 'verified' },
+    { label: 'Pending', value: documents.filter(d => d.kycStatus === 'pending').length, color: '#F59E0B', bg: '#FFFBEB', filter: 'pending' },
+    { label: 'Rejected', value: documents.filter(d => d.kycStatus === 'rejected').length, color: '#EF4444', bg: '#FEE2E2', filter: 'rejected' },
   ];
 
   return (
@@ -290,7 +296,22 @@ export default function KYCManagement() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 24 }}>
         {stats.map((s, i) => (
-          <div key={i} style={{ background: C.card, borderRadius: 14, padding: '16px 18px', border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+          <div
+            key={i}
+            onClick={() => setFilterStatus(s.filter)}
+            style={{
+              background: filterStatus === s.filter ? s.bg : C.card,
+              borderRadius: 14,
+              padding: '16px 18px',
+              border: `2px solid ${filterStatus === s.filter ? s.color : C.border}`,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+              cursor: 'pointer',
+              transition: 'all 0.15s',
+              userSelect: 'none',
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 6px 16px rgba(0,0,0,0.10)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)'; }}
+          >
             <div style={{ fontSize: 28, fontWeight: 800, color: s.color, marginBottom: 4 }}>{s.value}</div>
             <div style={{ fontSize: 13, fontWeight: 700, color: C.muted }}>{s.label}</div>
           </div>
