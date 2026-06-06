@@ -5,6 +5,7 @@ import { Banknote, Check, CreditCard, DollarSign, Eye, FileSpreadsheet, Trending
 import ExportModal from '@/components/Shared/ExportModal';
 import { redemptionApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
+import { formatISTDate, formatISTDateTimeFull } from '@/lib/dateIST';
 
 type SupportedRole = 'electrician' | 'dealer' | 'user' | 'counterboy';
 
@@ -288,7 +289,7 @@ export default function RoleRedemptionRequestsPage({
                         </span>
                       </td>
                       <td style={{ padding: '12px 16px', fontSize: 12, color: C.muted }}>
-                        {row.requestedAt ? new Date(row.requestedAt).toLocaleDateString('en-IN') : '—'}
+                        {row.requestedAt ? formatISTDate(row.requestedAt) : '—'}
                       </td>
                       <td style={{ padding: '12px 16px' }}>
                         {row.status === 'pending' ? (
@@ -352,7 +353,7 @@ export default function RoleRedemptionRequestsPage({
                       ['Points', Number(viewItem.points ?? 0).toLocaleString('en-IN')],
                       ['Amount', `₹${Number(viewItem.amount ?? 0).toLocaleString('en-IN')}`],
                       ['Status', viewItem.status],
-                      ['Date', viewItem.requestedAt ? new Date(viewItem.requestedAt).toLocaleDateString('en-IN') : '—'],
+                      ['Date', viewItem.requestedAt ? formatISTDateTimeFull(viewItem.requestedAt) : '—'],
                     ].map(([label, value]) => (
                       <div key={label} style={{ background: C.card, borderRadius: 10, padding: '10px 12px', fontSize: 13, color: C.text }}>
                         <span style={{ color: C.muted, fontWeight: 700 }}>{label}: </span>

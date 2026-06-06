@@ -1,10 +1,11 @@
-'use client';
+﻿'use client';
 import { useState, useEffect } from 'react';
 import { Bolt, Store, ScanLine, Star, Users, AlertTriangle, ChartColumn, Medal, CreditCard, Gift, MessageCircle, X, Check, Award, Trophy, Gem, FileText, IndianRupee } from 'lucide-react';
 import { analyticsApi, redemptionApi, scanApi, supportApi } from '@/lib/api';
 import type { AdminRole } from '@/lib/types';
 import { getPermissions } from '@/lib/permissions';
 import { useThemePalette } from '@/lib/theme';
+import { formatISTDateTime, formatISTDate, formatISTDateTimeFull, formatISTTime } from '@/lib/dateIST';
 
 interface DashboardProps {
   role: AdminRole;
@@ -145,7 +146,7 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
       <div style={{ background: C.heroGradient, borderRadius: 20, padding: '24px 28px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 8px 30px rgba(15,23,42,0.2)' }}>
         <div>
           <div style={{ fontSize: 22, fontWeight: 900, color: 'white', marginBottom: 4 }}>Welcome back, {adminName}</div>
-          <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)' }}>SRV Electricals Admin Portal — {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</div>
+          <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)' }}>SRV Electricals Admin Portal — {formatISTDateTimeFull(new Date().toISOString()).split(',').slice(0,2).join(',')}</div>
         </div>
         <div style={{ display: 'flex', gap: 12 }}>
           <div onClick={() => onNavigate && onNavigate('redemptions')} style={{ textAlign: 'center', padding: '10px 20px', background: 'rgba(29,78,216,0.25)', borderRadius: 12, border: '1px solid rgba(29,78,216,0.3)', cursor: 'pointer' }}>
@@ -246,7 +247,7 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
                 </div>
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 800, color: '#F59E0B' }}>+{s.points} pts</div>
-                  <div style={{ fontSize: 10, color: C.muted }}>{new Date(s.scannedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</div>
+                  <div style={{ fontSize: 10, color: C.muted }}>{formatISTTime(s.scannedAt)}</div>
                 </div>
               </div>
             ))

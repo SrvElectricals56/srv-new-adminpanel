@@ -1,7 +1,8 @@
-'use client';
+﻿'use client';
 import { useState, useEffect } from 'react';
 import { MessageCircle, Search, Filter, Send, X, Clock, CheckCircle, AlertCircle, User, Phone, Mail, Calendar } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
+import { formatISTDateTime, formatISTDate, formatISTDateTimeFull } from '@/lib/dateIST';
 import { supportApi } from '@/lib/api';
 
 interface Enquiry {
@@ -148,7 +149,7 @@ export default function EnquirySupport() {
     if (hours < 1) return 'Just now';
     if (hours < 24) return `${hours}h ago`;
     if (days < 7) return `${days}d ago`;
-    return date.toLocaleDateString();
+    return formatISTDate(date.toISOString());
   };
 
   const inp: React.CSSProperties = { width: '100%', padding: '10px 12px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 13, outline: 'none', background: C.inputBg, color: C.text };
@@ -306,7 +307,7 @@ export default function EnquirySupport() {
               </select>
               <div style={{ fontSize: 11, color: C.muted, marginLeft: 'auto' }}>
                 <Calendar size={12} style={{ display: 'inline', marginRight: 4 }} />
-                Created: {new Date(selectedEnquiry.createdAt).toLocaleString()}
+                Created: {formatISTDateTimeFull(selectedEnquiry.createdAt)}
               </div>
             </div>
 
@@ -320,7 +321,7 @@ export default function EnquirySupport() {
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 2 }}>{selectedEnquiry.userName}</div>
-                    <div style={{ fontSize: 11, color: C.muted }}>{new Date(selectedEnquiry.createdAt).toLocaleString()}</div>
+                    <div style={{ fontSize: 11, color: C.muted }}>{formatISTDateTimeFull(selectedEnquiry.createdAt)}</div>
                   </div>
                 </div>
                 <div style={{ marginLeft: 46, padding: '12px 16px', background: C.bg, borderRadius: 10, fontSize: 13, color: C.text, lineHeight: 1.6 }}>
@@ -337,7 +338,7 @@ export default function EnquirySupport() {
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 2 }}>{reply.senderName}</div>
-                      <div style={{ fontSize: 11, color: C.muted }}>{new Date(reply.timestamp).toLocaleString()}</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>{formatISTDateTimeFull(reply.timestamp)}</div>
                     </div>
                   </div>
                   <div style={{ marginLeft: 46, padding: '12px 16px', background: reply.sender === 'admin' ? '#F3E8FF' : C.bg, borderRadius: 10, fontSize: 13, color: C.text, lineHeight: 1.6 }}>

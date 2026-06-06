@@ -1,7 +1,8 @@
-'use client';
+﻿'use client';
 import React, { useState, useEffect } from 'react';
 import { ShoppingBag, Bolt, Store, Eye, Pencil, Trash2, Package, SlidersHorizontal, Search, User, FileSpreadsheet } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
+import { formatISTDateTime, formatISTDate, formatISTDateTimeFull } from '@/lib/dateIST';
 import { productOrderApi } from '@/lib/api';
 import ExportModal from '@/components/Shared/ExportModal';
 
@@ -70,7 +71,7 @@ function OrderDetailModal({ order, onClose, C }: { order: ProductOrder; onClose:
               { label: 'Name', value: order.userName },
               { label: 'Phone', value: order.userPhone || '—' },
               { label: 'Code', value: order.userCode || '—' },
-              { label: 'Ordered On', value: new Date(order.orderedAt).toLocaleDateString('en-IN') },
+              { label: 'Ordered On', value: formatISTDate(order.orderedAt) },
               { label: 'Shipping Address', value: order.shippingAddress || '—' },
               { label: 'Tracking', value: order.trackingNumber || '—' },
             ].map(item => (
@@ -312,7 +313,7 @@ export default function ProductOrders({ role }: { role?: import('@/lib/types').A
                   <td style={{ padding: '14px 16px' }}>
                     <span style={{ background: '#D1FAE5', color: '#065F46', fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 20 }}>₹{order.total}</span>
                   </td>
-                  <td style={{ padding: '14px 16px', fontSize: 12, color: C.muted }}>{new Date(order.orderedAt).toLocaleDateString('en-IN')}</td>
+                  <td style={{ padding: '14px 16px', fontSize: 12, color: C.muted }}>{formatISTDate(order.orderedAt)}</td>
                   <td style={{ padding: '14px 16px' }}>
                     <span style={{ background: s.bg, color: s.color, fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 20, whiteSpace: 'nowrap' }}>{s.label}</span>
                   </td>
@@ -400,7 +401,7 @@ export default function ProductOrders({ role }: { role?: import('@/lib/types').A
                 <strong>Customer:</strong> {deleteConfirm.order.userName}<br />
                 <strong>Qty:</strong> {deleteConfirm.order.quantity} × ₹{deleteConfirm.order.price} = ₹{deleteConfirm.order.total}<br />
                 <strong>Status:</strong> {STATUS_CONFIG[deleteConfirm.order.status].label}<br />
-                <strong>Date:</strong> {new Date(deleteConfirm.order.orderedAt).toLocaleDateString('en-IN')}
+                <strong>Date:</strong> {formatISTDate(deleteConfirm.order.orderedAt)}
               </div>
             </div>
             <div style={{ padding: '0 24px 24px', display: 'flex', justifyContent: 'flex-end', gap: 10 }}>

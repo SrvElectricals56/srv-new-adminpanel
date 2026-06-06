@@ -193,7 +193,7 @@ const BASE_FEATURES: Record<AppFeatureKey, boolean> = {
 };
 
 const DEFAULT_CONTROLS: RolePageControls = {
-  electrician: { ...BASE_FEATURES, rewards: true, scan: true, electrician_tier: true, scan_history: true },
+  electrician: { ...BASE_FEATURES, cart: true, checkout: true, rewards: true, scan: true, electrician_tier: true, scan_history: true },
   dealer: { ...BASE_FEATURES, electricians: true, call_electrician: true, dealer_tier: true, dealer_bonus: true },
   user: { ...BASE_FEATURES, play: true, categories: true, cart: true, rewards: true, transfer_points: false },
   counterboy: { ...BASE_FEATURES, support: true, transfer_points: false },
@@ -226,6 +226,8 @@ const ROLE_ALLOWED_FEATURES: Record<UserRole, AppFeatureKey[]> = {
   electrician: [
     'home',
     'product',
+    'cart',
+    'checkout',
     'scan',
     'rewards',
     'profile',

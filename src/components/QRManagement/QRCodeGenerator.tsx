@@ -1,7 +1,8 @@
-'use client';
+﻿'use client';
 import { useState, useEffect } from 'react';
 import { QrCode, Download, RefreshCw, Bolt, Package, Gift, Copy, Check, FileText, FileSpreadsheet, Archive } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
+import { formatISTDateTime, formatISTDate, formatISTDateTimeFull } from '@/lib/dateIST';
 import type { AdminRole } from '@/lib/types';
 import { getPermissions } from '@/lib/permissions';
 import { productApi, qrCodeApi } from '@/lib/api';
@@ -199,7 +200,7 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
           q.productName,
           q.productId,
           q.points,
-          new Date(q.generatedAt).toLocaleString('en-IN'),
+          formatISTDateTime(q.generatedAt),
           q.status,
         ]),
       ];
@@ -241,7 +242,7 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
     const escape = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
     const header = ['QR ID', 'Product Name', 'SKU Code', 'Points', 'Generated At', 'Status'].map(escape).join(',');
     const rows = generatedQRs.map(q =>
-      [q.id, q.productName, q.productId, q.points, new Date(q.generatedAt).toLocaleString('en-IN'), q.status].map(escape).join(',')
+      [q.id, q.productName, q.productId, q.points, formatISTDateTime(q.generatedAt), q.status].map(escape).join(',')
     );
     const csv = '\uFEFF' + [header, ...rows].join('\r\n'); // BOM for Excel UTF-8
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -269,7 +270,7 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
           q.productName,
           q.productId,
           q.points,
-          new Date(q.generatedAt).toLocaleString('en-IN'),
+          formatISTDateTime(q.generatedAt),
           q.status,
         ]),
       ];
@@ -529,7 +530,7 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
                     <div style={{ display: 'flex', gap: 16, fontSize: 11, color: C.muted, marginBottom: 12 }}>
                       <div><Bolt size={12} style={{ display: 'inline', marginRight: 4 }} />{qr.points} points</div>
                       <div>SKU: {qr.productId}</div>
-                      <div>Generated: {new Date(qr.generatedAt).toLocaleDateString('en-IN')}</div>
+                      <div>Generated: {formatISTDate(qr.generatedAt)}</div>
                     </div>
                     <div style={{ display: 'flex', gap: 8 }}>
                       {qr.qrData && (

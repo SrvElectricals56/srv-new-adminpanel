@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import { FileSpreadsheet, Plus, Store, CheckCircle, Bolt, Clock, MapPin, Phone, Building2, Target, Check, Pencil, SlidersHorizontal, Calendar, Trash2 } from 'lucide-react';
 import { dealerApi, financeApi } from '@/lib/api';
@@ -12,6 +12,7 @@ import ExportModal from '@/components/Shared/ExportModal';
 import ImportModal from '@/components/Shared/ImportModal';
 import PasswordInputField from '@/components/Shared/PasswordInputField';
 import { I } from '@/lib/iconMap';
+import { formatISTDate } from '@/lib/dateIST';
 
 interface DealersProps {
   role: AdminRole;
@@ -148,7 +149,7 @@ function ViewModal({
               { label: 'Town', value: dealer.town }, { label: 'District', value: dealer.district },
               { label: 'State', value: dealer.state }, { label: 'Phone', value: dealer.phone },
               { label: 'Email', value: dealer.email || '—' }, { label: 'GST Number', value: dealer.gstNumber },
-              { label: 'Pincode', value: dealer.pincode || '—' }, { label: 'Joined', value: new Date(dealer.joinedDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) },
+              { label: 'Pincode', value: dealer.pincode || '—' }, { label: 'Joined', value: formatISTDate(dealer.joinedDate) },
             ].map((d, i) => (
               <div key={i} style={{ background: C.bg, borderRadius: 10, padding: '10px 14px' }}>
                 <div style={{ fontSize: 11, color: C.muted, marginBottom: 2, textTransform: 'uppercase', fontWeight: 600 }}>{d.label}</div>
@@ -661,7 +662,7 @@ export default function Dealers({ role }: DealersProps) {
           DealerBonus: d.bonusPoints ?? 0,
           GSTNumber: d.gstNumber ?? '',
           BankLinked: d.bankLinked ? 'Yes' : 'No',
-          JoinedDate: new Date(d.joinedDate).toLocaleDateString('en-IN'),
+          JoinedDate: formatISTDate(d.joinedDate),
         }))}
       />
 

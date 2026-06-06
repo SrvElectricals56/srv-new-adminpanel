@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useMemo, useState, useEffect } from 'react';
 import { Users, Award, Eye, FileSpreadsheet, Plus, IdCard, Phone, MapPin, Building2, Wallet, ScanLine, Star, Pencil } from 'lucide-react';
 import { electricianApi, dealerApi } from '@/lib/api';
@@ -7,6 +7,7 @@ import { useThemePalette } from '@/lib/theme';
 import ExportModal from '@/components/Shared/ExportModal';
 import AlertDialog from '@/components/Shared/AlertDialog';
 import { I } from '@/lib/iconMap';
+import { formatISTDate } from '@/lib/dateIST';
 
 const TIER_CONFIG: Record<MemberTier, { bg: string; color: string; icon: string }> = {
   Silver: { bg: '#F1F5F9', color: '#475569', icon: '' },
@@ -100,7 +101,7 @@ function ViewModal({ electrician, onClose }: { electrician: Electrician; onClose
     { label: 'Total Redemptions', value: electrician.totalRedemptions.toString(), Icon: Award },
     { label: 'Bank Linked', value: electrician.bankLinked ? 'Yes' : 'No', Icon: Building2 },
     { label: 'UPI ID', value: electrician.upiId ?? '—', Icon: Wallet },
-    { label: 'Joined Date', value: new Date(electrician.joinedDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }), Icon: Users },
+    { label: 'Joined Date', value: formatISTDate(electrician.joinedDate), Icon: Users },
   ];
 
   return (

@@ -4,6 +4,7 @@ import { ScanLine, QrCode, Scan, FileSpreadsheet } from 'lucide-react';
 import { scanApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
 import ExportModal from '@/components/Shared/ExportModal';
+import { formatISTDateTime } from '@/lib/dateIST';
 
 export default function CounterBoyScanHistory() {
   const C = useThemePalette();
@@ -84,7 +85,7 @@ export default function CounterBoyScanHistory() {
                   <td style={{ padding: '13px 16px', fontSize: 13, color: C.text }}>{row.productName}</td>
                   <td style={{ padding: '13px 16px' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: row.mode === 'single' ? '#EFF6FF' : '#F5F3FF', color: row.mode === 'single' ? '#3B82F6' : '#8B5CF6', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20 }}>{row.mode === 'single' ? <QrCode size={14} /> : <Scan size={14} />}{row.mode === 'single' ? 'Single' : 'Multi'}</span></td>
                   <td style={{ padding: '13px 16px', fontSize: 14, fontWeight: 700, color: '#F59E0B' }}>+{row.points}</td>
-                  <td style={{ padding: '13px 16px', fontSize: 12, color: C.muted }}>{new Date(row.scannedAt).toLocaleString('en-IN')}</td>
+                  <td style={{ padding: '13px 16px', fontSize: 12, color: C.muted }}>{formatISTDateTime(row.scannedAt)}</td>
                 </tr>
               ))}
             </tbody>

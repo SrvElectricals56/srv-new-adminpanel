@@ -1,10 +1,11 @@
-'use client';
+﻿'use client';
 import { useEffect, useMemo, useState } from 'react';
 import { CheckCircle, Check, X, Eye, FileSpreadsheet } from 'lucide-react';
 import { dealerApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 import ExportModal from '@/components/Shared/ExportModal';
+import { formatISTDate } from '@/lib/dateIST';
 
 interface PendingDealer {
   id: string;
@@ -529,7 +530,7 @@ export default function DealerApprovals() {
                 </div>
               ) : null}
               <div style={{ background: C.bg, borderRadius: 10, padding: 12, fontSize: 13 }}>
-                <strong>Applied:</strong> {new Date(selectedDealer.joinedDate).toLocaleDateString('en-IN')}
+                <strong>Applied:</strong> {formatISTDate(selectedDealer.joinedDate)}
               </div>
             </div>
             {selectedDealer.status === 'pending' ? (

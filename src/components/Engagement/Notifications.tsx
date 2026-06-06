@@ -1,8 +1,9 @@
-'use client';
+﻿'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Search, Bell, Eye, Send, Pencil, Trash2, User } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
+import { formatISTDateTime, formatISTDate, formatISTDateTimeFull } from '@/lib/dateIST';
 import { notificationApi, userSearchApi } from '@/lib/api';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 import AlertDialog from '@/components/Shared/AlertDialog';
@@ -389,7 +390,7 @@ export default function NotificationsPage({ role }: { role?: import('@/lib/types
                       <span style={{ background: C.surface, color: C.muted, padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 600, border: `1px solid ${C.border}` }}>{n.type}</span>
                     </td>
                     <td style={{ padding: '10px 14px', fontSize: 11, color: C.muted, whiteSpace: 'nowrap' }}>
-                      {new Date(n.sentOn).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      {formatISTDate(n.sentOn)}
                     </td>
                     <td style={{ padding: '10px 14px' }}>{statusBadge(n.status)}</td>
                     <td style={{ padding: '10px 14px' }}>

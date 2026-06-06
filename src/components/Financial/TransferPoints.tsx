@@ -7,6 +7,7 @@ import { financeApi, settingsApi, userSearchApi } from '@/lib/api';
 import ExportModal from '@/components/Shared/ExportModal';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 import AlertDialog from '@/components/Shared/AlertDialog';
+import { formatISTDate } from '@/lib/dateIST';
 
 interface Transfer {
   id: string;
@@ -83,7 +84,7 @@ export default function TransferPoints({ role }: { role?: import('@/lib/types').
         toPhone: t.toPhone ?? t.to_phone ?? '—',
         // Ensure numeric so totals don't become string concatenations.
         points: Number(t.points ?? t.amount ?? 0),
-        date: (t.date ?? t.createdAt ?? t.created_at ?? new Date().toISOString()).slice(0, 10),
+        date: t.date ?? t.createdAt ?? t.created_at ?? new Date().toISOString(),
         reason: t.reason ?? t.description ?? '',
         status: t.status ?? 'completed',
       })));
@@ -332,7 +333,7 @@ export default function TransferPoints({ role }: { role?: import('@/lib/types').
                   <td style={{ padding: '12px 16px' }}>
                     <span style={{ fontSize: 14, fontWeight: 800, color: '#0F766E' }}>+{t.points.toLocaleString()}</span>
                   </td>
-                  <td style={{ padding: '12px 16px', fontSize: 12, color: C.muted, whiteSpace: 'nowrap' }}>{t.date}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 12, color: C.muted, whiteSpace: 'nowrap' }}>{formatISTDate(t.date)}</td>
                   <td style={{ padding: '12px 16px' }}>{statusBadge(t.status)}</td>
                   <td style={{ padding: '12px 16px' }}>
                     <div style={{ display: 'flex', gap: 6 }}>
@@ -375,7 +376,7 @@ export default function TransferPoints({ role }: { role?: import('@/lib/types').
                 ['Transfer ID', `#${viewItem.id}`], ['Points', `${viewItem.points.toLocaleString()} pts`],
                 ['From', viewItem.fromName], ['From Code', viewItem.fromCode],
                 ['To', viewItem.toName], ['To Phone', viewItem.toPhone],
-                ['Date', viewItem.date], ['Status', viewItem.status],
+                ['Date', formatISTDate(viewItem.date)], ['Status', viewItem.status],
                 ['Reason', viewItem.reason],
               ].map(([label, value]) => (
                 <div key={label as string} style={{ gridColumn: label === 'Reason' ? 'span 2' : 'span 1' }}>

@@ -10,6 +10,23 @@ import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 import AlertDialog from '@/components/Shared/AlertDialog';
 import { I } from '@/lib/iconMap';
 
+const API_ORIGIN = process.env.NEXT_PUBLIC_API_URL!.replace(/\/api\/v1\/?$/, '');
+
+function normalizeImageUrl(value: string | null | undefined): string {
+  const raw = String(value ?? '').trim();
+  if (!raw || raw.startsWith('blob:') || raw.startsWith('data:')) return raw;
+  if (raw.startsWith('/uploads/')) return `${API_ORIGIN}${raw}`;
+  if (/^https?:\/\//i.test(raw)) {
+    try {
+      const url = new URL(raw);
+      if (url.pathname.startsWith('/uploads/')) return `${API_ORIGIN}${url.pathname}`;
+      return raw;
+    } catch { return raw; }
+  }
+  if (raw.includes('/uploads/')) return `${API_ORIGIN}${raw.slice(raw.indexOf('/uploads/'))}`;
+  return raw;
+}
+
 interface ProductsProps {
   role: AdminRole;
   initialCategory?: string;
@@ -39,7 +56,7 @@ function ProductModal({ product, onClose, onEdit, canEdit }: { product: Product;
         <div style={{ padding: 24 }}>
           <div style={{ textAlign: 'center', marginBottom: 20, background: C.bg, borderRadius: 16, padding: 20, minHeight: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {product.image ? (
-              <img src={product.image} alt={product.name} style={{ width: 160, height: 160, objectFit: 'contain' }} onError={e => { const t = e.currentTarget; t.style.display = 'none'; t.parentElement!.innerHTML = '<svg width=\"48\" height=\"48\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z\"/><polyline points=\"3.27 6.96 12 12.01 20.73 6.96\"/><line x1=\"12\" y1=\"22.08\" x2=\"12\" y2=\"12\"/></svg>'; }} />
+              <img src={normalizeImageUrl(product.image)} alt={product.name} style={{ width: 160, height: 160, objectFit: 'contain' }} onError={e => { const t = e.currentTarget; t.style.display = 'none'; t.parentElement!.innerHTML = '<svg width=\"48\" height=\"48\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z\"/><polyline points=\"3.27 6.96 12 12.01 20.73 6.96\"/><line x1=\"12\" y1=\"22.08\" x2=\"12\" y2=\"12\"/></svg>'; }} />
             ) : (
               <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 160 }}><Box size={48} /></div>
             )}
@@ -143,7 +160,7 @@ function EditModal({ product, onClose, onSave, onDelete, categories, role, canDe
                   <input style={inputStyle} value={form.image ?? ''} onChange={e => f('image', e.target.value)} placeholder="https://example.com/image.jpg" />
                   {form.image && (
                     <div style={{ width: 42, height: 42, borderRadius: 8, overflow: 'hidden', flexShrink: 0, border: `1.5px solid ${C.border}` }}>
-                      <img src={form.image} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} onError={e => (e.currentTarget.style.display = 'none')} />
+                      <img src={normalizeImageUrl(form.image)} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} onError={e => (e.currentTarget.style.display = 'none')} />
                     </div>
                   )}
                 </div>
@@ -157,7 +174,7 @@ function EditModal({ product, onClose, onSave, onDelete, categories, role, canDe
                   </label>
                   {form.image && (
                     <div style={{ width: 80, height: 80, borderRadius: 8, overflow: 'hidden', flexShrink: 0, border: `1.5px solid ${C.border}` }}>
-                      <img src={form.image} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => (e.currentTarget.style.display = 'none')} />
+                      <img src={normalizeImageUrl(form.image)} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => (e.currentTarget.style.display = 'none')} />
                     </div>
                   )}
                 </div>
@@ -209,7 +226,7 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
     sub: String(p.sub ?? p.description ?? ''),
     category: String(p.category ?? 'Other'),
     subCategory: String(p.subCategory ?? p.sub_category ?? ''),
-    image: String(p.image ?? p.imageUrl ?? ''),
+    image: normalizeImageUrl(String(p.image ?? p.imageUrl ?? '')),
     points: Number(p.points ?? p.pointsValue ?? 0),
     badge: String(p.badge ?? ''),
     price: typeof p.price === 'number' ? `₹${p.price}` : String(p.price ?? ''),
@@ -564,7 +581,7 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <div style={{ width: 46, height: 46, borderRadius: 10, background: C.bg, overflow: 'hidden', flexShrink: 0 }}>
                       {p.image ? (
-                        <img src={p.image} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} onError={e => { const t = e.currentTarget; t.style.display = 'none'; const ph = t.parentElement; if (ph) { ph.innerHTML = '<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z\"/><polyline points=\"3.27 6.96 12 12.01 20.73 6.96\"/><line x1=\"12\" y1=\"22.08\" x2=\"12\" y2=\"12\"/></svg>'; ph.style.display = 'flex'; ph.style.alignItems = 'center'; ph.style.justifyContent = 'center'; } }} />
+                        <img src={normalizeImageUrl(p.image)} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} onError={e => { const t = e.currentTarget; t.style.display = 'none'; const ph = t.parentElement; if (ph) { ph.innerHTML = '<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z\"/><polyline points=\"3.27 6.96 12 12.01 20.73 6.96\"/><line x1=\"12\" y1=\"22.08\" x2=\"12\" y2=\"12\"/></svg>'; ph.style.display = 'flex'; ph.style.alignItems = 'center'; ph.style.justifyContent = 'center'; } }} />
                       ) : (
                         <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.muted }}><I name='Box' size={20} /></div>
                       )}

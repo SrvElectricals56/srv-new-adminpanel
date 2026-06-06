@@ -5,6 +5,7 @@ import { ArrowDownLeft, ArrowUpRight, Eye, FileSpreadsheet, Pencil, Trash2, QrCo
 import ExportModal from '@/components/Shared/ExportModal';
 import { redemptionApi, walletApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
+import { formatISTDate, formatISTDateTimeFull } from '@/lib/dateIST';
 
 type SupportedRole = 'electrician' | 'dealer' | 'user' | 'counterboy';
 type WalletTab = 'scan' | 'gift' | 'payments';
@@ -470,7 +471,7 @@ export default function RoleWalletHistoryPage({
                         ₹{Number(row.balanceAfter ?? 0).toLocaleString('en-IN')}
                       </td>
                       <td style={{ padding: '13px 16px', fontSize: 12, color: C.muted }}>
-                        {new Date(row.createdAt).toLocaleDateString('en-IN')}
+                        {formatISTDate(row.createdAt)}
                       </td>
                       <td style={{ padding: '13px 16px' }}>
                         <div style={{ display: 'flex', gap: 8 }}>
@@ -517,7 +518,7 @@ export default function RoleWalletHistoryPage({
             <div style={{ padding: 22, overflowY: 'auto' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
                 {[
-                  { title: 'User Info', rows: [['Name', viewItem.userName || 'N/A'], ['Phone', viewItem.userPhone || 'N/A'], ['Code', viewItem.userCode || 'N/A'], ['Date', new Date(viewItem.createdAt).toLocaleDateString('en-IN')]] },
+                  { title: 'User Info', rows: [['Name', viewItem.userName || 'N/A'], ['Phone', viewItem.userPhone || 'N/A'], ['Code', viewItem.userCode || 'N/A'], ['Date', formatISTDateTimeFull(viewItem.createdAt)]] },
                   { title: 'Transaction Summary', rows: [['Type', viewItem.type], ['Source', viewItem.source], ['Status', getStatusConfig(viewItem)?.label ?? '—'], ['Amount', `₹${Number(viewItem.amount ?? 0).toLocaleString('en-IN')}`], ['Balance Before', `₹${Number(viewItem.balanceBefore ?? 0).toLocaleString('en-IN')}`], ['Balance After', `₹${Number(viewItem.balanceAfter ?? 0).toLocaleString('en-IN')}`]] },
                   { title: 'Payment Details', rows: [['Bank Linked', viewItem.bankLinked ? 'Yes' : 'No'], ['Account Holder', viewItem.accountHolderName || viewItem.linkedRedemption?.accountHolderName || '—'], ['Bank Account', viewItem.bankAccount || viewItem.linkedRedemption?.bankAccount || '—'], ['IFSC', viewItem.ifsc || viewItem.linkedRedemption?.ifsc || '—'], ['UPI ID', viewItem.upiId || viewItem.linkedRedemption?.upiId || '—']] },
                 ].map((section) => (
@@ -597,7 +598,7 @@ export default function RoleWalletHistoryPage({
                 <strong>User:</strong> {deleteConfirm.row.userName || 'N/A'}<br />
                 <strong>Type:</strong> {deleteConfirm.row.linkedRedemption?.type ?? deleteConfirm.row.source}<br />
                 <strong>Amount:</strong> ₹{Number(deleteConfirm.row.amount ?? 0).toLocaleString('en-IN')}<br />
-                <strong>Date:</strong> {new Date(deleteConfirm.row.createdAt).toLocaleDateString('en-IN')}
+                <strong>Date:</strong> {formatISTDateTimeFull(deleteConfirm.row.createdAt)}
               </div>
             </div>
             <div style={{ padding: '0 22px 22px', display: 'flex', justifyContent: 'flex-end', gap: 10 }}>

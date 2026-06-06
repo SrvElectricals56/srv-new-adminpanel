@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useEffect, useState } from 'react';
 import {
   Calendar,
@@ -13,6 +13,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
+import { formatISTDateTime, formatISTDate, formatISTDateTimeFull } from '@/lib/dateIST';
 import type { AdminRole } from '@/lib/types';
 import { useAppContext } from '@/lib/appContext';
 import { productApi, qrCodeApi } from '@/lib/api';
@@ -139,7 +140,7 @@ export default function QRHub({ role }: QRHubProps) {
       Id: (currentPage - 1) * PAGE_SIZE + index + 1,
       'Product Name': batch.productName,
       'Batch No.': getBatchLabel(batch),
-      'Generate Date': new Date(batch.generatedDate).toLocaleString('en-IN'),
+      'Generate Date': formatISTDateTime(batch.generatedDate),
       Point: batch.points,
       Qty: batch.qty,
     }));
@@ -152,13 +153,13 @@ export default function QRHub({ role }: QRHubProps) {
       'QR ID': qr.code ?? qr.qrId ?? qr.id,
       'Product Name': qr.productName ?? qr.product?.name ?? batch.productName,
       'Batch No.': qr.batchNo ?? qr.batchId ?? getBatchLabel(batch),
-      'Generate Date': new Date(qr.createdAt ?? batch.generatedDate).toLocaleString('en-IN'),
+      'Generate Date': formatISTDateTime(qr.createdAt ?? batch.generatedDate),
       Point: qr.points ?? qr.rewardPoints ?? batch.points,
       Status: qr.isScanned ? 'Used' : 'Active',
       'Used By': qr.lastScannedPhone || qr.lastScannedCode
         ? `${qr.lastScannedPhone ?? ''}${qr.lastScannedPhone && qr.lastScannedCode ? ' · ' : ''}${qr.lastScannedCode ?? ''}`
         : qr.lastScannedBy ?? '',
-      'Used Date': qr.lastScannedAt ? new Date(qr.lastScannedAt).toLocaleString('en-IN') : '',
+      'Used Date': qr.lastScannedAt ? formatISTDateTime(qr.lastScannedAt) : '',
     }));
   };
 
@@ -327,7 +328,7 @@ export default function QRHub({ role }: QRHubProps) {
                   <td style={{ padding: '15px 18px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: C.text, fontSize: 13 }}>
                       <Calendar size={14} style={{ color: C.muted }} />
-                      {new Date(batch.generatedDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      {formatISTDate(batch.generatedDate)}
                     </div>
                   </td>
                   <td style={{ padding: '15px 18px', textAlign: 'center' }}>
@@ -403,7 +404,7 @@ export default function QRHub({ role }: QRHubProps) {
                       <tr key={qr.id} style={{ borderBottom: `1px solid ${C.border}` }}>
                         <td style={{ padding: '12px 14px', fontSize: 12, color: C.text, fontFamily: 'monospace', fontWeight: 700 }}>{qr.code ?? qr.id}</td>
                         <td style={{ padding: '12px 14px', fontSize: 12, color: qr.isScanned ? '#B45309' : '#047857', fontWeight: 800 }}>{qr.isScanned ? 'Used' : 'Active'}</td>
-                        <td style={{ padding: '12px 14px', fontSize: 12, color: C.text }}>{new Date(qr.createdAt ?? selectedBatch.generatedDate).toLocaleString('en-IN')}</td>
+                        <td style={{ padding: '12px 14px', fontSize: 12, color: C.text }}>{formatISTDateTime(qr.createdAt ?? selectedBatch.generatedDate)}</td>
                         <td style={{ padding: '12px 14px', fontSize: 12, color: C.muted }}>
                           {qr.lastScannedPhone || qr.lastScannedCode
                             ? `${qr.lastScannedPhone ?? ''}${qr.lastScannedPhone && qr.lastScannedCode ? ' · ' : ''}${qr.lastScannedCode ?? ''}`

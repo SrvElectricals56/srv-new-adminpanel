@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { FileSpreadsheet, DollarSign, Check, Pencil, Search } from 'lucide-react';
+import { FileSpreadsheet, DollarSign, Check, Pencil, Search, Settings } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
-import { financeApi } from '@/lib/api';
+import { financeApi, settingsApi } from '@/lib/api';
 import ExportModal from '@/components/Shared/ExportModal';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 import AlertDialog from '@/components/Shared/AlertDialog';
@@ -48,6 +48,16 @@ export default function DealerBonus({ role }: { role?: import('@/lib/types').Adm
   const [bulkPay, setBulkPay] = useState(false);
   const [markPaidId, setMarkPaidId] = useState<string | null>(null);
   const [alertDialog, setAlertDialog] = useState<{ show: boolean; title: string; message: string; type: 'error' | 'success' | 'warning' | 'info' }>({ show: false, title: '', message: '', type: 'success' });
+  const [bonusRate, setBonusRate] = useState('5');
+  const [savingRate, setSavingRate] = useState(false);
+
+  useEffect(() => {
+    settingsApi.getAll().then((res: any) => {
+      const list = Array.isArray(res) ? res : res?.data ?? [];
+      const setting = list.find((s: any) => s.key === 'dealerBonusRate');
+      if (setting) setBonusRate(String(setting.value));
+    }).catch(() => {});
+  }, []);
 
   const [editItem, setEditItem] = useState<BonusRecord | null>(null);
   const [editForm, setEditForm] = useState({ dealerName: '', dealerPhone: '', electriciansCount: 0, bonusPoints: 0, status: 'pending' as BonusRecord['status'] });
@@ -93,6 +103,23 @@ export default function DealerBonus({ role }: { role?: import('@/lib/types').Adm
   };
   const toggleSelect = (id: string) => setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   const toggleAll = () => setSelected(selected.length === filtered.length ? [] : filtered.map(c => c.id));
+
+  const handleSaveRate = async () => {
+    const rate = Number(bonusRate);
+    if (Number.isNaN(rate) || rate < 0 || rate > 100) {
+      setAlertDialog({ show: true, title: 'Invalid Rate', message: 'Enter a valid percentage between 0 and 100.', type: 'warning' });
+      return;
+    }
+    setSavingRate(true);
+    try {
+      await settingsApi.update('dealerBonusRate', rate);
+      setAlertDialog({ show: true, title: 'Saved', message: `Dealer bonus rate set to ${rate}%`, type: 'success' });
+    } catch {
+      setAlertDialog({ show: true, title: 'Error', message: 'Failed to save rate.', type: 'error' });
+    } finally {
+      setSavingRate(false);
+    }
+  };
 
   const openEdit = (c: BonusRecord) => {
     setEditItem(c);
@@ -157,6 +184,47 @@ export default function DealerBonus({ role }: { role?: import('@/lib/types').Adm
           ))}
         </div>
       </div>
+
+      {/* Bonus Rate Setting */}
+      {canEdit && (
+        <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, padding: '18px 22px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+          <div style={{ width: 38, height: 38, borderRadius: 10, background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Settings size={18} color="#1D4ED8" />
+          </div>
+          <div style={{ flex: 1, minWidth: 140 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 2 }}>Dealer Bonus Rate</div>
+            <div style={{ fontSize: 11, color: C.muted }}>Set the percentage dealers earn when electricians redeem points</div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <input
+              type="number"
+              value={bonusRate}
+              onChange={e => setBonusRate(e.target.value)}
+              min={0}
+              max={100}
+              style={{ width: 70, ...inputStyle, textAlign: 'center', fontSize: 16, fontWeight: 800 }}
+            />
+            <span style={{ fontSize: 16, fontWeight: 700, color: C.text }}>%</span>
+            <button
+              onClick={handleSaveRate}
+              disabled={savingRate}
+              style={{
+                padding: '9px 18px',
+                borderRadius: 8,
+                border: 'none',
+                background: savingRate ? C.muted : 'linear-gradient(135deg, #1D4ED8, #2563EB)',
+                color: '#fff',
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: savingRate ? 'not-allowed' : 'pointer',
+                opacity: savingRate ? 0.6 : 1,
+              }}
+            >
+              {savingRate ? 'Saving...' : 'Save'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Filter Bar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>

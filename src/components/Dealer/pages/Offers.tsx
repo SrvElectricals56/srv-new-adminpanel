@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState, useEffect } from 'react';
 import { FileSpreadsheet, Gift, Plus, Edit2, Trash2, Calendar, Target } from 'lucide-react';
 import { offerApi } from '@/lib/api';
@@ -6,6 +6,7 @@ import { useThemePalette } from '@/lib/theme';
 import ExportModal from '@/components/Shared/ExportModal';
 import AlertDialog from '@/components/Shared/AlertDialog';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
+import { formatISTDate } from '@/lib/dateIST';
 
 const numberInputValue = (value: number | null | undefined) => value === 0 || value === null || value === undefined ? '' : value;
 
@@ -198,11 +199,11 @@ export default function DealerOffers() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
                   <div style={{ background: C.bg, borderRadius: 10, padding: '10px 12px' }}>
                     <div style={{ fontSize: 10, color: C.muted, marginBottom: 2, fontWeight: 600 }}>Valid From</div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: C.text, display: 'flex', alignItems: 'center', gap: 4 }}><Calendar size={12} /> {offer.validFrom ? new Date(offer.validFrom).toLocaleDateString('en-IN') : '—'}</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: C.text, display: 'flex', alignItems: 'center', gap: 4 }}><Calendar size={12} /> {offer.validFrom ? formatISTDate(offer.validFrom) : '—'}</div>
                   </div>
                   <div style={{ background: C.bg, borderRadius: 10, padding: '10px 12px' }}>
                     <div style={{ fontSize: 10, color: C.muted, marginBottom: 2, fontWeight: 600 }}>Valid To</div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: C.text, display: 'flex', alignItems: 'center', gap: 4 }}><Calendar size={12} /> {offer.validTo ? new Date(offer.validTo).toLocaleDateString('en-IN') : '—'}</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: C.text, display: 'flex', alignItems: 'center', gap: 4 }}><Calendar size={12} /> {offer.validTo ? formatISTDate(offer.validTo) : '—'}</div>
                   </div>
                 </div>
                 <div style={{ background: C.bg, borderRadius: 10, padding: '10px 12px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>

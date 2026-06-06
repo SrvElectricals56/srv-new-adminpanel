@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Eye, FileSpreadsheet, Pencil, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
 import { appUserApi } from '@/lib/api';
@@ -12,6 +12,7 @@ import ExportModal from '@/components/Shared/ExportModal';
 import ImportModal from '@/components/Shared/ImportModal';
 import { ViewModeToggle, type ListViewMode } from '@/components/Shared/ViewModeToggle';
 import PasswordInputField from '@/components/Shared/PasswordInputField';
+import { formatISTDate } from '@/lib/dateIST';
 
 interface AllAppUsersProps {
   role: AdminRole;
@@ -150,7 +151,7 @@ function ViewModal({
               { label: 'Account Holder', value: user.accountHolderName || '-' },
               { label: 'Bank Account', value: user.bankAccount || '-' },
               { label: 'IFSC', value: user.ifsc || '-' },
-              { label: 'Joined', value: user.joinedDate ? new Date(user.joinedDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-' },
+              { label: 'Joined', value: user.joinedDate ? formatISTDate(user.joinedDate) : '-' },
               { label: 'Aadhaar', value: user.aadharNumber || '-' },
             ].map((item) => (
               <div key={item.label} style={{ background: C.bg, borderRadius: 10, padding: '10px 14px' }}>
@@ -818,7 +819,7 @@ export default function AllAppUsers({ role }: AllAppUsersProps) {
                       )}
                     </td>
                     <td style={{ padding: '14px 16px', fontSize: 12, color: C.muted, whiteSpace: 'nowrap' }}>
-                      {user.joinedDate ? new Date(user.joinedDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                      {user.joinedDate ? formatISTDate(user.joinedDate) : '-'}
                     </td>
                     <td style={{ padding: '14px 16px' }}>
                       <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>

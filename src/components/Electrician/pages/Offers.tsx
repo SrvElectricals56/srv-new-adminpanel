@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState, useEffect } from 'react';
 import { FileSpreadsheet, Gift, Plus, Edit, Trash2, Eye, X } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
@@ -7,6 +7,7 @@ import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 import ExportModal from '@/components/Shared/ExportModal';
 import { exportRowsToExcel } from '@/lib/excel';
 import AlertDialog from '@/components/Shared/AlertDialog';
+import { formatISTDate } from '@/lib/dateIST';
 
 const numberInputValue = (value: number | null | undefined) => value === 0 || value === null || value === undefined ? '' : value;
 
@@ -319,8 +320,8 @@ export default function ElectricianOffers() {
               <div style={{ background: C.bg, borderRadius: 10, padding: 12, fontSize: 13 }}><strong>Description:</strong> {selectedOffer.description}</div>
               <div style={{ background: C.bg, borderRadius: 10, padding: 12, fontSize: 13 }}><strong>Discount:</strong> {selectedOffer.discount}</div>
               <div style={{ background: C.bg, borderRadius: 10, padding: 12, fontSize: 13 }}><strong>Bonus Points:</strong> {selectedOffer.bonusPoints}</div>
-              <div style={{ background: C.bg, borderRadius: 10, padding: 12, fontSize: 13 }}><strong>Valid From:</strong> {new Date(selectedOffer.validFrom).toLocaleDateString('en-IN')}</div>
-              <div style={{ background: C.bg, borderRadius: 10, padding: 12, fontSize: 13 }}><strong>Valid To:</strong> {new Date(selectedOffer.validTo).toLocaleDateString('en-IN')}</div>
+              <div style={{ background: C.bg, borderRadius: 10, padding: 12, fontSize: 13 }}><strong>Valid From:</strong> {formatISTDate(selectedOffer.validFrom)}</div>
+              <div style={{ background: C.bg, borderRadius: 10, padding: 12, fontSize: 13 }}><strong>Valid To:</strong> {formatISTDate(selectedOffer.validTo)}</div>
               <div style={{ background: C.bg, borderRadius: 10, padding: 12, fontSize: 13 }}><strong>Status:</strong> {selectedOffer.status}</div>
             </div>
           </div>

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import { FileSpreadsheet, Plus, Users, Star, ScanLine, Wallet, Trash2, SlidersHorizontal, Calendar, Medal, Award, Trophy, Gem } from 'lucide-react';
 import { electricianApi, dealerApi } from '@/lib/api';
@@ -13,6 +13,7 @@ import ImportModal from '@/components/Shared/ImportModal';
 import { ViewModeToggle, type ListViewMode } from '@/components/Shared/ViewModeToggle';
 import PasswordInputField from '@/components/Shared/PasswordInputField';
 import { I } from '@/lib/iconMap';
+import { formatISTDate } from '@/lib/dateIST';
 
 interface ElectriciansProps {
   role: AdminRole;
@@ -142,7 +143,7 @@ function ViewModal({
               { label: 'State', value: el.state }, { label: 'Dealer', value: el.dealerName },
               { label: 'Email', value: el.email || '—' },
               { label: 'Electrician Code', value: el.electricianCode },
-              { label: 'Joined', value: new Date(el.joinedDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) },
+              { label: 'Joined', value: formatISTDate(el.joinedDate) },
               { label: 'Category', value: 'Electrician' },
               { label: 'UPI ID', value: el.upiId || '—' },
               { label: 'Total Redemptions', value: el.totalRedemptions },
@@ -722,7 +723,7 @@ export default function Electricians({ role }: ElectriciansProps) {
           WalletBalance: e.walletBalance,
           TotalScans: e.totalScans,
           BankLinked: e.bankLinked ? 'Yes' : 'No',
-          JoinedDate: new Date(e.joinedDate).toLocaleDateString('en-IN'),
+          JoinedDate: formatISTDate(e.joinedDate),
         }))}
       />
 

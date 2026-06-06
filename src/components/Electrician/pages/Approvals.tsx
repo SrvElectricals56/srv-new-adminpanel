@@ -1,10 +1,11 @@
-'use client';
+﻿'use client';
 import { useState, useEffect } from 'react';
 import { CheckCircle, Check, X, Eye, FileSpreadsheet } from 'lucide-react';
 import { electricianApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 import ExportModal from '@/components/Shared/ExportModal';
+import { formatISTDate } from '@/lib/dateIST';
 
 interface PendingElectrician {
   id: string;
@@ -162,7 +163,7 @@ export default function ElectricianApprovals() {
               <div style={{ background: C.bg, borderRadius: 10, padding: 12, fontSize: 13 }}><strong>Phone:</strong> {selected.phone}</div>
               <div style={{ background: C.bg, borderRadius: 10, padding: 12, fontSize: 13 }}><strong>Email:</strong> {selected.email || '—'}</div>
               <div style={{ background: C.bg, borderRadius: 10, padding: 12, fontSize: 13 }}><strong>Location:</strong> {selected.town}, {selected.state}</div>
-              <div style={{ background: C.bg, borderRadius: 10, padding: 12, fontSize: 13 }}><strong>Applied:</strong> {new Date(selected.joinedDate).toLocaleDateString('en-IN')}</div>
+              <div style={{ background: C.bg, borderRadius: 10, padding: 12, fontSize: 13 }}><strong>Applied:</strong> {formatISTDate(selected.joinedDate)}</div>
             </div>
             <div style={{ padding: '18px 22px', borderTop: `1px solid ${C.border}`, display: 'flex', gap: 12 }}>
               <button onClick={() => handleApprove(selected)} style={{ flex: 1, background: '#D1FAE5', color: '#065F46', border: 'none', borderRadius: 8, padding: '12px 20px', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}><Check size={16} /> Approve</button>

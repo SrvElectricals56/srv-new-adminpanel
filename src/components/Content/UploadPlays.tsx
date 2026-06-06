@@ -1,7 +1,8 @@
-'use client';
+﻿'use client';
 import { useState, useEffect } from 'react';
 import { Play, Plus, Trash2, Edit3, Save, X, ToggleLeft, ToggleRight, Users, MessageCircle, Heart, Send } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
+import { formatISTDateTime, formatISTDate, formatISTDateTimeFull } from '@/lib/dateIST';
 import { getToken } from '@/lib/api';
 import { I } from '@/lib/iconMap';
 
@@ -587,7 +588,7 @@ export default function UploadPlays({ role }: { role?: string }) {
                 </div>
                 <div style={{ fontSize: 11, color: C.muted, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
                   <span><I name='Eye' size={14} /> {play.viewCount} views</span>
-                  <span><I name='Calendar' size={14} /> {new Date(play.createdAt).toLocaleDateString()}</span>
+                  <span><I name='Calendar' size={14} /> {formatISTDate(play.createdAt)}</span>
                   <span><I name='Hash' size={14} /> Order: {play.displayOrder}</span>
                   <a href={play.videoUrl} target="_blank" rel="noreferrer" style={{ color: '#1D4ED8', textDecoration: 'none', fontWeight: 600 }}><I name='Link' size={14} /> Open Video</a>
                 </div>
@@ -775,7 +776,7 @@ export default function UploadPlays({ role }: { role?: string }) {
                       <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{v.userId}</div>
                       <div style={{ fontSize: 11, color: C.muted }}>{v.role}</div>
                     </div>
-                    <div style={{ fontSize: 11, color: C.muted }}>{new Date(v.viewedAt).toLocaleString()}</div>
+                    <div style={{ fontSize: 11, color: C.muted }}>{formatISTDateTimeFull(v.viewedAt)}</div>
                   </div>
                 ))}
               </div>
@@ -821,7 +822,7 @@ export default function UploadPlays({ role }: { role?: string }) {
                         <div style={{ fontSize: 14, fontWeight: 800, color: C.text }}>{comment.authorName || 'SRV User'}</div>
                         <div style={{ fontSize: 11, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{comment.authorRole || 'customer'}</div>
                       </div>
-                      <div style={{ fontSize: 11, color: C.muted }}>{new Date(comment.createdAt).toLocaleString()}</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>{formatISTDateTimeFull(comment.createdAt)}</div>
                     </div>
                     <div style={{ fontSize: 14, lineHeight: 1.6, color: C.text, marginBottom: 12 }}>{comment.message}</div>
 
@@ -831,7 +832,7 @@ export default function UploadPlays({ role }: { role?: string }) {
                           <div key={reply.id} style={{ marginLeft: 18, padding: '12px 14px', borderRadius: 14, background: C.card, border: `1px solid ${C.border}` }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: 4 }}>
                               <div style={{ fontSize: 12, fontWeight: 800, color: '#1D4ED8' }}>{reply.authorName || 'Admin Team'}</div>
-                              <div style={{ fontSize: 10, color: C.muted }}>{new Date(reply.createdAt).toLocaleString()}</div>
+                              <div style={{ fontSize: 10, color: C.muted }}>{formatISTDateTimeFull(reply.createdAt)}</div>
                             </div>
                             <div style={{ fontSize: 13, lineHeight: 1.55, color: C.text }}>{reply.message}</div>
                           </div>

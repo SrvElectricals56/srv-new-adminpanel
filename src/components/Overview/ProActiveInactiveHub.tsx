@@ -17,6 +17,7 @@ import {
 import { appUserApi, counterboyApi, dealerApi, electricianApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
 import { I } from '@/lib/iconMap';
+import { formatISTDate } from '@/lib/dateIST';
 
 type RoleTab = 'electrician' | 'dealer' | 'counterboy' | 'customer';
 type ActivityTab = 'proactive' | 'active' | 'inactive';
@@ -166,11 +167,11 @@ function formatLastSeen(row: ActivityRow): string {
   if (!date) return 'No recent activity found';
 
   const days = getDaysSince(date);
-  if (days === null) return date.toLocaleDateString('en-IN');
+  if (days === null) return formatISTDate(date.toISOString());
   if (days === 0) return 'Today';
   if (days === 1) return '1 day ago';
   if (days < 7) return `${days} days ago`;
-  return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  return formatISTDate(date.toISOString());
 }
 
 function getLocation(row: ActivityRow, role: RoleTab): string {

@@ -4,6 +4,7 @@ import { ScanLine, QrCode, Scan, FileSpreadsheet } from 'lucide-react';
 import { scanApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
 import ExportModal from '@/components/Shared/ExportModal';
+import { formatISTDateTime } from '@/lib/dateIST';
 
 interface ScanRecord {
   id: string;
@@ -173,7 +174,7 @@ export default function ElectricianScanHistory() {
                     </span>
                   </td>
                   <td style={{ padding: '13px 16px', textAlign: 'center', fontSize: 14, fontWeight: 700, color: '#F59E0B' }}>+{scan.points}</td>
-                  <td style={{ padding: '13px 16px', fontSize: 12, color: C.muted }}>{new Date(scan.scannedAt).toLocaleString('en-IN')}</td>
+                  <td style={{ padding: '13px 16px', fontSize: 12, color: C.muted }}>{formatISTDateTime(scan.scannedAt)}</td>
                   <td style={{ padding: '13px 16px', fontSize: 12, color: C.muted }}>{scan.location || '—'}</td>
                 </tr>
               ))}

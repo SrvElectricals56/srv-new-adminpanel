@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Eye, FileSpreadsheet, Pencil, Plus, RefreshCw, ScanLine, Search, Trash2, Wallet } from 'lucide-react';
 import { counterboyApi } from '@/lib/api';
@@ -12,6 +12,7 @@ import ExportModal from '@/components/Shared/ExportModal';
 import ImportModal from '@/components/Shared/ImportModal';
 import { ViewModeToggle, type ListViewMode } from '@/components/Shared/ViewModeToggle';
 import PasswordInputField from '@/components/Shared/PasswordInputField';
+import { formatISTDate } from '@/lib/dateIST';
 
 interface AllCounterBoysProps {
   role: AdminRole;
@@ -835,7 +836,7 @@ export default function AllCounterBoys({ role }: AllCounterBoysProps) {
                       )}
                     </td>
                     <td style={{ padding: '14px 16px', fontSize: 12, color: C.muted, whiteSpace: 'nowrap' }}>
-                      {counterBoy.joinedDate ? new Date(counterBoy.joinedDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                      {counterBoy.joinedDate ? formatISTDate(counterBoy.joinedDate) : '-'}
                     </td>
                     <td style={{ padding: '14px 16px' }}>
                       <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>

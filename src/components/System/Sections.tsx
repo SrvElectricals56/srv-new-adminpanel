@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import React, { useState, useEffect } from 'react';
 import { Plus, FileSpreadsheet, FileText, Image } from 'lucide-react';
 import { scanApi, redemptionApi, notificationApi, offerApi, settingsApi, bannerApi, analyticsApi, productApi } from '@/lib/api';
@@ -6,6 +6,7 @@ import type { PointsConfig, BannerItem } from '@/lib/types';
 import { useTheme, useThemePalette } from '@/lib/theme';
 import AlertDialog from '@/components/Shared/AlertDialog';
 import { I } from '@/lib/iconMap';
+import { formatISTDate, formatISTDateTime, formatISTDateTimeFull } from '@/lib/dateIST';
 
 function useSectionStyles() {
   const C = useThemePalette();
@@ -99,7 +100,7 @@ export function ScanHistory() {
                 <td style={{ padding: '13px 16px' }}><span style={{ background: '#FFFBEB', color: '#92400E', fontSize: 13, fontWeight: 800, padding: '3px 10px', borderRadius: 8 }}>+{s.points} pts</span></td>
                 <td style={{ padding: '13px 16px' }}><span style={{ background: s.mode === 'multi' ? '#EFF6FF' : '#F0FDF4', color: s.mode === 'multi' ? '#1D4ED8' : '#15803D', fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20 }}>{s.mode || 'single'}</span></td>
                 <td style={{ padding: '13px 16px', fontSize: 12.5, color: C.muted }}>{s.location || '—'}</td>
-                <td style={{ padding: '13px 16px', fontSize: 12, color: C.muted }}>{new Date(s.scannedAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</td>
+                <td style={{ padding: '13px 16px', fontSize: 12, color: C.muted }}>{formatISTDateTime(s.scannedAt)}</td>
               </tr>
             ))}
           </tbody>
@@ -190,7 +191,7 @@ export function Redemptions() {
               </div>
               <div style={{ textAlign: 'right', flexShrink: 0 }}>
                 <span style={{ background: st.bg, color: st.color, fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 20 }}>{r.status}</span>
-                <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>{new Date(r.requestedAt || r.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</div>
+                <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>{formatISTDate(r.requestedAt || r.createdAt)}</div>
               </div>
               {r.status === 'pending' && (
                 <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
@@ -316,7 +317,7 @@ export function Notifications() {
                   <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.6 }}>{n.message}</div>
                 </div>
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <div style={{ fontSize: 12, color: C.muted }}>{new Date(n.sentAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+                  <div style={{ fontSize: 12, color: C.muted }}>{formatISTDate(n.sentAt)}</div>
                   <button onClick={() => handleDelete(n.id)} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 8, padding: '5px 10px', fontSize: 11, cursor: 'pointer', marginTop: 8, fontWeight: 600 }}>Delete</button>
                 </div>
               </div>
@@ -707,7 +708,7 @@ export function AppBanners() {
                 <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{b.title}</div>
                 <span style={{ background: b.status === 'active' ? '#D1FAE5' : '#FEE2E2', color: b.status === 'active' ? '#065F46' : '#991B1B', fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 20, flexShrink: 0 }}>{b.status}</span>
               </div>
-              <div style={{ fontSize: 12, color: C.muted, marginBottom: 12 }}><I name='Target' size={14} /> {b.targetRole === 'all' ? 'Everyone' : b.targetRole} · Order #{b.order} · {b.createdAt}</div>
+              <div style={{ fontSize: 12, color: C.muted, marginBottom: 12 }}><I name='Target' size={14} /> {b.targetRole === 'all' ? 'Everyone' : b.targetRole} · Order #{b.order} · {formatISTDate(b.createdAt)}</div>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button onClick={() => toggleStatus(b.id)} style={{ flex: 1, background: b.status === 'active' ? '#FEE2E2' : '#D1FAE5', color: b.status === 'active' ? '#991B1B' : '#065F46', border: 'none', borderRadius: 8, padding: '8px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>{b.status === 'active' ? 'Deactivate' : 'Activate'}</button>
                 <button onClick={() => handleDelete(b.id)} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 8, padding: '8px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Trash</button>
@@ -857,7 +858,7 @@ export function Reports() {
         
         doc.setFontSize(12);
         doc.text(`Period: ${period}`, 14, 35);
-        doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 42);
+        doc.text(`Generated: ${formatISTDateTimeFull(new Date().toISOString())}`, 14, 42);
         
         doc.setFontSize(14);
         doc.text('Metrics Summary', 14, 55);

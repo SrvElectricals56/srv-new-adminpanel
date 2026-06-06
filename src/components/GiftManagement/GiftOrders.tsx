@@ -1,7 +1,8 @@
-'use client';
+﻿'use client';
 import React, { useState, useEffect } from 'react';
 import { ShoppingBag, Bolt, Store, Eye, Check, X, Package, SlidersHorizontal, Search, User, FileSpreadsheet } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
+import { formatISTDateTime, formatISTDate, formatISTDateTimeFull } from '@/lib/dateIST';
 import { giftApi, redemptionApi } from '@/lib/api';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 import ExportModal from '@/components/Shared/ExportModal';
@@ -63,7 +64,7 @@ function OrderDetailModal({ order, onClose, C }: { order: GiftOrder; onClose: ()
               { label: order.type === 'electrician' ? 'Electrician' : order.type === 'dealer' ? 'Dealer' : order.type === 'customer' ? 'Customer' : 'Counterboy', value: order.userName },
               { label: 'Code', value: order.userCode },
               { label: 'Dealer', value: order.dealerName },
-              { label: 'Ordered On', value: new Date(order.orderedAt).toLocaleDateString('en-IN') },
+              { label: 'Ordered On', value: formatISTDate(order.orderedAt) },
             ].map(item => (
               <div key={item.label} style={{ background: C.bg, borderRadius: 10, padding: '12px 14px' }}>
                 <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>{item.label}</div>
@@ -263,7 +264,7 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
                   <td style={{ padding: '14px 16px' }}>
                     <span style={{ background: '#FEF3C7', color: '#92400E', fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 20 }}>{order.pointsUsed}</span>
                   </td>
-                  <td style={{ padding: '14px 16px', fontSize: 12, color: C.muted }}>{new Date(order.orderedAt).toLocaleDateString('en-IN')}</td>
+                  <td style={{ padding: '14px 16px', fontSize: 12, color: C.muted }}>{formatISTDate(order.orderedAt)}</td>
                   <td style={{ padding: '14px 16px' }}>
                     <span style={{ background: s.bg, color: s.color, fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 20, whiteSpace: 'nowrap' }}>{s.label}</span>
                   </td>

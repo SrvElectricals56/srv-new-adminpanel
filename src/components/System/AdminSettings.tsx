@@ -6,6 +6,7 @@ import { adminApi } from '@/lib/api';
 import { useAppContext } from '@/lib/appContext';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 import { I } from '@/lib/iconMap';
+import { formatISTDateTime } from '@/lib/dateIST';
 
 type AdminRole = 'super_admin' | 'admin' | 'staff';
 
@@ -525,8 +526,8 @@ export default function AdminSettings() {
                         {a.status === 'active' ? 'Active' : 'Inactive'}
                       </button>
                     </td>
-                    <td style={{ padding: '14px 16px', fontSize: 12, color: C.muted }}>{a.lastLogin}</td>
-                    <td style={{ padding: '14px 16px', fontSize: 12, color: C.muted }}>{a.createdAt}</td>
+                    <td style={{ padding: '14px 16px', fontSize: 12, color: C.muted }}>{formatISTDateTime(a.lastLogin) || a.lastLogin}</td>
+                    <td style={{ padding: '14px 16px', fontSize: 12, color: C.muted }}>{formatISTDateTime(a.createdAt) || a.createdAt || '—'}</td>
                     <td style={{ padding: '14px 16px' }}>
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button onClick={() => openEdit(a)} title="Edit" style={{ width: 32, height: 32, borderRadius: 7, border: 'none', background: '#EFF6FF', color: '#1D4ED8', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Pencil size={14} /></button>

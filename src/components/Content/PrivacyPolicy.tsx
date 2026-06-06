@@ -5,6 +5,7 @@ import { ShieldCheck, Save } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { settingsApi } from '@/lib/api';
 import { I } from '@/lib/iconMap';
+import { formatISTDateTimeFull } from '@/lib/dateIST';
 
 const DEFAULT_CONTENT = `Privacy Policy - SRV Electricals
 
@@ -70,7 +71,7 @@ export default function PrivacyPolicy({ role }: { role?: import('@/lib/types').A
 
   const handleSave = async () => {
     setSaving(true);
-    const now = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const now = formatISTDateTimeFull(new Date().toISOString());
     try {
       await Promise.all([
         settingsApi.update('privacy_policy_content', content),

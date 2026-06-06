@@ -1,8 +1,9 @@
-'use client';
+﻿'use client';
 import { useState, useEffect } from 'react';
 import { ShoppingCart, Trash2, Package, Search, FileSpreadsheet } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import ExportModal from '@/components/Shared/ExportModal';
+import { formatISTDate } from '@/lib/dateIST';
 
 interface CartItem {
   id: string;
@@ -206,7 +207,7 @@ export default function DealerCart() {
                   <td style={{ padding: '13px 16px', fontSize: 14, fontWeight: 700, color: C.text }}>{item.quantity}</td>
                   <td style={{ padding: '13px 16px', fontSize: 13, color: C.text }}>₹{item.price.toLocaleString('en-IN')}</td>
                   <td style={{ padding: '13px 16px', fontSize: 14, fontWeight: 800, color: '#10B981' }}>₹{(item.price * item.quantity).toLocaleString('en-IN')}</td>
-                  <td style={{ padding: '13px 16px', fontSize: 12, color: C.muted }}>{new Date(item.addedAt).toLocaleDateString('en-IN')}</td>
+                  <td style={{ padding: '13px 16px', fontSize: 12, color: C.muted }}>{formatISTDate(item.addedAt)}</td>
                 </tr>
               ))}
             </tbody>
