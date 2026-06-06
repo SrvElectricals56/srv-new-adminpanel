@@ -198,7 +198,9 @@ export default function UserKYC() {
   const sorted = [...filtered].sort((a, b) => {
     const diff = (statusOrder[a.kycStatus] ?? 2) - (statusOrder[b.kycStatus] ?? 2);
     if (diff !== 0) return diff;
-    return new Date(b.joinedDate).getTime() - new Date(a.joinedDate).getTime();
+    const aTime = new Date((a as any).updatedAt || a.joinedDate).getTime();
+    const bTime = new Date((b as any).updatedAt || b.joinedDate).getTime();
+    return bTime - aTime;
   });
 
   const handleVerify = (doc: UserKYCItem) => {

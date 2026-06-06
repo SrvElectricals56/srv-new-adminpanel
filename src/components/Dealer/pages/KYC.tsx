@@ -19,6 +19,7 @@ interface DealerKYC {
   gstDocument?: string;
   kycRejectionReason?: string;
   joinedDate: string;
+  updatedAt?: string;
 }
 
 function ImageUploadBox({ label, value, onChange, C }: { label: string; value?: string; onChange: (v: string) => void; C: any }) {
@@ -168,6 +169,7 @@ export default function KYCManagement() {
         gstDocument: normalizeUrl(d.gstDocument),
         kycRejectionReason: d.kycRejectionReason,
         joinedDate: d.joinedDate,
+        updatedAt: d.updatedAt,
       })));
     }).catch(console.error).finally(() => setLoading(false));
   }, []);
@@ -185,13 +187,15 @@ export default function KYCManagement() {
     return matchSearch && matchStatus;
   });
 
-  // Sort: pending first (new requests), then rejected, not_submitted, verified last
+  // Sort: pending first (latest resubmit on top), then rejected, not_submitted, verified last
+  // Within same status: most recently updated first
   const STATUS_ORDER: Record<string, number> = { pending: 0, rejected: 1, not_submitted: 2, verified: 3 };
   const sorted = [...filtered].sort((a, b) => {
     const diff = (STATUS_ORDER[a.kycStatus] ?? 2) - (STATUS_ORDER[b.kycStatus] ?? 2);
     if (diff !== 0) return diff;
-    // Within same status, newest first
-    return new Date(b.joinedDate).getTime() - new Date(a.joinedDate).getTime();
+    const aTime = new Date(a.updatedAt || a.joinedDate).getTime();
+    const bTime = new Date(b.updatedAt || b.joinedDate).getTime();
+    return bTime - aTime;
   });
 
   const handleVerify = (doc: DealerKYC) => {
