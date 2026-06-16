@@ -112,7 +112,7 @@ export default function DealerBonus({ role }: { role?: import('@/lib/types').Adm
     }
     setSavingRate(true);
     try {
-      await settingsApi.update('dealerBonusRate', rate);
+      await settingsApi.update('dealerBonusRate', String(rate));
       setAlertDialog({ show: true, title: 'Saved', message: `Dealer bonus rate set to ${rate}%`, type: 'success' });
     } catch {
       setAlertDialog({ show: true, title: 'Error', message: 'Failed to save rate.', type: 'error' });

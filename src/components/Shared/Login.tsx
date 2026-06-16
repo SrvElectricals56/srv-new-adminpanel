@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { FormEvent, useRef, useState } from 'react';
 import Image from 'next/image';
 import { ShieldCheck, Users, UserCheck, Eye, EyeOff, LogIn, Bolt, Lock, Mail, ChevronRight, Sun, Moon } from 'lucide-react';
 import { useTheme } from '@/lib/theme';
@@ -61,6 +61,8 @@ export default function Login({ onLogin }: LoginProps) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [shake, setShake] = useState(false);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
 
   // Clear fields when role changes
   const handleRoleSelect = (role: AdminRole) => {
@@ -70,16 +72,22 @@ export default function Login({ onLogin }: LoginProps) {
     setError('');
   };
 
-  const handleLogin = async () => {
-    if (!email || !password) {
+  const handleLogin = async (event?: FormEvent) => {
+    event?.preventDefault();
+    const nextEmail = (emailRef.current?.value || email).trim();
+    const nextPassword = passwordRef.current?.value || password;
+
+    if (!nextEmail || !nextPassword) {
       setError('Please enter email and password');
       triggerShake();
       return;
     }
+    setEmail(nextEmail);
+    setPassword(nextPassword);
     setLoading(true);
     setError('');
     try {
-      const { role, name } = await login(email, password);
+      const { role, name } = await login(nextEmail, nextPassword);
       onLogin(role, name);
     } catch (err: any) {
       setError(err.message || 'Invalid credentials. Please try again.');
@@ -252,6 +260,7 @@ export default function Login({ onLogin }: LoginProps) {
                 return (
                   <button
                     key={role.id}
+                    type="button"
                     onClick={() => handleRoleSelect(role.id)}
                     style={{
                       padding: '12px 8px',
@@ -294,20 +303,24 @@ export default function Login({ onLogin }: LoginProps) {
           <div style={{ height: 1, background: theme.divider, marginBottom: 24 }} />
 
           {/* Form */}
-          <div style={{
+          <form
+            onSubmit={handleLogin}
+            style={{
             animation: shake ? 'shake 0.4s ease' : 'none',
-          }}>
+            }}
+          >
             {/* Email */}
             <div style={{ marginBottom: 16 }}>
               <label style={{ fontSize: 11, fontWeight: 700, color: theme.labelColor, letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>Email Address</label>
               <div style={{ position: 'relative' }}>
                 <Mail size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: theme.iconColor, pointerEvents: 'none' }} />
                 <input
+                  ref={emailRef}
                   type="email"
                   value={email}
-                  onChange={e => { setEmail(e.target.value); setError(''); }}
-                  onKeyDown={e => e.key === 'Enter' && handleLogin()}
+                  onChange={e => { setEmail(e.target.value.trim()); setError(''); }}
                   placeholder="Enter your email"
+                  autoComplete="email"
                   style={{
                     width: '100%', padding: '12px 14px 12px 42px',
                     background: theme.inputBg,
@@ -328,11 +341,12 @@ export default function Login({ onLogin }: LoginProps) {
               <div style={{ position: 'relative' }}>
                 <Lock size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: theme.iconColor, pointerEvents: 'none' }} />
                 <input
+                  ref={passwordRef}
                   type={showPass ? 'text' : 'password'}
                   value={password}
                   onChange={e => { setPassword(e.target.value); setError(''); }}
-                  onKeyDown={e => e.key === 'Enter' && handleLogin()}
                   placeholder="Enter your password"
+                  autoComplete="current-password"
                   style={{
                     width: '100%', padding: '12px 44px 12px 42px',
                     background: theme.inputBg,
@@ -345,6 +359,8 @@ export default function Login({ onLogin }: LoginProps) {
                   onBlur={e => (e.target.style.borderColor = theme.inputBorder)}
                 />
                 <button
+                  type="button"
+                  aria-label={showPass ? 'Hide password' : 'Show password'}
                   onClick={() => setShowPass(!showPass)}
                   style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: theme.iconColor, padding: 4 }}
                 >
@@ -366,7 +382,7 @@ export default function Login({ onLogin }: LoginProps) {
 
             {/* Login button */}
             <button
-              onClick={handleLogin}
+              type="submit"
               disabled={loading}
               style={{
                 width: '100%', padding: '14px',
@@ -398,7 +414,7 @@ export default function Login({ onLogin }: LoginProps) {
                 </>
               )}
             </button>
-          </div>
+          </form>
         </div>
 
         {/* Footer */}

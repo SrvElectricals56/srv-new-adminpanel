@@ -1,11 +1,12 @@
 'use client';
-import { lazy, Suspense, useEffect, useState, useTransition } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState, useTransition } from 'react';
 import Image from 'next/image';
 import { Search, Bell, LayoutDashboard, Activity, Bolt, Store, Package, Star, ScanLine, Gift, Tags, ChartColumn, ShieldCheck, AppWindow, UserCheck, Users, LogOut, FileSpreadsheet, Sun, Moon, QrCode, ArrowLeftRight, Percent, Image as ImageIcon, MessageCircle, FileText, ClipboardList, Play } from 'lucide-react';
 import { useTheme, useThemePalette } from '@/lib/theme';
 import { I } from '@/lib/iconMap';
 import Sidebar from '@/components/Shared/Sidebar';
 import Login from '@/components/Shared/Login';
+import SrvLogoLoader from '@/components/Shared/SrvLogoLoader';
 import { useAppContext } from '@/lib/appContext';
 import type { AdminRole } from '@/lib/types';
 
@@ -99,6 +100,26 @@ const DEFAULT_PRELOAD_PAGES = [
 
 const SESSION_TIMEOUT_MS = 20 * 60 * 1000;
 const SESSION_ACTIVITY_KEY = 'srv_admin_last_activity';
+const ADMIN_PAGE_STATE_KEY = 'srv_admin_current_page';
+
+type AdminPageState = {
+  active?: string;
+  electricianSubPage?: string;
+  dealerSubPage?: string;
+  appUserSubPage?: string;
+  counterBoySubPage?: string;
+  productCategoryFilter?: string;
+};
+
+const readAdminPageState = (): AdminPageState => {
+  if (typeof window === 'undefined') return {};
+  try {
+    const parsed = JSON.parse(localStorage.getItem(ADMIN_PAGE_STATE_KEY) || '{}') as AdminPageState;
+    return parsed.active && PAGE_LABELS[parsed.active] ? parsed : {};
+  } catch {
+    return {};
+  }
+};
 
 // ── Skeleton shown while a chunk is downloading ────────────────────────────────
 function PageSkeleton() {
@@ -173,13 +194,14 @@ export default function Home() {
   const { mode, toggleTheme } = useTheme();
   const P = useThemePalette();
   const { auth, logout, products, pointsConfig } = useAppContext();
-  const [, startTransition] = useTransition();
-  const [active, setActive] = useState('dashboard');
-  const [electricianSubPage, setElectricianSubPage] = useState<string | undefined>(undefined);
-  const [dealerSubPage, setDealerSubPage] = useState<string | undefined>(undefined);
-  const [appUserSubPage, setAppUserSubPage] = useState<string | undefined>(undefined);
-  const [counterBoySubPage, setCounterBoySubPage] = useState<string | undefined>(undefined);
-  const [productCategoryFilter, setProductCategoryFilter] = useState<string | undefined>(undefined);
+  const [isPending, startTransition] = useTransition();
+  const [initialPageState] = useState<AdminPageState>(() => readAdminPageState());
+  const [active, setActive] = useState(initialPageState.active ?? 'dashboard');
+  const [electricianSubPage, setElectricianSubPage] = useState<string | undefined>(initialPageState.electricianSubPage);
+  const [dealerSubPage, setDealerSubPage] = useState<string | undefined>(initialPageState.dealerSubPage);
+  const [appUserSubPage, setAppUserSubPage] = useState<string | undefined>(initialPageState.appUserSubPage);
+  const [counterBoySubPage, setCounterBoySubPage] = useState<string | undefined>(initialPageState.counterBoySubPage);
+  const [productCategoryFilter, setProductCategoryFilter] = useState<string | undefined>(initialPageState.productCategoryFilter);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
@@ -187,6 +209,8 @@ export default function Home() {
   const [globalSearch, setGlobalSearch] = useState('');
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [routeLoading, setRouteLoading] = useState(false);
+  const routeLoadingTimeoutRef = useRef<number | null>(null);
 
   const loggedIn = auth.isLoggedIn;
   const role = auth.role;
@@ -271,6 +295,35 @@ export default function Home() {
     };
   }, [loggedIn, logout]);
 
+  useEffect(() => {
+    if (!loggedIn) return;
+    localStorage.setItem(ADMIN_PAGE_STATE_KEY, JSON.stringify({
+      active,
+      electricianSubPage,
+      dealerSubPage,
+      appUserSubPage,
+      counterBoySubPage,
+      productCategoryFilter,
+    }));
+  }, [active, appUserSubPage, counterBoySubPage, dealerSubPage, electricianSubPage, loggedIn, productCategoryFilter]);
+
+  useEffect(() => () => {
+    if (routeLoadingTimeoutRef.current) {
+      window.clearTimeout(routeLoadingTimeoutRef.current);
+    }
+  }, []);
+
+  const showRouteLoader = () => {
+    setRouteLoading(true);
+    if (routeLoadingTimeoutRef.current) {
+      window.clearTimeout(routeLoadingTimeoutRef.current);
+    }
+    routeLoadingTimeoutRef.current = window.setTimeout(() => {
+      setRouteLoading(false);
+      routeLoadingTimeoutRef.current = null;
+    }, 650);
+  };
+
   const handleLogin = (r: AdminRole, name?: string) => {
     // auth state is already set by appContext.login() — nothing extra needed
   };
@@ -281,6 +334,7 @@ export default function Home() {
 
   const confirmLogout = () => {
     logout();
+    localStorage.removeItem(ADMIN_PAGE_STATE_KEY);
     setActive('dashboard');
     setShowLogoutModal(false);
   };
@@ -291,6 +345,9 @@ export default function Home() {
 
   const handleNavigate = (id: string, subPage?: string) => {
     void preloadPageChunk(id);
+    if (id !== active || subPage) {
+      showRouteLoader();
+    }
     startTransition(() => {
       setActive(id);
       if (id === 'electricians' && subPage) {
@@ -977,6 +1034,7 @@ export default function Home() {
       )}
 
       <Sidebar active={active} onNavigate={handleNavigate} onPreload={(id) => { void preloadPageChunk(id); }} onCollapseChange={setSidebarCollapsed} role={role} adminName={adminName} />
+      {(isPending || routeLoading) && <SrvLogoLoader overlay label={`Opening ${PAGE_LABELS[active]?.title ?? 'section'}...`} />}
       <div style={{ 
         marginLeft: sidebarCollapsed ? 72 : 260, 
         flex: 1, 
@@ -1147,7 +1205,7 @@ export default function Home() {
 
         {/* Page content */}
         <div key={active} style={{ flex: 1, animation: 'fadeInUp 0.3s ease' }}>
-          <Suspense fallback={null}>
+          <Suspense fallback={<SrvLogoLoader label="Loading SRV section..." />}>
             {renderPage()}
           </Suspense>
         </div>

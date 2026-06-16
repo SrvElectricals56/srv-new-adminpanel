@@ -236,6 +236,7 @@ export const electricianApi = {
   getDistinctCategories: () =>
     request<{ categories: string[] }>('/electricians/distinct-categories'),
   getOne: (id: string) => request<any>(`/electricians/${id}`),
+  getActivity: (id: string) => request<any>(`/electricians/${id}/activity`),
   create: (body: object) => request<any>('/electricians', { method: 'POST', body: JSON.stringify(body) }),
   update: (id: string, body: object) => request<any>(`/electricians/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   setPassword: (id: string, password: string) =>
@@ -268,6 +269,7 @@ export const dealerApi = {
     return request<{ cities: string[] }>(`/dealers/distinct-cities${q}`);
   },
   getOne: (id: string) => request<any>(`/dealers/${id}`),
+  getActivity: (id: string) => request<any>(`/dealers/${id}/activity`),
   create: (body: object) => request<any>('/dealers', { method: 'POST', body: JSON.stringify(body) }),
   update: (id: string, body: object) => request<any>(`/dealers/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   setPassword: (id: string, password: string) =>

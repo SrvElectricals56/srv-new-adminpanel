@@ -1,0 +1,22 @@
+
+> srv-admin@0.1.0 dev
+> next dev --webpack
+
+▲ Next.js 16.2.4 (webpack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.29.8:3000
+- Environments: .env.local
+✓ Ready in 477ms
+
+○ Compiling / ...
+ GET / 200 in 3.6s (next.js: 3.4s, application-code: 198ms)
+ GET / 200 in 45ms (next.js: 4ms, application-code: 40ms)
+ GET / 200 in 39ms (next.js: 3ms, application-code: 36ms)
+ GET / 200 in 42ms (next.js: 4ms, application-code: 38ms)
+ GET / 200 in 40ms (next.js: 3ms, application-code: 37ms)
+ GET / 200 in 46ms (next.js: 4ms, application-code: 42ms)
+ GET / 200 in 44ms (next.js: 4ms, application-code: 40ms)
+ GET / 200 in 37ms (next.js: 3ms, application-code: 34ms)
+ GET / 200 in 49ms (next.js: 4ms, application-code: 44ms)
+ GET / 200 in 46ms (next.js: 4ms, application-code: 42ms)
+ GET / 200 in 60ms (next.js: 9ms, application-code: 51ms)

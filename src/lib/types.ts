@@ -98,6 +98,41 @@ export interface Dealer {
   hasPassword?: boolean;
 }
 
+export interface CustomerActivityInsight {
+  user: Record<string, unknown>;
+  summary: {
+    scans: number;
+    cartItems: number;
+    productOrders: number;
+    walletTransactions: number;
+    appEvents?: number;
+    linkedElectricians?: number;
+    favoriteProduct: string;
+    lastActivityAt: string | null;
+  };
+  productInterests: Array<{
+    productId: string;
+    productName: string;
+    category?: string;
+    scanCount: number;
+    pointsEarned: number;
+    cartQuantity: number;
+    orderQuantity: number;
+    viewCount?: number;
+    durationMs?: number;
+    intentScore: number;
+  }>;
+  recentTimeline: Array<{
+    id: string;
+    type: 'scan' | 'cart' | 'order' | 'wallet' | 'screen_view' | 'screen_time' | 'product_view' | 'product_add_to_cart' | 'product_buy_now' | 'profile_view' | 'button_tap';
+    title: string;
+    detail: string;
+    productName?: string;
+    occurredAt: string;
+  }>;
+  note: string;
+}
+
 export interface Product {
   id: string;
   name: string;

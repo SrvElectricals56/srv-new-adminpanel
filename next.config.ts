@@ -3,6 +3,8 @@ import path from "path";
 
 const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(__dirname),
+  // Allow cross-origin dev access (mobile/network devices)
+  allowedDevOrigins: ['192.168.29.8', '172.17.240.1', '10.121.152.231', '10.255.222.231'],
   // Allow images from external domains
   images: {
     remotePatterns: [

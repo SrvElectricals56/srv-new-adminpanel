@@ -12,6 +12,7 @@ import ExportModal from '@/components/Shared/ExportModal';
 import ImportModal from '@/components/Shared/ImportModal';
 import { ViewModeToggle, type ListViewMode } from '@/components/Shared/ViewModeToggle';
 import PasswordInputField from '@/components/Shared/PasswordInputField';
+import CustomerActivityPanel from '@/components/Shared/CustomerActivityPanel';
 import { I } from '@/lib/iconMap';
 import { formatISTDate } from '@/lib/dateIST';
 
@@ -58,6 +59,7 @@ function ViewModal({
   const [confirmPassword, setConfirmPassword] = useState('');
   const [savingPassword, setSavingPassword] = useState(false);
   const [passwordFeedback, setPasswordFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const loadActivity = useCallback((id: string) => electricianApi.getActivity(id), []);
 
   const handlePasswordSubmit = async () => {
     const nextPassword = password.trim();
@@ -93,7 +95,7 @@ function ViewModal({
       onMouseUp={() => { if (!mouseDownInside.current) onClose(); }}
     >
       <div
-        style={{ background: C.card, borderRadius: 20, width: 560, maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 70px rgba(0,0,0,0.2)' }}
+        style={{ background: C.card, borderRadius: 20, width: 920, maxWidth: '96vw', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 70px rgba(0,0,0,0.2)' }}
         onMouseDown={e => { e.stopPropagation(); mouseDownInside.current = true; }}
         onMouseUp={e => e.stopPropagation()}
       >
@@ -155,6 +157,12 @@ function ViewModal({
               </div>
             ))}
           </div>
+
+          <CustomerActivityPanel
+            customerId={el.id}
+            roleLabel="Electrician"
+            loadActivity={loadActivity}
+          />
 
           <div style={{ background: C.bg, borderRadius: 14, padding: '16px 16px 18px', marginBottom: 22 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 8, flexWrap: 'wrap' }}>
@@ -953,7 +961,7 @@ export default function Electricians({ role }: ElectriciansProps) {
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 1120 }}>
           <thead>
             <tr style={{ background: C.surface, borderBottom: `1px solid ${C.border}` }}>
-              {['Electrician','Mobile Number','Location','Tier','Points','Scans','Wallet','Status','Actions'].map(h => (
+              {['Electrician','Mobile Number','Location','Tier','Points','Scans','Wallet','Status','App Installed','Actions'].map(h => (
                 <th
                   key={h}
                   style={{
@@ -1003,6 +1011,15 @@ export default function Electricians({ role }: ElectriciansProps) {
                   <td style={{ padding: '13px 14px', fontSize: 13, fontWeight: 700, color: '#10B981' }}>₹{e.walletBalance}</td>
                   <td style={{ padding: '13px 14px' }}>
                     <span style={{ background: status.bg, color: status.color, fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20 }}>{status.label}</span>
+                  </td>
+                  <td style={{ padding: '13px 14px' }}>
+                    <span style={{
+                      background: (e as any).appInstalled ? '#D1FAE5' : '#FEF3C7',
+                      color: (e as any).appInstalled ? '#065F46' : '#92400E',
+                      fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20, whiteSpace: 'nowrap',
+                    }}>
+                      {(e as any).appInstalled ? '✓ Installed' : '✗ Not Installed'}
+                    </span>
                   </td>
                   <td style={{ padding: '13px 14px', minWidth: 190, width: 190 }}>
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>

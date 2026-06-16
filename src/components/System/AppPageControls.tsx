@@ -11,6 +11,7 @@ type AppFeatureKey =
   | 'play'
   | 'categories'
   | 'cart'
+  | 'checkout'
   | 'electricians'
   | 'call_electrician'
   | 'support'
@@ -164,6 +165,7 @@ const BASE_FEATURES: Record<AppFeatureKey, boolean> = {
   play: false,
   categories: false,
   cart: false,
+  checkout: false,
   electricians: false,
   call_electrician: false,
   support: false,

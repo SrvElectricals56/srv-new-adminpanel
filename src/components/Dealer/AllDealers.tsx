@@ -11,6 +11,7 @@ import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 import ExportModal from '@/components/Shared/ExportModal';
 import ImportModal from '@/components/Shared/ImportModal';
 import PasswordInputField from '@/components/Shared/PasswordInputField';
+import CustomerActivityPanel from '@/components/Shared/CustomerActivityPanel';
 import { I } from '@/lib/iconMap';
 import { formatISTDate } from '@/lib/dateIST';
 
@@ -60,6 +61,7 @@ function ViewModal({
   const [confirmPassword, setConfirmPassword] = useState('');
   const [savingPassword, setSavingPassword] = useState(false);
   const [passwordFeedback, setPasswordFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const loadActivity = useCallback((id: string) => dealerApi.getActivity(id), []);
 
   const handlePasswordSubmit = async () => {
     const nextPassword = password.trim();
@@ -95,7 +97,7 @@ function ViewModal({
       onMouseUp={() => { if (!mouseDownInside.current) onClose(); }}
     >
       <div
-        style={{ background: C.card, borderRadius: 20, width: 600, maxWidth: '95vw', maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 25px 70px rgba(0,0,0,0.2)' }}
+        style={{ background: C.card, borderRadius: 20, width: 920, maxWidth: '96vw', maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 25px 70px rgba(0,0,0,0.2)' }}
         onMouseDown={e => { e.stopPropagation(); mouseDownInside.current = true; }}
         onMouseUp={e => e.stopPropagation()}
       >
@@ -163,6 +165,12 @@ function ViewModal({
             <div style={{ fontSize: 11, color: C.muted, marginBottom: 4, textTransform: 'uppercase', fontWeight: 600 }}>Full Address</div>
             <div style={{ fontSize: 13, color: C.text }}>{dealer.address}</div>
           </div>
+
+          <CustomerActivityPanel
+            customerId={dealer.id}
+            roleLabel="Dealer"
+            loadActivity={loadActivity}
+          />
 
           <div style={{ background: C.bg, borderRadius: 14, padding: '16px 16px 18px', marginBottom: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 8, flexWrap: 'wrap' }}>
@@ -854,7 +862,7 @@ export default function Dealers({ role }: DealersProps) {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: C.surface, borderBottom: `1px solid ${C.border}` }}>
-                {['Dealer','Location','Tier','Electricians','Status','Phone','Actions'].map(h => (
+                {['Dealer','Location','Tier','Electricians','Status','Phone','App Installed','Actions'].map(h => (
                   <th key={h} style={{ textAlign: 'left', padding: '12px 16px', fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
                 ))}
               </tr>
@@ -883,6 +891,15 @@ export default function Dealers({ role }: DealersProps) {
                     <td style={{ padding: '13px 16px', fontSize: 14, fontWeight: 800, color: C.text }}>{d.electricianCount}</td>
                     <td style={{ padding: '13px 16px' }}><span style={{ background: status.bg, color: status.color, fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20 }}>{status.label}</span></td>
                     <td style={{ padding: '13px 16px', fontSize: 13, color: C.muted }}>{d.phone}</td>
+                    <td style={{ padding: '13px 16px' }}>
+                      <span style={{
+                        background: (d as any).appInstalled ? '#D1FAE5' : '#FEF3C7',
+                        color: (d as any).appInstalled ? '#065F46' : '#92400E',
+                        fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20, whiteSpace: 'nowrap',
+                      }}>
+                        {(d as any).appInstalled ? '✓ Installed' : '✗ Not Installed'}
+                      </span>
+                    </td>
                     <td style={{ padding: '13px 16px' }}>
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button onClick={() => setViewing(d)} style={{ background: '#EFF6FF', color: '#1D4ED8', border: 'none', borderRadius: 7, padding: '6px 11px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>View</button>
