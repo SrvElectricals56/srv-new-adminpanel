@@ -410,6 +410,7 @@ export default function AllAppUsers({ role }: AllAppUsersProps) {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [appStatusFilter, setAppStatusFilter] = useState('');
   const [stateFilter, setStateFilter] = useState('');
   const [cityFilter, setCityFilter] = useState('');
   const [allStates, setAllStates] = useState<string[]>([]);
@@ -438,6 +439,7 @@ export default function AllAppUsers({ role }: AllAppUsersProps) {
       const params: Record<string, string> = { page: String(page), limit: String(LIMIT) };
       if (search) params.search = search;
       if (statusFilter) params.status = statusFilter;
+      if (appStatusFilter) params.appInstalled = appStatusFilter;
       if (stateFilter) params.state = stateFilter;
       if (cityFilter) params.city = cityFilter;
       const [res, statesRes, citiesRes] = await Promise.all([
@@ -454,7 +456,7 @@ export default function AllAppUsers({ role }: AllAppUsersProps) {
     } finally {
       setLoading(false);
     }
-  }, [cityFilter, page, search, stateFilter, statusFilter]);
+  }, [appStatusFilter, cityFilter, page, search, stateFilter, statusFilter]);
 
   useEffect(() => {
     if (cityFilter && !allCities.includes(cityFilter)) {
@@ -675,6 +677,15 @@ export default function AllAppUsers({ role }: AllAppUsersProps) {
           <option value="inactive">Inactive</option>
         </select>
         <select
+          value={appStatusFilter}
+          onChange={e => { setAppStatusFilter(e.target.value); setPage(1); }}
+          style={{ padding: '9px 12px', borderRadius: 10, border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: 13, cursor: 'pointer' }}
+        >
+          <option value="">All App Status</option>
+          <option value="true">App Installed</option>
+          <option value="false">Not Installed</option>
+        </select>
+        <select
           value={stateFilter}
           onChange={e => { setStateFilter(e.target.value); setCityFilter(''); setPage(1); }}
           style={{ padding: '9px 12px', borderRadius: 10, border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: 13, cursor: 'pointer' }}
@@ -694,9 +705,9 @@ export default function AllAppUsers({ role }: AllAppUsersProps) {
             <option key={city} value={city}>{city}</option>
           ))}
         </select>
-        {(statusFilter || stateFilter || cityFilter) && (
+        {(statusFilter || appStatusFilter || stateFilter || cityFilter) && (
           <button
-            onClick={() => { setStatusFilter(''); setStateFilter(''); setCityFilter(''); setPage(1); }}
+            onClick={() => { setStatusFilter(''); setAppStatusFilter(''); setStateFilter(''); setCityFilter(''); setPage(1); }}
             style={{ padding: '9px 14px', borderRadius: 10, border: `1px solid ${C.red}`, background: '#FFF0F0', color: C.red, cursor: 'pointer', fontSize: 13, fontWeight: 700 }}
           >
             Clear Filters
@@ -772,14 +783,14 @@ export default function AllAppUsers({ role }: AllAppUsersProps) {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: C.bg, borderBottom: `1px solid ${C.border}` }}>
-                {['Customer', 'Code', 'Location', 'Tier', 'Points', 'Wallet', 'Status', 'Joined', 'Actions'].map(header => (
+                {['Customer', 'Code', 'Location', 'Tier', 'Points', 'Wallet', 'App Status', 'Status', 'Joined', 'Actions'].map(header => (
                   <th key={header} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: 0.5, whiteSpace: 'nowrap' }}>{header}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {!loading && users.length === 0 ? (
-                <tr><td colSpan={9} style={{ padding: 40, textAlign: 'center', color: C.muted }}>No customers found</td></tr>
+                <tr><td colSpan={10} style={{ padding: 40, textAlign: 'center', color: C.muted }}>No customers found</td></tr>
               ) : users.map((user, index) => {
                 const status = STATUS_CONFIG[user.status] ?? STATUS_CONFIG.pending;
                 const tier = TIER_CONFIG[user.tier] ?? TIER_CONFIG.Silver;
@@ -803,6 +814,11 @@ export default function AllAppUsers({ role }: AllAppUsersProps) {
                     </td>
                     <td style={{ padding: '14px 16px', fontSize: 13, fontWeight: 700, color: '#F59E0B' }}>{(user.totalPoints ?? 0).toLocaleString('en-IN')}</td>
                     <td style={{ padding: '14px 16px', fontSize: 13, fontWeight: 700, color: '#10B981' }}>Rs {(user.walletBalance ?? 0).toLocaleString('en-IN')}</td>
+                    <td style={{ padding: '14px 16px' }}>
+                      <span style={{ background: user.appInstalled ? '#D1FAE5' : '#FEF3C7', color: user.appInstalled ? '#065F46' : '#92400E', fontSize: 11, fontWeight: 800, padding: '4px 10px', borderRadius: 999, whiteSpace: 'nowrap' }}>
+                        {user.appInstalled ? 'Installed' : 'Not Installed'}
+                      </span>
+                    </td>
                     <td style={{ padding: '14px 16px' }}>
                       {canEdit ? (
                         <select

@@ -1,7 +1,7 @@
 ﻿'use client';
 import { useState, useEffect } from 'react';
-import { Bolt, Store, ScanLine, Star, Users, AlertTriangle, ChartColumn, Medal, CreditCard, Gift, MessageCircle, X, Check, Award, Trophy, Gem, FileText, IndianRupee } from 'lucide-react';
-import { analyticsApi, redemptionApi, scanApi, supportApi } from '@/lib/api';
+import { Bolt, Store, ScanLine, Star, Users, AlertTriangle, ChartColumn, Medal, CreditCard, Gift, MessageCircle, X, Check, Award, Trophy, Gem, FileText, IndianRupee, UserRound, UserCog, Smartphone } from 'lucide-react';
+import { analyticsApi, appUserApi, counterboyApi, dealerApi, electricianApi, redemptionApi, scanApi, supportApi } from '@/lib/api';
 import type { AdminRole } from '@/lib/types';
 import { getPermissions } from '@/lib/permissions';
 import { useThemePalette } from '@/lib/theme';
@@ -31,20 +31,43 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
   const [scanChartData, setScanChartData] = useState<{ day: string; value: number }[]>([]);
   const [tierData, setTierData] = useState<Record<string, number>>({});
   const [pendingEnquiries, setPendingEnquiries] = useState(0);
+  const [roleCounts, setRoleCounts] = useState({
+    dealers: 0,
+    customers: 0,
+    counterboys: 0,
+  });
+  const [appInstallCounts, setAppInstallCounts] = useState({
+    installed: 0,
+    notInstalled: 0,
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const load = async () => {
       try {
-        const [dashData, scansData, redemptionsData, scanStatsData, userStatsData, supportData] = await Promise.all([
+        const [dashData, scansData, redemptionsData, scanStatsData, userStatsData, supportData, dealerStats, customerStats, counterboyStats, installedElectricians, notInstalledElectricians] = await Promise.all([
           analyticsApi.getDashboard(),
           scanApi.getAll({ limit: '5' }),
           redemptionApi.getAll({ status: 'pending', limit: '5' }),
           analyticsApi.getScanStats(),
           analyticsApi.getUserStats(),
           supportApi.getAll({ status: 'open', limit: '1' }),
+          dealerApi.getStats().catch(() => null),
+          appUserApi.getStats().catch(() => null),
+          counterboyApi.getStats().catch(() => null),
+          electricianApi.getAll({ page: '1', limit: '1', appInstalled: 'true' }).catch(() => null),
+          electricianApi.getAll({ page: '1', limit: '1', appInstalled: 'false' }).catch(() => null),
         ]);
         setStats(dashData);
+        setRoleCounts({
+          dealers: Number(dealerStats?.total ?? dashData?.totalDealers ?? 0),
+          customers: Number(customerStats?.total ?? 0),
+          counterboys: Number(counterboyStats?.total ?? 0),
+        });
+        setAppInstallCounts({
+          installed: Number((installedElectricians as any)?.total ?? 0),
+          notInstalled: Number((notInstalledElectricians as any)?.total ?? 0),
+        });
         setRecentScans(Array.isArray(scansData) ? scansData : (scansData as any).data ?? []);
         setPendingRedemptions(Array.isArray(redemptionsData) ? redemptionsData : (redemptionsData as any).data ?? []);
 
@@ -85,9 +108,30 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
     } catch (err) { console.error(err); }
   };
 
+  const totalUsers =
+    Number(stats?.totalElectricians ?? 0) +
+    roleCounts.dealers +
+    roleCounts.customers +
+    roleCounts.counterboys;
+
   const statCards = [
+    { label: 'Total Users', value: totalUsers.toLocaleString('en-IN'), Icon: Users, change: 'Electricians, Dealers, Customers & Counter Boys', up: true, color: '#7C3AED', bg: '#F5F3FF', navigateTo: 'dashboard' },
+    {
+      label: 'App Status',
+      value: null,
+      Icon: Smartphone,
+      change: 'Installed / Not Installed',
+      up: true,
+      color: '#1D4ED8',
+      bg: '#E0F2FE',
+      navigateTo: 'electricians',
+      installed: appInstallCounts.installed,
+      notInstalled: appInstallCounts.notInstalled,
+    },
     { label: 'Total Electricians', value: stats?.totalElectricians?.toLocaleString('en-IN') ?? '—', Icon: Bolt, change: 'All registered', up: true, color: '#1D4ED8', bg: '#FFF0F0', navigateTo: 'electricians' },
-    { label: 'Total Dealers', value: stats?.totalDealers?.toLocaleString('en-IN') ?? '—', Icon: Store, change: 'All registered', up: true, color: '#3B82F6', bg: '#EFF6FF', navigateTo: 'dealers' },
+    { label: 'Total Dealers', value: roleCounts.dealers.toLocaleString('en-IN'), Icon: Store, change: 'All registered', up: true, color: '#3B82F6', bg: '#EFF6FF', navigateTo: 'dealers' },
+    { label: 'Customers', value: roleCounts.customers.toLocaleString('en-IN'), Icon: UserRound, change: 'All registered', up: true, color: '#0F766E', bg: '#CCFBF1', navigateTo: 'app-users' },
+    { label: 'Counter Boys', value: roleCounts.counterboys.toLocaleString('en-IN'), Icon: UserCog, change: 'All registered', up: true, color: '#92400E', bg: '#FEF3C7', navigateTo: 'counterboys' },
     { label: 'Scans Today', value: stats?.totalScansToday?.toLocaleString('en-IN') ?? '—', Icon: ScanLine, change: 'Today', up: true, color: '#10B981', bg: '#D1FAE5', navigateTo: 'electricians', subPage: 'scans' },
     { label: 'Points Awarded', value: stats?.totalPointsAwarded ? `${(stats.totalPointsAwarded / 1000).toFixed(0)}K` : '—', Icon: Star, change: 'Total all-time', up: true, color: '#F59E0B', bg: '#FFFBEB', navigateTo: 'points-config' },
     { label: 'Finance', value: null, Icon: CreditCard, change: 'Electrician, Dealer, Customer & Counter Boy', up: true, color: '#065F46', bg: '#D1FAE5', navigateTo: 'finance-choice', valueIcon: IndianRupee },
@@ -161,19 +205,32 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
       </div>
 
       {/* Stat Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 24 }}>
         {statCards.map((s, i) => (
-          <div key={i} style={{ background: C.card, borderRadius: 16, padding: '18px 20px', border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', transition: 'all 0.2s', cursor: 'pointer' }}
+          <div key={i} style={{ background: C.card, borderRadius: 16, padding: '15px 16px', border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', transition: 'all 0.2s', cursor: 'pointer' }}
             onClick={() => { if (s.navigateTo === 'finance-choice') { setShowFinanceChoice(true); return; } onNavigate && s.navigateTo && onNavigate(s.navigateTo, (s as any).subPage); }}
             onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 8px 24px rgba(0,0,0,0.10)'; }}
             onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)'; }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <div style={{ width: 42, height: 42, borderRadius: 12, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.color }}><s.Icon size={20} /></div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <div style={{ width: 38, height: 38, borderRadius: 11, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.color }}><s.Icon size={18} /></div>
               <span style={{ background: '#D1FAE5', color: '#065F46', fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 20 }}>↑</span>
             </div>
-            <div style={{ fontSize: 28, fontWeight: 900, color: C.text, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>{loading ? '...' : s.valueIcon ? <s.valueIcon size={28} style={{ color: s.color }} /> : s.value}</div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: C.muted, marginBottom: 2 }}>{s.label}</div>
-            <div style={{ fontSize: 11, color: '#10B981', fontWeight: 600 }}>{s.change}</div>
+            {'installed' in s ? (
+              <div style={{ display: 'grid', gap: 6, marginBottom: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                  <span style={{ fontSize: 12, fontWeight: 800, color: C.text }}>App Installed</span>
+                  <span style={{ fontSize: 19, fontWeight: 900, color: '#065F46' }}>{loading ? '...' : Number(s.installed ?? 0).toLocaleString('en-IN')}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                  <span style={{ fontSize: 12, fontWeight: 800, color: C.text }}>Not Installed</span>
+                  <span style={{ fontSize: 19, fontWeight: 900, color: '#92400E' }}>{loading ? '...' : Number(s.notInstalled ?? 0).toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+            ) : (
+              <div style={{ fontSize: 24, fontWeight: 900, color: C.text, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>{loading ? '...' : s.valueIcon ? <s.valueIcon size={24} style={{ color: s.color }} /> : s.value}</div>
+            )}
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: C.muted, marginBottom: 2 }}>{s.label}</div>
+            <div style={{ fontSize: 10.5, color: '#10B981', fontWeight: 600, lineHeight: 1.25 }}>{s.change}</div>
           </div>
         ))}
       </div>

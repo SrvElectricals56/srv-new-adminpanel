@@ -188,7 +188,20 @@ const PAGE_LABELS: Record<string, { title: string; Icon: React.ElementType }> = 
   redemptions: { title: 'Redemptions', Icon: Gift },
   reports: { title: 'Reports', Icon: ChartColumn },
   'app-page-controls': { title: 'App Page Controls', Icon: AppWindow },
-  };
+};
+
+const PAGE_SEARCH_KEYWORDS: Record<string, string[]> = {
+  dashboard: ['dashboard', 'home', 'overview', 'stats', 'analytics'],
+  electricians: ['electrician', 'technician', 'worker', 'installer'],
+  dealers: ['dealer', 'distributor', 'retailer', 'seller'],
+  products: ['product', 'item', 'catalog', 'inventory', 'stock'],
+  'points-config': ['points', 'config', 'rewards'],
+  'qr-hub': ['qr hub', 'batch qr', 'qr batch', 'batch', 'quantity'],
+  'qr-codes': ['qr', 'qrcode', 'code', 'scan', 'barcode'],
+  scans: ['scan', 'history', 'activity'],
+  redemptions: ['redemption', 'redeem', 'pending', 'approve'],
+  reports: ['report', 'analytics', 'data', 'export'],
+};
 
 export default function Home() {
   const { mode, toggleTheme } = useTheme();
@@ -386,20 +399,8 @@ export default function Home() {
       const pointsMatches = pointsConfig.filter(pc =>
         pc.productName.toLowerCase().includes(q)
       );
-      const pageKeywords: Record<string, string[]> = {
-        'dashboard': ['dashboard', 'home', 'overview', 'stats', 'analytics'],
-        'electricians': ['electrician', 'technician', 'worker', 'installer'],
-        'dealers': ['dealer', 'distributor', 'retailer', 'seller'],
-        'products': ['product', 'item', 'catalog', 'inventory', 'stock'],
-        'points-config': ['points', 'config', 'rewards'],
-        'qr-hub': ['qr hub', 'batch qr', 'qr batch', 'batch', 'quantity'],
-        'qr-codes': ['qr', 'qrcode', 'code', 'scan', 'barcode'],
-        'scans': ['scan', 'history', 'activity'],
-        'redemptions': ['redemption', 'redeem', 'pending', 'approve'],
-        'reports': ['report', 'analytics', 'data', 'export'],
-      };
       let matchedPage = '';
-      for (const [page, keywords] of Object.entries(pageKeywords)) {
+      for (const [page, keywords] of Object.entries(PAGE_SEARCH_KEYWORDS)) {
         if (keywords.some(kw => kw.includes(q) || q.includes(kw))) { matchedPage = page; break; }
       }
       if (productMatches.length > 0) setActive('products');

@@ -265,6 +265,8 @@ export interface AppUser {
   panDocument?: string;
   gstDocument?: string;
   kycRejectionReason?: string;
+  appInstalled?: boolean;
+  firstAppLoginAt?: string | null;
   joinedDate: string;
   hasPassword?: boolean;
 }
@@ -314,6 +316,8 @@ export interface CounterBoy {
   panDocument?: string;
   gstDocument?: string;
   kycRejectionReason?: string;
+  appInstalled?: boolean;
+  firstAppLoginAt?: string | null;
   status: UserStatus;
   kycStatus: string;
   joinedDate: string;

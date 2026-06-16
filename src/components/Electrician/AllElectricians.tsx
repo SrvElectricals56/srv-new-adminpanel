@@ -450,6 +450,7 @@ export default function Electricians({ role }: ElectriciansProps) {
   const [filterCity, setFilterCity] = useState('all');
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterBank, setFilterBank] = useState('all');
+  const [filterAppInstalled, setFilterAppInstalled] = useState('all');
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'week' | 'month' | 'custom'>('all');
   const [customDateRange, setCustomDateRange] = useState<{ from: string; to: string }>({ from: '', to: '' });
 
@@ -499,6 +500,7 @@ export default function Electricians({ role }: ElectriciansProps) {
       if (filterCity !== 'all') params.city = filterCity;
       if (filterCategory !== 'all') params.subCategory = filterCategory;
       if (filterBank !== 'all') params.bankLinked = filterBank === 'linked' ? 'true' : 'false';
+      if (filterAppInstalled !== 'all') params.appInstalled = filterAppInstalled === 'installed' ? 'true' : 'false';
 
       // Date filter → convert to dateFrom / dateTo
       if (dateFilter !== 'all') {
@@ -549,13 +551,13 @@ export default function Electricians({ role }: ElectriciansProps) {
     } finally {
       setLoading(false);
     }
-  }, [search, filterTier, filterStatus, filterState, filterCity, filterCategory, filterBank, dateFilter, customDateRange]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [search, filterTier, filterStatus, filterState, filterCity, filterCategory, filterBank, filterAppInstalled, dateFilter, customDateRange]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Re-fetch from page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
     loadData(1);
-  }, [search, filterTier, filterStatus, filterState, filterCity, filterCategory, filterBank, dateFilter, customDateRange]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [search, filterTier, filterStatus, filterState, filterCity, filterCategory, filterBank, filterAppInstalled, dateFilter, customDateRange]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Initial load
   useEffect(() => { loadData(1); loadTierCounts(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -804,8 +806,8 @@ export default function Electricians({ role }: ElectriciansProps) {
         )}
 
         {/* Active filter count badge */}
-        {(filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all' || dateFilter !== 'all') && (
-          <button onClick={() => { setFilterTier('all'); setFilterStatus('all'); setFilterState('all'); setFilterCity('all'); setFilterCategory('all'); setFilterBank('all'); setDateFilter('all'); setCustomDateRange({ from: '', to: '' }); }}
+        {(filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all' || filterAppInstalled !== 'all' || dateFilter !== 'all') && (
+          <button onClick={() => { setFilterTier('all'); setFilterStatus('all'); setFilterState('all'); setFilterCity('all'); setFilterCategory('all'); setFilterBank('all'); setFilterAppInstalled('all'); setDateFilter('all'); setCustomDateRange({ from: '', to: '' }); }}
             style={{ padding: '8px 12px', borderRadius: 8, border: `1px solid ${C.red}`, background: '#FFF0F0', color: C.red, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4 }}>
             Clear Filters
           </button>
@@ -816,16 +818,16 @@ export default function Electricians({ role }: ElectriciansProps) {
           <button
             onClick={() => setShowFilterPopup(p => !p)}
             style={{
-              width: 38, height: 38, borderRadius: 10, border: `1.5px solid ${showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all') ? C.red : C.border}`,
-              background: showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all') ? '#FFF0F0' : C.card,
-              color: showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all') ? C.red : C.muted,
+              width: 38, height: 38, borderRadius: 10, border: `1.5px solid ${showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all' || filterAppInstalled !== 'all') ? C.red : C.border}`,
+              background: showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all' || filterAppInstalled !== 'all') ? '#FFF0F0' : C.card,
+              color: showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all' || filterAppInstalled !== 'all') ? C.red : C.muted,
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative',
             }}
           >
             <SlidersHorizontal size={17} />
-            {(filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all') && (
+            {(filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all' || filterAppInstalled !== 'all') && (
               <span style={{ position: 'absolute', top: -5, right: -5, width: 16, height: 16, borderRadius: '50%', background: C.red, color: 'white', fontSize: 9, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {[filterTier, filterStatus, filterState, filterCity, filterCategory, filterBank].filter(f => f !== 'all').length}
+                {[filterTier, filterStatus, filterState, filterCity, filterCategory, filterBank, filterAppInstalled].filter(f => f !== 'all').length}
               </span>
             )}
           </button>
@@ -856,6 +858,7 @@ export default function Electricians({ role }: ElectriciansProps) {
                     { label: 'City', value: filterCity, set: setFilterCity, options: [['all','All Cities'], ...uniqueCities.filter(c => c !== 'all').map(c => [c, c])] },
                     { label: 'Category', value: filterCategory, set: setFilterCategory, options: [['all','All Categories'], ...uniqueCategories.filter(c => c !== 'all').map(c => [c, c])] },
                     { label: 'Bank Account', value: filterBank, set: setFilterBank, options: [['all','All'],['linked','Linked'],['not_linked','Not Linked']] },
+                    { label: 'App Status', value: filterAppInstalled, set: setFilterAppInstalled, options: [['all','All'],['installed','App Installed'],['not_installed','Not Installed']] },
                   ].map(f => (
                     <div key={f.label}>
                       <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>{f.label}</div>
@@ -868,7 +871,7 @@ export default function Electricians({ role }: ElectriciansProps) {
                 </div>
                 {/* Footer */}
                 <div style={{ padding: '16px 24px', borderTop: `1px solid ${C.border}`, display: 'flex', gap: 10 }}>
-                  <button onClick={() => { setFilterTier('all'); setFilterStatus('all'); setFilterState('all'); setFilterCity('all'); setFilterCategory('all'); setFilterBank('all'); setDateFilter('all'); setCustomDateRange({ from: '', to: '' }); }}
+                  <button onClick={() => { setFilterTier('all'); setFilterStatus('all'); setFilterState('all'); setFilterCity('all'); setFilterCategory('all'); setFilterBank('all'); setFilterAppInstalled('all'); setDateFilter('all'); setCustomDateRange({ from: '', to: '' }); }}
                     style={{ flex: 1, padding: '10px', borderRadius: 10, border: `1px solid ${C.border}`, background: C.bg, color: C.muted, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                     Reset All
                   </button>
