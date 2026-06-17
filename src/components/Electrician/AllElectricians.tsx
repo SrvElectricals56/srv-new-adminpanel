@@ -450,6 +450,8 @@ export default function Electricians({ role }: ElectriciansProps) {
   const [filterCity, setFilterCity] = useState('all');
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterBank, setFilterBank] = useState('all');
+  const [filterWelcomeBonus, setFilterWelcomeBonus] = useState('all');
+  const [filterElectricianGroup, setFilterElectricianGroup] = useState('all');
   const [filterAppInstalled, setFilterAppInstalled] = useState('all');
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'week' | 'month' | 'custom'>('all');
   const [customDateRange, setCustomDateRange] = useState<{ from: string; to: string }>({ from: '', to: '' });
@@ -605,7 +607,13 @@ export default function Electricians({ role }: ElectriciansProps) {
   const uniqueCities = ['all', ...sanitizeOptions(allCities)];
   const uniqueCategories = ['all', ...sanitizeOptions(allCategories)];
 
-  const filtered = data; // Server-side pagination handles filtering
+  const filtered = data.filter((electrician: any) => {
+    const bonusOk = filterWelcomeBonus === 'all'
+      || Number(electrician.totalPoints ?? 0) === 21;
+    const groupOk = filterElectricianGroup === 'all'
+      || String(electrician.subCategory ?? '').toLowerCase().includes(filterElectricianGroup.toLowerCase());
+    return bonusOk && groupOk;
+  }); // Server-side pagination handles main filters; bonus/group are local quick filters.
 
   const handleSave = async (form: Partial<Electrician>) => {
     if (!form.name?.trim() || !form.phone?.trim() || !form.city?.trim() || !form.state?.trim()) {
@@ -779,7 +787,37 @@ export default function Electricians({ role }: ElectriciansProps) {
 
       {/* Filters */}
       <div style={{ background: C.card, borderRadius: 14, padding: '14px 18px', border: `1px solid ${C.border}`, marginBottom: 16, display: 'flex', gap: 10, alignItems: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', position: 'relative' }}>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, phone, city, code, dealer..." style={{ ...inputStyle, flex: 1 }} onFocus={e => (e.target as HTMLInputElement).style.borderColor = C.red} onBlur={e => (e.target as HTMLInputElement).style.borderColor = C.border} />
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, phone, city, code, dealer..." style={{ ...inputStyle, flex: '0 1 320px', maxWidth: 320 }} onFocus={e => (e.target as HTMLInputElement).style.borderColor = C.red} onBlur={e => (e.target as HTMLInputElement).style.borderColor = C.border} />
+
+        <select
+          value={filterWelcomeBonus}
+          onChange={e => setFilterWelcomeBonus(e.target.value)}
+          style={{ padding: '9px 12px', borderRadius: 10, border: `1px solid ${filterWelcomeBonus !== 'all' ? C.red : C.border}`, background: C.bg, color: C.text, fontSize: 13, cursor: 'pointer', minWidth: 180, flexShrink: 0 }}
+        >
+          <option value="all">All Bonus</option>
+          <option value="welcome_back_bonus">Welcome Back Bonus</option>
+        </select>
+
+        <select
+          value={filterElectricianGroup}
+          onChange={e => setFilterElectricianGroup(e.target.value)}
+          style={{ padding: '9px 12px', borderRadius: 10, border: `1px solid ${filterElectricianGroup !== 'all' ? C.red : C.border}`, background: C.bg, color: C.text, fontSize: 13, cursor: 'pointer', minWidth: 170, flexShrink: 0 }}
+        >
+          <option value="all">All Electrician</option>
+          <option value="General Electrician">General Electrician</option>
+          <option value="Industrial Electrician">Industrial Electrician</option>
+          <option value="Residential Wiring">Residential Wiring</option>
+        </select>
+
+        <select
+          value={filterAppInstalled}
+          onChange={e => setFilterAppInstalled(e.target.value)}
+          style={{ padding: '9px 12px', borderRadius: 10, border: `1px solid ${filterAppInstalled !== 'all' ? C.red : C.border}`, background: C.bg, color: C.text, fontSize: 13, cursor: 'pointer', minWidth: 150, flexShrink: 0 }}
+        >
+          <option value="all">All App Status</option>
+          <option value="installed">App Installed</option>
+          <option value="not_installed">Not Installed</option>
+        </select>
 
         {/* Date Filter */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -806,8 +844,8 @@ export default function Electricians({ role }: ElectriciansProps) {
         )}
 
         {/* Active filter count badge */}
-        {(filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all' || filterAppInstalled !== 'all' || dateFilter !== 'all') && (
-          <button onClick={() => { setFilterTier('all'); setFilterStatus('all'); setFilterState('all'); setFilterCity('all'); setFilterCategory('all'); setFilterBank('all'); setFilterAppInstalled('all'); setDateFilter('all'); setCustomDateRange({ from: '', to: '' }); }}
+        {(filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all' || filterWelcomeBonus !== 'all' || filterElectricianGroup !== 'all' || filterAppInstalled !== 'all' || dateFilter !== 'all') && (
+          <button onClick={() => { setFilterTier('all'); setFilterStatus('all'); setFilterState('all'); setFilterCity('all'); setFilterCategory('all'); setFilterBank('all'); setFilterWelcomeBonus('all'); setFilterElectricianGroup('all'); setFilterAppInstalled('all'); setDateFilter('all'); setCustomDateRange({ from: '', to: '' }); }}
             style={{ padding: '8px 12px', borderRadius: 8, border: `1px solid ${C.red}`, background: '#FFF0F0', color: C.red, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4 }}>
             Clear Filters
           </button>
@@ -818,16 +856,16 @@ export default function Electricians({ role }: ElectriciansProps) {
           <button
             onClick={() => setShowFilterPopup(p => !p)}
             style={{
-              width: 38, height: 38, borderRadius: 10, border: `1.5px solid ${showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all' || filterAppInstalled !== 'all') ? C.red : C.border}`,
-              background: showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all' || filterAppInstalled !== 'all') ? '#FFF0F0' : C.card,
-              color: showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all' || filterAppInstalled !== 'all') ? C.red : C.muted,
+              width: 38, height: 38, borderRadius: 10, border: `1.5px solid ${showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all' || filterWelcomeBonus !== 'all' || filterElectricianGroup !== 'all' || filterAppInstalled !== 'all') ? C.red : C.border}`,
+              background: showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all' || filterWelcomeBonus !== 'all' || filterElectricianGroup !== 'all' || filterAppInstalled !== 'all') ? '#FFF0F0' : C.card,
+              color: showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all' || filterWelcomeBonus !== 'all' || filterElectricianGroup !== 'all' || filterAppInstalled !== 'all') ? C.red : C.muted,
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative',
             }}
           >
             <SlidersHorizontal size={17} />
-            {(filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all' || filterAppInstalled !== 'all') && (
+            {(filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all' || filterWelcomeBonus !== 'all' || filterElectricianGroup !== 'all' || filterAppInstalled !== 'all') && (
               <span style={{ position: 'absolute', top: -5, right: -5, width: 16, height: 16, borderRadius: '50%', background: C.red, color: 'white', fontSize: 9, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {[filterTier, filterStatus, filterState, filterCity, filterCategory, filterBank, filterAppInstalled].filter(f => f !== 'all').length}
+                {[filterTier, filterStatus, filterState, filterCity, filterCategory, filterBank, filterWelcomeBonus, filterElectricianGroup, filterAppInstalled].filter(f => f !== 'all').length}
               </span>
             )}
           </button>
@@ -858,6 +896,8 @@ export default function Electricians({ role }: ElectriciansProps) {
                     { label: 'City', value: filterCity, set: setFilterCity, options: [['all','All Cities'], ...uniqueCities.filter(c => c !== 'all').map(c => [c, c])] },
                     { label: 'Category', value: filterCategory, set: setFilterCategory, options: [['all','All Categories'], ...uniqueCategories.filter(c => c !== 'all').map(c => [c, c])] },
                     { label: 'Bank Account', value: filterBank, set: setFilterBank, options: [['all','All'],['linked','Linked'],['not_linked','Not Linked']] },
+                    { label: 'Bonus', value: filterWelcomeBonus, set: setFilterWelcomeBonus, options: [['all','All Bonus'],['welcome_back_bonus','Welcome Back Bonus']] },
+                    { label: 'Electrician', value: filterElectricianGroup, set: setFilterElectricianGroup, options: [['all','All Electrician'],['General Electrician','General Electrician'],['Industrial Electrician','Industrial Electrician'],['Residential Wiring','Residential Wiring']] },
                     { label: 'App Status', value: filterAppInstalled, set: setFilterAppInstalled, options: [['all','All'],['installed','App Installed'],['not_installed','Not Installed']] },
                   ].map(f => (
                     <div key={f.label}>
@@ -871,7 +911,7 @@ export default function Electricians({ role }: ElectriciansProps) {
                 </div>
                 {/* Footer */}
                 <div style={{ padding: '16px 24px', borderTop: `1px solid ${C.border}`, display: 'flex', gap: 10 }}>
-                  <button onClick={() => { setFilterTier('all'); setFilterStatus('all'); setFilterState('all'); setFilterCity('all'); setFilterCategory('all'); setFilterBank('all'); setFilterAppInstalled('all'); setDateFilter('all'); setCustomDateRange({ from: '', to: '' }); }}
+                  <button onClick={() => { setFilterTier('all'); setFilterStatus('all'); setFilterState('all'); setFilterCity('all'); setFilterCategory('all'); setFilterBank('all'); setFilterWelcomeBonus('all'); setFilterElectricianGroup('all'); setFilterAppInstalled('all'); setDateFilter('all'); setCustomDateRange({ from: '', to: '' }); }}
                     style={{ flex: 1, padding: '10px', borderRadius: 10, border: `1px solid ${C.border}`, background: C.bg, color: C.muted, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                     Reset All
                   </button>

@@ -704,7 +704,17 @@ export default function Dealers({ role }: DealersProps) {
 
       {/* Filters */}
       <div style={{ background: C.card, borderRadius: 14, padding: '14px 18px', border: `1px solid ${C.border}`, marginBottom: 18, display: 'flex', gap: 10, alignItems: 'center', position: 'relative' }}>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search dealer name, code, town, contact..." style={{ ...inputStyle, flex: 1 }} onFocus={e => (e.target as HTMLInputElement).style.borderColor = C.red} onBlur={e => (e.target as HTMLInputElement).style.borderColor = C.border} />
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search dealer name, code, town, contact..." style={{ ...inputStyle, flex: '1 1 280px', maxWidth: 420 }} onFocus={e => (e.target as HTMLInputElement).style.borderColor = C.red} onBlur={e => (e.target as HTMLInputElement).style.borderColor = C.border} />
+
+        <select
+          value={filterAppInstalled}
+          onChange={e => setFilterAppInstalled(e.target.value)}
+          style={{ padding: '9px 12px', borderRadius: 10, border: `1px solid ${filterAppInstalled !== 'all' ? C.red : C.border}`, background: C.bg, color: C.text, fontSize: 13, cursor: 'pointer', minWidth: 150, flexShrink: 0 }}
+        >
+          <option value="all">All App Status</option>
+          <option value="installed">App Installed</option>
+          <option value="not_installed">Not Installed</option>
+        </select>
 
         {/* Date Filter */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

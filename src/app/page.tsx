@@ -1,7 +1,7 @@
 'use client';
 import { lazy, Suspense, useEffect, useRef, useState, useTransition } from 'react';
 import Image from 'next/image';
-import { Search, Bell, LayoutDashboard, Activity, Bolt, Store, Package, Star, ScanLine, Gift, Tags, ChartColumn, ShieldCheck, AppWindow, UserCheck, Users, LogOut, FileSpreadsheet, Sun, Moon, QrCode, ArrowLeftRight, Percent, Image as ImageIcon, MessageCircle, FileText, ClipboardList, Play } from 'lucide-react';
+import { Search, Bell, LayoutDashboard, Activity, Bolt, Store, Package, Star, ScanLine, Gift, Tags, ChartColumn, ShieldCheck, AppWindow, UserCheck, Users, LogOut, FileSpreadsheet, Sun, Moon, QrCode, ArrowLeftRight, Percent, Image as ImageIcon, MessageCircle, FileText, ClipboardList, Play, Truck } from 'lucide-react';
 import { useTheme, useThemePalette } from '@/lib/theme';
 import { I } from '@/lib/iconMap';
 import Sidebar from '@/components/Shared/Sidebar';
@@ -26,6 +26,7 @@ const QRCodeGenerator    = lazy(() => import('@/components/QRManagement/QRCodeGe
 const GiftProducts       = lazy(() => import('@/components/GiftManagement/GiftProducts'));
 const GiftOrders         = lazy(() => import('@/components/GiftManagement/GiftOrders'));
 const ProductOrders      = lazy(() => import('@/components/Orders/ProductOrders'));
+const DeliveryTracker    = lazy(() => import('@/components/Orders/DeliveryTracker'));
 const NotificationsPage  = lazy(() => import('@/components/Engagement/Notifications'));
 const Banners            = lazy(() => import('@/components/Content/Banners'));
 const TransferPoints     = lazy(() => import('@/components/Financial/TransferPoints'));
@@ -60,6 +61,7 @@ const preloadPageChunk = (id: string) => {
     case 'gift-products': return import('@/components/GiftManagement/GiftProducts');
     case 'gift-orders': return import('@/components/GiftManagement/GiftOrders');
     case 'product-orders': return import('@/components/Orders/ProductOrders');
+    case 'delivery-tracker': return import('@/components/Orders/DeliveryTracker');
     case 'notifications': return import('@/components/Engagement/Notifications');
     case 'banners': return import('@/components/Content/Banners');
     case 'transfer-points': return import('@/components/Financial/TransferPoints');
@@ -90,9 +92,10 @@ const DEFAULT_PRELOAD_PAGES = [
   'qr-hub',
   'qr-codes',
   'qr-generator',
-   'gift-products',
+  'gift-products',
   'gift-orders',
   'product-orders',
+  'delivery-tracker',
   'transfer-points',
   'notifications',
   'reports',
@@ -173,6 +176,7 @@ const PAGE_LABELS: Record<string, { title: string; Icon: React.ElementType }> = 
   'gift-products': { title: 'Gift Products', Icon: Gift },
   'gift-orders': { title: 'Gift Orders', Icon: Gift },
   'product-orders': { title: 'Product Orders', Icon: Package },
+  'delivery-tracker': { title: 'Delivery Tracker', Icon: Truck },
   'redemption-requests': { title: 'Redemption Requests', Icon: ClipboardList },
   'pending-registrations': { title: 'Pending Registrations', Icon: UserCheck },
   'notifications': { title: 'Notifications', Icon: Bell },
@@ -556,6 +560,7 @@ export default function Home() {
       case 'gift-products': return <GiftProducts role={role} />;
       case 'gift-orders': return <GiftOrders role={role} />;
       case 'product-orders': return <ProductOrders role={role} />;
+      case 'delivery-tracker': return <DeliveryTracker role={role} />;
       case 'notifications': return <NotificationsPage role={role} />;
       case 'banners': return <Banners role={role} />;
       case 'transfer-points': return <TransferPoints role={role} />;

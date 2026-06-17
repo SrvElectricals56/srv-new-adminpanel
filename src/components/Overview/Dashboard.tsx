@@ -22,6 +22,7 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
   const C = useThemePalette();
   const [hovered, setHovered] = useState<number | null>(null);
   const [showFinanceChoice, setShowFinanceChoice] = useState(false);
+  const [showAppStatusChoice, setShowAppStatusChoice] = useState(false);
   const permissions = getPermissions(role);
 
   // Real data state
@@ -45,7 +46,25 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
   useEffect(() => {
     const load = async () => {
       try {
-        const [dashData, scansData, redemptionsData, scanStatsData, userStatsData, supportData, dealerStats, customerStats, counterboyStats, installedElectricians, notInstalledElectricians] = await Promise.all([
+        const [
+          dashData,
+          scansData,
+          redemptionsData,
+          scanStatsData,
+          userStatsData,
+          supportData,
+          dealerStats,
+          customerStats,
+          counterboyStats,
+          installedElectricians,
+          notInstalledElectricians,
+          installedDealers,
+          notInstalledDealers,
+          installedCustomers,
+          notInstalledCustomers,
+          installedCounterboys,
+          notInstalledCounterboys,
+        ] = await Promise.all([
           analyticsApi.getDashboard(),
           scanApi.getAll({ limit: '5' }),
           redemptionApi.getAll({ status: 'pending', limit: '5' }),
@@ -57,6 +76,12 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
           counterboyApi.getStats().catch(() => null),
           electricianApi.getAll({ page: '1', limit: '1', appInstalled: 'true' }).catch(() => null),
           electricianApi.getAll({ page: '1', limit: '1', appInstalled: 'false' }).catch(() => null),
+          dealerApi.getAll({ page: '1', limit: '1', appInstalled: 'true' }).catch(() => null),
+          dealerApi.getAll({ page: '1', limit: '1', appInstalled: 'false' }).catch(() => null),
+          appUserApi.getAll({ page: '1', limit: '1', appInstalled: 'true' }).catch(() => null),
+          appUserApi.getAll({ page: '1', limit: '1', appInstalled: 'false' }).catch(() => null),
+          counterboyApi.getAll({ page: '1', limit: '1', appInstalled: 'true' }).catch(() => null),
+          counterboyApi.getAll({ page: '1', limit: '1', appInstalled: 'false' }).catch(() => null),
         ]);
         setStats(dashData);
         setRoleCounts({
@@ -65,8 +90,16 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
           counterboys: Number(counterboyStats?.total ?? 0),
         });
         setAppInstallCounts({
-          installed: Number((installedElectricians as any)?.total ?? 0),
-          notInstalled: Number((notInstalledElectricians as any)?.total ?? 0),
+          installed:
+            Number((installedElectricians as any)?.total ?? 0) +
+            Number((installedDealers as any)?.total ?? 0) +
+            Number((installedCustomers as any)?.total ?? 0) +
+            Number((installedCounterboys as any)?.total ?? 0),
+          notInstalled:
+            Number((notInstalledElectricians as any)?.total ?? 0) +
+            Number((notInstalledDealers as any)?.total ?? 0) +
+            Number((notInstalledCustomers as any)?.total ?? 0) +
+            Number((notInstalledCounterboys as any)?.total ?? 0),
         });
         setRecentScans(Array.isArray(scansData) ? scansData : (scansData as any).data ?? []);
         setPendingRedemptions(Array.isArray(redemptionsData) ? redemptionsData : (redemptionsData as any).data ?? []);
@@ -124,7 +157,7 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
       up: true,
       color: '#1D4ED8',
       bg: '#E0F2FE',
-      navigateTo: 'electricians',
+      navigateTo: 'app-status-choice',
       installed: appInstallCounts.installed,
       notInstalled: appInstallCounts.notInstalled,
     },
@@ -148,6 +181,43 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
 
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
+      {/* App Status Role Choice Modal */}
+      {showAppStatusChoice && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.42)', backdropFilter: 'blur(5px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={() => setShowAppStatusChoice(false)}>
+          <div style={{ background: C.card, borderRadius: 20, width: 560, maxWidth: '95vw', boxShadow: '0 25px 70px rgba(0,0,0,0.22)', border: `1px solid ${C.border}` }} onClick={e => e.stopPropagation()}>
+            <div style={{ padding: '20px 24px', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 38, height: 38, borderRadius: 12, background: '#E0F2FE', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1D4ED8' }}><Smartphone size={19} /></div>
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 900, color: C.text }}>Open App Status</div>
+                  <div style={{ fontSize: 12, color: C.muted }}>Choose which user table you want to review</div>
+                </div>
+              </div>
+              <button onClick={() => setShowAppStatusChoice(false)} style={{ background: C.bg, border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.muted }}><X size={16} /></button>
+            </div>
+            <div style={{ padding: '20px 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              {[
+                { label: 'Electricians', Icon: Bolt, nav: 'electricians', color: '#1D4ED8', bg: '#EFF6FF' },
+                { label: 'Dealers', Icon: Store, nav: 'dealers', color: '#2563EB', bg: '#DBEAFE' },
+                { label: 'Counter Boys', Icon: UserCog, nav: 'counterboys', color: '#92400E', bg: '#FEF3C7' },
+                { label: 'Customers', Icon: UserRound, nav: 'app-users', color: '#0F766E', bg: '#CCFBF1' },
+              ].map(item => (
+                <button key={item.label} onClick={() => { setShowAppStatusChoice(false); onNavigate && onNavigate(item.nav); }}
+                  style={{ background: C.surface, border: `2px solid ${C.border}`, borderRadius: 14, padding: '18px 16px', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 12 }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = item.bg; (e.currentTarget as HTMLButtonElement).style.borderColor = item.color; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = C.surface; (e.currentTarget as HTMLButtonElement).style.borderColor = C.border; }}>
+                  <div style={{ width: 38, height: 38, borderRadius: 12, background: item.bg, color: item.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><item.Icon size={19} /></div>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 900, color: C.text }}>{item.label}</div>
+                    <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>View installed / not installed users</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Finance Choice Modal */}
       {showFinanceChoice && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={() => setShowFinanceChoice(false)}>
@@ -208,7 +278,7 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 24 }}>
         {statCards.map((s, i) => (
           <div key={i} style={{ background: C.card, borderRadius: 16, padding: '15px 16px', border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', transition: 'all 0.2s', cursor: 'pointer' }}
-            onClick={() => { if (s.navigateTo === 'finance-choice') { setShowFinanceChoice(true); return; } onNavigate && s.navigateTo && onNavigate(s.navigateTo, (s as any).subPage); }}
+            onClick={() => { if (s.navigateTo === 'finance-choice') { setShowFinanceChoice(true); return; } if (s.navigateTo === 'app-status-choice') { setShowAppStatusChoice(true); return; } onNavigate && s.navigateTo && onNavigate(s.navigateTo, (s as any).subPage); }}
             onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 8px 24px rgba(0,0,0,0.10)'; }}
             onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)'; }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
