@@ -11,6 +11,7 @@ import AlertDialog from '@/components/Shared/AlertDialog';
 import ExportModal from '@/components/Shared/ExportModal';
 import ImportModal from '@/components/Shared/ImportModal';
 import { ViewModeToggle, type ListViewMode } from '@/components/Shared/ViewModeToggle';
+import SearchableSelect from '@/components/Shared/SearchableSelect';
 import PasswordInputField from '@/components/Shared/PasswordInputField';
 import CustomerActivityPanel from '@/components/Shared/CustomerActivityPanel';
 import { I } from '@/lib/iconMap';
@@ -503,6 +504,7 @@ export default function Electricians({ role }: ElectriciansProps) {
       if (filterCategory !== 'all') params.subCategory = filterCategory;
       if (filterBank !== 'all') params.bankLinked = filterBank === 'linked' ? 'true' : 'false';
       if (filterAppInstalled !== 'all') params.appInstalled = filterAppInstalled === 'installed' ? 'true' : 'false';
+      if (filterWelcomeBonus === 'welcome_back_bonus') params.welcomeBonus = 'true';
 
       // Date filter → convert to dateFrom / dateTo
       if (dateFilter !== 'all') {
@@ -553,13 +555,13 @@ export default function Electricians({ role }: ElectriciansProps) {
     } finally {
       setLoading(false);
     }
-  }, [search, filterTier, filterStatus, filterState, filterCity, filterCategory, filterBank, filterAppInstalled, dateFilter, customDateRange]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [search, filterTier, filterStatus, filterState, filterCity, filterCategory, filterBank, filterWelcomeBonus, filterAppInstalled, dateFilter, customDateRange]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Re-fetch from page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
     loadData(1);
-  }, [search, filterTier, filterStatus, filterState, filterCity, filterCategory, filterBank, filterAppInstalled, dateFilter, customDateRange]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [search, filterTier, filterStatus, filterState, filterCity, filterCategory, filterBank, filterWelcomeBonus, filterAppInstalled, dateFilter, customDateRange]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Initial load
   useEffect(() => { loadData(1); loadTierCounts(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -608,12 +610,10 @@ export default function Electricians({ role }: ElectriciansProps) {
   const uniqueCategories = ['all', ...sanitizeOptions(allCategories)];
 
   const filtered = data.filter((electrician: any) => {
-    const bonusOk = filterWelcomeBonus === 'all'
-      || Number(electrician.totalPoints ?? 0) === 21;
     const groupOk = filterElectricianGroup === 'all'
       || String(electrician.subCategory ?? '').toLowerCase().includes(filterElectricianGroup.toLowerCase());
-    return bonusOk && groupOk;
-  }); // Server-side pagination handles main filters; bonus/group are local quick filters.
+    return groupOk;
+  }); // Welcome scans and main filters are server-side; group remains a local quick filter.
 
   const handleSave = async (form: Partial<Electrician>) => {
     if (!form.name?.trim() || !form.phone?.trim() || !form.city?.trim() || !form.state?.trim()) {
@@ -902,10 +902,16 @@ export default function Electricians({ role }: ElectriciansProps) {
                   ].map(f => (
                     <div key={f.label}>
                       <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>{f.label}</div>
-                      <select value={f.value} onChange={e => f.set(e.target.value)}
-                        style={{ width: '100%', padding: '9px 12px', border: `1.5px solid ${f.value !== 'all' ? C.red : C.border}`, borderRadius: 10, fontSize: 13, outline: 'none', background: C.inputBg, color: C.text, cursor: 'pointer' }}>
-                        {f.options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                      </select>
+                      {['State', 'City', 'Category'].includes(f.label) ? (
+                        <SearchableSelect value={f.value} placeholder={`All ${f.label === 'Category' ? 'Categories' : `${f.label}s`}`} minWidth={180}
+                          options={f.options.map(([value, label]) => ({ value, label }))}
+                          onChange={(next) => { f.set(next); if (f.label === 'State') setFilterCity('all'); }} />
+                      ) : (
+                        <select value={f.value} onChange={e => f.set(e.target.value)}
+                          style={{ width: '100%', padding: '9px 12px', border: `1.5px solid ${f.value !== 'all' ? C.red : C.border}`, borderRadius: 10, fontSize: 13, outline: 'none', background: C.inputBg, color: C.text, cursor: 'pointer' }}>
+                          {f.options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                        </select>
+                      )}
                     </div>
                   ))}
                 </div>

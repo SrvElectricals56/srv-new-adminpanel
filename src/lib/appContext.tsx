@@ -46,11 +46,11 @@ function mapProduct(p: any): Product {
   return {
     id: p.id,
     name: p.name,
-    sub: p.description || '',
+    sub: p.sub ?? p.description ?? '',
     category: p.category || '',
     subCategory: p.subCategory,
-    image: p.imageUrl || '',
-    points: p.pointsValue || 0,
+    image: p.image ?? p.imageUrl ?? '',
+    points: Number(p.points ?? p.pointsValue ?? 0),
     badge: p.badge || '',
     price: p.price ? `₹${p.price}` : '',
     mrp: p.mrp ? `₹${p.mrp}` : '',
@@ -76,7 +76,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [productsLoading, setProductsLoading] = useState(false);
 
   const hydrateProducts = useCallback(async () => {
-    const res = await productApi.getAll({ limit: '200' });
+    const res = await productApi.getAll({ limit: '1000', page: '1' });
     const items = Array.isArray(res) ? res : (res as any).data ?? [];
     const mapped = items.map(mapProduct);
     setProducts(mapped);

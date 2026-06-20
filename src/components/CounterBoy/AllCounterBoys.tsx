@@ -11,6 +11,7 @@ import AlertDialog from '@/components/Shared/AlertDialog';
 import ExportModal from '@/components/Shared/ExportModal';
 import ImportModal from '@/components/Shared/ImportModal';
 import { ViewModeToggle, type ListViewMode } from '@/components/Shared/ViewModeToggle';
+import SearchableSelect from '@/components/Shared/SearchableSelect';
 import PasswordInputField from '@/components/Shared/PasswordInputField';
 import { formatISTDate } from '@/lib/dateIST';
 
@@ -701,26 +702,8 @@ export default function AllCounterBoys({ role }: AllCounterBoysProps) {
           <option value="true">App Installed</option>
           <option value="false">Not Installed</option>
         </select>
-        <select
-          value={stateFilter}
-          onChange={e => { setStateFilter(e.target.value); setCityFilter(''); setPage(1); }}
-          style={{ padding: '9px 12px', borderRadius: 10, border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: 13, cursor: 'pointer' }}
-        >
-          <option value="">All States</option>
-          {allStates.map((state) => (
-            <option key={state} value={state}>{state}</option>
-          ))}
-        </select>
-        <select
-          value={cityFilter}
-          onChange={e => { setCityFilter(e.target.value); setPage(1); }}
-          style={{ padding: '9px 12px', borderRadius: 10, border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: 13, cursor: 'pointer' }}
-        >
-          <option value="">All Cities</option>
-          {allCities.map((city) => (
-            <option key={city} value={city}>{city}</option>
-          ))}
-        </select>
+        <SearchableSelect value={stateFilter} placeholder="All States" options={[{ value: '', label: 'All States' }, ...allStates.map(state => ({ value: state, label: state }))]} onChange={(next) => { setStateFilter(next); setCityFilter(''); setPage(1); }} />
+        <SearchableSelect value={cityFilter} placeholder="All Cities" options={[{ value: '', label: 'All Cities' }, ...allCities.map(city => ({ value: city, label: city }))]} onChange={(next) => { setCityFilter(next); setPage(1); }} />
         {(statusFilter || appStatusFilter || stateFilter || cityFilter) && (
           <button
             onClick={() => { setStatusFilter(''); setAppStatusFilter(''); setStateFilter(''); setCityFilter(''); setPage(1); }}

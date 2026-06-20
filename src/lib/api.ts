@@ -258,6 +258,10 @@ export const dealerApi = {
   },
   getStats: () =>
     request<{ total: number; active: number; pending: number; inactive: number }>('/dealers/stats'),
+  getSubDealers: (params?: Record<string, string>) => {
+    const q = params ? '?' + new URLSearchParams(params).toString() : '';
+    return request<{ data: any[]; total: number; page: number; limit: number }>(`/dealers/sub-dealers${q}`);
+  },
   getTop: (params?: Record<string, string>) => {
     const q = params ? '?' + new URLSearchParams(params).toString() : '';
     return request<any[]>(`/dealers/top${q}`);
@@ -331,7 +335,7 @@ export const qrCodeApi = {
     return request<{ data: any[]; total: number; page: number; limit: number; totalPages: number }>(`/qr-codes/hub${q}`);
   },
   getStats: () =>
-    request<{ total: number; active: number; used: number }>('/qr-codes/stats'),
+    request<{ total: number; active: number; used: number; scanned?: number }>('/qr-codes/stats'),
   generate: (body: { productId: string; quantity: number; batchId?: string }) =>
     request<any>('/qr-codes/generate', { method: 'POST', body: JSON.stringify(body) }),
   updateBatch: (batchId: string, body: { productId?: string; rewardPoints?: number }) =>

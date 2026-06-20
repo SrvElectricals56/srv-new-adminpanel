@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { AppWindow, Save, ToggleLeft, ToggleRight, Bell, Gift, Info, Headphones, Award, Medal, SlidersHorizontal, Link2, ThumbsUp, FileText, Image as ImageIcon } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
-import { electricianApi, dealerApi, settingsApi } from '@/lib/api';
+import { settingsApi, notificationApi, userSearchApi } from '@/lib/api';
 import AppIcons from './AppIcons';
 import { I } from '@/lib/iconMap';
 
@@ -126,6 +126,8 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [notificationSent, setNotificationSent] = useState(false);
+  const [notificationSending, setNotificationSending] = useState(false);
+  const [notificationError, setNotificationError] = useState('');
   const numberInputValue = (value: number | string | undefined) => value === 0 || value === '' || value == null ? '' : value;
   const parseNumberInput = (value: string) => value === '' ? '' : Number(value);
   const normalizeNumberConfig = (value: unknown) => typeof value === 'number' ? value : Number(value || 0);
@@ -203,45 +205,53 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
     }
     
     try {
-      const [elecRes, dealerRes] = await Promise.all([
-        electricianApi.getAll({ search: searchTerm, limit: '10' }),
-        dealerApi.getAll({ search: searchTerm, limit: '10' }),
-      ]);
-      const elecs = (Array.isArray(elecRes) ? elecRes : (elecRes as any).data ?? []).map((e: any) => ({
-        id: e.id, name: e.name, code: e.electricianCode ?? e.electrician_code ?? e.id,
-        phone: e.phone, type: 'Electrician', points: e.totalPoints ?? 0,
-        city: e.city, state: e.state, tier: e.tier,
-      }));
-      const dlrs = (Array.isArray(dealerRes) ? dealerRes : (dealerRes as any).data ?? []).map((d: any) => ({
-        id: d.id, name: d.name, code: d.dealerCode ?? d.dealer_code ?? d.id,
-        phone: d.phone, type: 'Dealer', electricians: d.electricianCount ?? 0,
-        town: d.town, state: d.state, tier: d.tier,
-      }));
-      setSearchResults([...elecs, ...dlrs]);
+      const users = await userSearchApi.search(searchTerm);
+      setSearchResults(users.map((user: any) => ({
+        ...user,
+        code: user.electricianCode ?? user.dealerCode ?? user.userCode ?? user.counterboyCode ?? user.id,
+        type: user.role === 'electrician' ? 'Electrician' : user.role === 'dealer' ? 'Dealer' : user.role === 'counterboy' ? 'Counterboy' : 'Customer',
+        points: user.totalPoints ?? 0,
+        electricians: user.electricianCount ?? 0,
+      })));
     } catch (err) {
       console.error('User search failed:', err);
       setSearchResults([]);
     }
   };
   
-  const handleSendNotification = () => {
-    // Here you would integrate with your push notification service (Firebase, OneSignal, etc.)
-    console.log('Sending notification:', {
-      target: notificationTarget,
-      title: notificationTitle,
-      message: notificationMessage,
-      user: selectedUser
-    });
-    
-    setNotificationSent(true);
-    setTimeout(() => {
-      setNotificationSent(false);
+  const handleSendNotification = async () => {
+    if (notificationSending || !notificationTitle.trim() || !notificationMessage.trim()) return;
+    setNotificationSending(true);
+    setNotificationError('');
+    try {
+      const targetRoleMap: Record<string, string | null> = {
+        all: null,
+        electricians: 'electrician',
+        dealers: 'dealer',
+        customers: 'user',
+        counterboys: 'counterboy',
+        specific: selectedUser?.role ?? null,
+      };
+      const created = await notificationApi.create({
+        title: notificationTitle.trim(),
+        message: notificationMessage.trim(),
+        targetRole: targetRoleMap[notificationTarget],
+        targetUserIds: notificationTarget === 'specific' && selectedUser ? [selectedUser.id] : null,
+        status: 'draft',
+      });
+      await notificationApi.send(created.id);
+      setNotificationSent(true);
       setNotificationTitle('');
       setNotificationMessage('');
       setSpecificUserSearch('');
       setSelectedUser(null);
       setSearchResults([]);
-    }, 3000);
+      setTimeout(() => setNotificationSent(false), 3000);
+    } catch (error: any) {
+      setNotificationError(error?.message || 'Notification could not be sent.');
+    } finally {
+      setNotificationSending(false);
+    }
   };
 
   const inp: React.CSSProperties = { width: '100%', padding: '10px 12px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 13, outline: 'none', background: C.inputBg, color: C.text, boxSizing: 'border-box' };
@@ -609,6 +619,9 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
                   <span style={{ fontSize: 14, color: '#065F46', fontWeight: 700 }}>Notification sent successfully!</span>
                 </div>
               )}
+              {notificationError && (
+                <div style={{ background: '#FEF2F2', borderRadius: 12, padding: '12px 18px', border: '1px solid #FECACA', fontSize: 13, color: '#B91C1C', fontWeight: 700 }}>{notificationError}</div>
+              )}
 
               <div style={{ display: 'grid', gap: 14 }}>
                 <div>
@@ -738,7 +751,7 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
 
                 <button 
                   onClick={handleSendNotification}
-                  disabled={!canEdit || !notificationTitle || !notificationMessage || (notificationTarget === 'specific' && !selectedUser)}
+                  disabled={!canEdit || notificationSending || !notificationTitle || !notificationMessage || (notificationTarget === 'specific' && !selectedUser)}
                   style={{ 
                     background: (!notificationTitle || !notificationMessage || (notificationTarget === 'specific' && !selectedUser)) 
                       ? C.muted 
@@ -756,7 +769,7 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
                     opacity: (!notificationTitle || !notificationMessage || (notificationTarget === 'specific' && !selectedUser)) ? 0.5 : 1
                   }}
                 >
-                  <Bell size={16} /> Send Notification
+                  <Bell size={16} /> {notificationSending ? 'Sending...' : 'Send Notification'}
                 </button>
 
                 <div style={{ padding: '14px', background: C.bg, borderRadius: 10, border: `1px solid ${C.border}`, fontSize: 12, color: C.muted }}>

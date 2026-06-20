@@ -1,13 +1,18 @@
 ﻿'use client';
-import { useState, useEffect } from 'react';
-import { QrCode, Download, RefreshCw, Bolt, Package, Gift, Copy, Check, FileText, FileSpreadsheet, Archive } from 'lucide-react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { QrCode, Download, RefreshCw, Bolt, Package, Gift, Copy, Check, FileText, FileSpreadsheet, Archive, Search, X } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { formatISTDateTime, formatISTDate, formatISTDateTimeFull } from '@/lib/dateIST';
 import type { AdminRole } from '@/lib/types';
 import { getPermissions } from '@/lib/permissions';
 import { productApi, qrCodeApi } from '@/lib/api';
-import QRCodeLib from 'qrcode';
 import AlertDialog from '@/components/Shared/AlertDialog';
+
+let qrCodeLibraryPromise: Promise<typeof import('qrcode')> | null = null;
+const loadQrCodeLibrary = () => {
+  if (!qrCodeLibraryPromise) qrCodeLibraryPromise = import('qrcode');
+  return qrCodeLibraryPromise;
+};
 
 interface QRCodeGeneratorProps {
   role: AdminRole;
@@ -27,21 +32,78 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
   const C = useThemePalette();
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [productsLoading, setProductsLoading] = useState(false);
+  const [productsLoaded, setProductsLoaded] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState('');
+  const [productSearch, setProductSearch] = useState('');
+  const [showProductResults, setShowProductResults] = useState(false);
+  const productSearchRef = useRef<HTMLDivElement>(null);
   const [qrCount, setQrCount] = useState<string | number>(1);
   const [generatedQRs, setGeneratedQRs] = useState<GeneratedQR[]>([]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [qrStats, setQrStats] = useState({ total: 0, scanned: 0, active: 0 });
   const [alertDialog, setAlertDialog] = useState<{ show: boolean; title: string; message: string; type: 'error' | 'success' | 'warning' | 'info' }>({ show: false, title: '', message: '', type: 'error' });
   const permissions = getPermissions(role);
 
   useEffect(() => {
-    productApi.getAll({ limit: '500' }).then(res => {
-      setProducts(Array.isArray(res) ? res : (res as any).data ?? []);
-    }).catch(console.error).finally(() => setLoading(false));
+    let mounted = true;
+    qrCodeApi.getStats().then((stats) => {
+      if (!mounted) return;
+      setQrStats({
+        total: Number(stats.total ?? 0),
+        scanned: Number(stats.scanned ?? stats.used ?? 0),
+        active: Number(stats.active ?? 0),
+      });
+    }).catch((error) => {
+      console.error(error);
+      if (mounted) setAlertDialog({ show: true, title: 'QR Data Load Failed', message: error?.message || 'Unable to load QR generator data.', type: 'error' });
+    }).finally(() => { if (mounted) setLoading(false); });
+    return () => { mounted = false; };
   }, []);
+
+  const loadProducts = useCallback(async () => {
+    if (productsLoaded || productsLoading) return;
+    setProductsLoading(true);
+    try {
+      const response = await productApi.getAll({ limit: '1000', page: '1' });
+      setProducts(Array.isArray(response) ? response : (response as any).data ?? []);
+      setProductsLoaded(true);
+    } catch (error: any) {
+      console.error(error);
+      setAlertDialog({ show: true, title: 'Product Load Failed', message: error?.message || 'Unable to load products.', type: 'error' });
+    } finally {
+      setProductsLoading(false);
+    }
+  }, [productsLoaded, productsLoading]);
+
+  useEffect(() => {
+    const closeOnOutsideClick = (event: MouseEvent | TouchEvent) => {
+      if (productSearchRef.current && !productSearchRef.current.contains(event.target as Node)) {
+        setShowProductResults(false);
+      }
+    };
+    document.addEventListener('mousedown', closeOnOutsideClick);
+    document.addEventListener('touchstart', closeOnOutsideClick);
+    return () => {
+      document.removeEventListener('mousedown', closeOnOutsideClick);
+      document.removeEventListener('touchstart', closeOnOutsideClick);
+    };
+  }, []);
+
+  const activeProducts = useMemo(() => products, [products]);
+
+  const matchingProducts = useMemo(() => {
+    const query = productSearch.trim().toLowerCase();
+    if (!query) return activeProducts;
+    return activeProducts.filter((product: any) =>
+      [product.name, product.sku, product.category]
+        .filter(Boolean)
+        .some(value => String(value).toLowerCase().includes(query)),
+    );
+  }, [activeProducts, productSearch]);
 
   const count = typeof qrCount === 'string' ? parseInt(qrCount) || 1 : qrCount;
 
@@ -65,14 +127,21 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
 
       const codes: any[] = (result as any).codes ?? [];
       const total = codes.length;
+      setQrStats(previous => ({
+        total: previous.total + total,
+        scanned: previous.scanned,
+        active: previous.active + total,
+      }));
 
       // For large batches: store only metadata (no QR images yet — generate on demand)
-      // For small batches (≤200): pre-generate QR images for immediate preview
-      const PREVIEW_LIMIT = 200;
+      // Keep the generator responsive: render only small batches immediately.
+      // Every code remains available in CSV/Excel/PDF/ZIP downloads.
+      const PREVIEW_LIMIT = 40;
       const BATCH = 50;
       const newQRs: GeneratedQR[] = [];
 
       if (total <= PREVIEW_LIMIT) {
+        const QRCodeLib = await loadQrCodeLibrary();
         // Small batch — generate all images for preview
         for (let i = 0; i < total; i += BATCH) {
           const slice = codes.slice(i, i + BATCH);
@@ -146,6 +215,7 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
   // ── Helper: ensure QR image exists, generate if missing ──────────
   const ensureQrData = async (qr: GeneratedQR): Promise<string> => {
     if (qr.qrData) return qr.qrData;
+    const QRCodeLib = await loadQrCodeLibrary();
     return QRCodeLib.toDataURL(qr.id, {
       width: 300, margin: 2,
       color: { dark: '#000000', light: '#FFFFFF' },
@@ -371,7 +441,7 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
         </div>
         <div style={{ textAlign: 'center', padding: '10px 20px', background: 'rgba(255,255,255,0.07)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)' }}>
           <div style={{ fontSize: 22, fontWeight: 900, color: '#10B981', display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
-            <Bolt size={20} /> {generatedQRs.filter(q => q.status === 'active').length}
+            <Bolt size={20} /> {loading ? '...' : qrStats.active.toLocaleString('en-IN')}
           </div>
           <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>Active QR Codes</div>
         </div>
@@ -392,16 +462,51 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
           )}
 
           <div style={{ marginBottom: 20 }}>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 8 }}>Select Product</label>
-            <select value={selectedProduct} onChange={e => setSelectedProduct(e.target.value)} disabled={!permissions.canEdit}
-              style={{ width: '100%', padding: '10px 12px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 13, outline: 'none', background: C.inputBg, color: C.text, cursor: permissions.canEdit ? 'pointer' : 'not-allowed' }}>
-              <option value="">-- Choose a product --</option>
-              {products.filter((p: any) => p.isActive ?? p.is_active ?? true).map((p: any) => (
-                <option key={p.id} value={String(p.id)}>
-                  {p.name} | SKU: {p.sku || 'N/A'} | {p.points} pts
-                </option>
-              ))}
-            </select>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 8 }}>Search Product</label>
+            <div ref={productSearchRef} style={{ position: 'relative' }}>
+              <Search size={16} style={{ position: 'absolute', left: 12, top: 12, color: C.muted, zIndex: 1 }} />
+              <input
+                value={productSearch}
+                onFocus={() => { setShowProductResults(true); void loadProducts(); }}
+                onChange={event => {
+                  setProductSearch(event.target.value);
+                  setSelectedProduct('');
+                  setShowProductResults(true);
+                }}
+                disabled={!permissions.canEdit}
+                placeholder={productsLoading ? 'Loading all products...' : 'Search by product name, SKU or category'}
+                style={{ width: '100%', boxSizing: 'border-box', padding: '10px 38px 10px 38px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 13, outline: 'none', background: C.inputBg, color: C.text }}
+              />
+              {!!productSearch && permissions.canEdit && (
+                <button type="button" aria-label="Clear selected product" onClick={() => { setProductSearch(''); setSelectedProduct(''); setShowProductResults(true); }} style={{ position: 'absolute', right: 8, top: 7, width: 28, height: 28, border: 'none', background: 'transparent', color: C.muted, cursor: 'pointer', display: 'grid', placeItems: 'center' }}><X size={15} /></button>
+              )}
+              {showProductResults && permissions.canEdit && (
+                <div style={{ position: 'absolute', zIndex: 30, top: 'calc(100% + 6px)', left: 0, right: 0, maxHeight: 280, overflowY: 'auto', background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, boxShadow: '0 14px 35px rgba(15,23,42,0.18)', padding: 6 }}>
+                  {productsLoading ? (
+                    <div style={{ padding: 16, textAlign: 'center', color: C.muted, fontSize: 12 }}>Loading all company products...</div>
+                  ) : matchingProducts.length ? matchingProducts.map((product: any) => (
+                    <button
+                      type="button"
+                      key={product.id}
+                      onClick={() => {
+                        setSelectedProduct(String(product.id));
+                        setProductSearch(product.name);
+                        setShowProductResults(false);
+                      }}
+                      style={{ width: '100%', border: 'none', borderRadius: 9, background: String(product.id) === selectedProduct ? '#EFF6FF' : 'transparent', padding: '10px 11px', textAlign: 'left', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', gap: 12 }}
+                    >
+                      <span style={{ minWidth: 0 }}>
+                        <span style={{ display: 'block', color: C.text, fontSize: 13, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{product.name}</span>
+                        <span style={{ display: 'block', color: C.muted, fontSize: 11, marginTop: 2 }}>SKU: {product.sku || 'N/A'} · {product.category || 'Uncategorized'}</span>
+                      </span>
+                      <span style={{ flexShrink: 0, color: '#166534', background: '#DCFCE7', borderRadius: 999, padding: '4px 8px', fontSize: 10, fontWeight: 900 }}>{Number(product.points ?? 0)} pts</span>
+                    </button>
+                  )) : (
+                    <div style={{ padding: 16, textAlign: 'center', color: C.muted, fontSize: 12 }}>No matching product found.</div>
+                  )}
+                </div>
+              )}
+            </div>
             {/* Selected product info */}
             {selectedProduct && (() => {
               const p = products.find((x: any) => String(x.id) === selectedProduct);
@@ -462,9 +567,9 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
           <div style={{ marginTop: 24, padding: 20, background: C.bg, borderRadius: 12 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 12 }}>Quick Stats</div>
             {[
-              { label: 'Total Generated', value: generatedQRs.length, color: C.text },
-              { label: 'Active', value: generatedQRs.filter(q => q.status === 'active').length, color: '#10B981' },
-              { label: 'Used', value: generatedQRs.filter(q => q.status === 'used').length, color: '#F59E0B' },
+              { label: 'Total QR Generated', value: loading ? '...' : qrStats.total.toLocaleString('en-IN'), color: '#1D4ED8' },
+              { label: 'Scanned by Users', value: loading ? '...' : qrStats.scanned.toLocaleString('en-IN'), color: '#7C3AED' },
+              { label: 'Remaining Active', value: loading ? '...' : qrStats.active.toLocaleString('en-IN'), color: '#059669' },
             ].map(s => (
               <div key={s.label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 6 }}>
                 <span style={{ color: C.muted }}>{s.label}:</span>

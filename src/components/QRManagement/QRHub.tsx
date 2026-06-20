@@ -97,6 +97,10 @@ export default function QRHub({ role }: QRHubProps) {
   });
 
   const getBatchLabel = (batch: QRBatch) => String(batch.batchNo ?? batch.batchId);
+  const getRedeemerLabel = (qr: any) => {
+    const details = [qr.lastScannedName, qr.lastScannedPhone, qr.lastScannedCode].filter(Boolean);
+    return details.length ? details.join(' · ') : qr.lastScannedBy ?? '';
+  };
 
   const loadHub = async (page = currentPage, search = searchTerm) => {
     setLoading(true);
@@ -156,9 +160,7 @@ export default function QRHub({ role }: QRHubProps) {
       'Generate Date': formatISTDateTime(qr.createdAt ?? batch.generatedDate),
       Point: qr.points ?? qr.rewardPoints ?? batch.points,
       Status: qr.isScanned ? 'Used' : 'Active',
-      'Used By': qr.lastScannedPhone || qr.lastScannedCode
-        ? `${qr.lastScannedPhone ?? ''}${qr.lastScannedPhone && qr.lastScannedCode ? ' · ' : ''}${qr.lastScannedCode ?? ''}`
-        : qr.lastScannedBy ?? '',
+      'Used By': getRedeemerLabel(qr),
       'Used Date': qr.lastScannedAt ? formatISTDateTime(qr.lastScannedAt) : '',
     }));
   };
@@ -406,9 +408,7 @@ export default function QRHub({ role }: QRHubProps) {
                         <td style={{ padding: '12px 14px', fontSize: 12, color: qr.isScanned ? '#B45309' : '#047857', fontWeight: 800 }}>{qr.isScanned ? 'Used' : 'Active'}</td>
                         <td style={{ padding: '12px 14px', fontSize: 12, color: C.text }}>{formatISTDateTime(qr.createdAt ?? selectedBatch.generatedDate)}</td>
                         <td style={{ padding: '12px 14px', fontSize: 12, color: C.muted }}>
-                          {qr.lastScannedPhone || qr.lastScannedCode
-                            ? `${qr.lastScannedPhone ?? ''}${qr.lastScannedPhone && qr.lastScannedCode ? ' · ' : ''}${qr.lastScannedCode ?? ''}`
-                            : qr.lastScannedBy ?? '-'}
+                          {getRedeemerLabel(qr) || '-'}
                         </td>
                       </tr>
                     ))}

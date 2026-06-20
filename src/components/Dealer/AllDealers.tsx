@@ -11,6 +11,7 @@ import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 import ExportModal from '@/components/Shared/ExportModal';
 import ImportModal from '@/components/Shared/ImportModal';
 import PasswordInputField from '@/components/Shared/PasswordInputField';
+import SearchableSelect from '@/components/Shared/SearchableSelect';
 import CustomerActivityPanel from '@/components/Shared/CustomerActivityPanel';
 import { I } from '@/lib/iconMap';
 import { formatISTDate } from '@/lib/dateIST';
@@ -788,10 +789,16 @@ export default function Dealers({ role }: DealersProps) {
                   ].map(f => (
                     <div key={f.label}>
                       <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>{f.label}</div>
-                      <select value={f.value} onChange={e => f.set(e.target.value)}
-                        style={{ width: '100%', padding: '9px 12px', border: `1.5px solid ${f.value !== 'all' ? C.red : C.border}`, borderRadius: 10, fontSize: 13, outline: 'none', background: C.inputBg, color: C.text, cursor: 'pointer' }}>
-                        {f.options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                      </select>
+                      {['State', 'City'].includes(f.label) ? (
+                        <SearchableSelect value={f.value} placeholder={`All ${f.label}s`} minWidth={180}
+                          options={f.options.map(([value, label]) => ({ value, label }))}
+                          onChange={(next) => { f.set(next); if (f.label === 'State') setFilterCity('all'); }} />
+                      ) : (
+                        <select value={f.value} onChange={e => f.set(e.target.value)}
+                          style={{ width: '100%', padding: '9px 12px', border: `1.5px solid ${f.value !== 'all' ? C.red : C.border}`, borderRadius: 10, fontSize: 13, outline: 'none', background: C.inputBg, color: C.text, cursor: 'pointer' }}>
+                          {f.options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                        </select>
+                      )}
                     </div>
                   ))}
                 </div>

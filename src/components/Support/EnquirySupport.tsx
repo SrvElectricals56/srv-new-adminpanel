@@ -1,9 +1,16 @@
 ﻿'use client';
 import { useState, useEffect } from 'react';
-import { MessageCircle, Search, Filter, Send, X, Clock, CheckCircle, AlertCircle, User, Phone, Mail, Calendar } from 'lucide-react';
+import { MessageCircle, Search, Filter, Send, X, Clock, CheckCircle, AlertCircle, User, Phone, Mail, Calendar, Image as ImageIcon } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { formatISTDateTime, formatISTDate, formatISTDateTimeFull } from '@/lib/dateIST';
 import { supportApi } from '@/lib/api';
+
+const API_ORIGIN = process.env.NEXT_PUBLIC_API_URL!.replace(/\/api\/v1\/?$/, '');
+const normalizePhotoUrl = (value?: string | null) => {
+  if (!value) return '';
+  if (/^(https?:|data:|blob:)/i.test(value)) return value;
+  return `${API_ORIGIN}${value.startsWith('/') ? '' : '/'}${value}`;
+};
 
 interface Enquiry {
   id: string;
@@ -12,6 +19,8 @@ interface Enquiry {
   userType: 'Electrician' | 'Dealer' | 'Customer' | 'Counterboy';
   userPhone: string;
   userEmail?: string;
+  photoUrl?: string;
+  photoUrls: string[];
   subject: string;
   message: string;
   category: 'Technical' | 'Account' | 'Points' | 'Redemption' | 'General' | 'Complaint';
@@ -40,6 +49,7 @@ export default function EnquirySupport() {
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [replyMessage, setReplyMessage] = useState('');
   const [showReplyBox, setShowReplyBox] = useState(false);
+  const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
 
   const loadEnquiries = async () => {
     try {
@@ -52,6 +62,11 @@ export default function EnquirySupport() {
         userType: e.userType ?? e.user_type ?? 'Unknown',
         userPhone: e.userPhone ?? e.user_phone ?? e.user?.phone ?? '',
         userEmail: e.userEmail ?? e.user_email ?? e.user?.email,
+        photoUrl: normalizePhotoUrl(e.photoUrl ?? e.photo_url),
+        photoUrls: [...new Set([
+          ...((Array.isArray(e.photoUrls) ? e.photoUrls : Array.isArray(e.photo_urls) ? e.photo_urls : []).map(normalizePhotoUrl)),
+          normalizePhotoUrl(e.photoUrl ?? e.photo_url),
+        ].filter(Boolean))],
         subject: e.subject ?? '',
         message: e.message ?? '',
         category: e.category ?? 'General',
@@ -252,6 +267,9 @@ export default function EnquirySupport() {
                     {enq.replies.length > 0 && (
                       <span style={{ fontSize: 10, color: '#3B82F6' }}>• {enq.replies.length} replies</span>
                     )}
+                    {enq.photoUrls.length > 0 && (
+                      <span style={{ fontSize: 10, color: '#7C3AED', display: 'inline-flex', alignItems: 'center', gap: 3 }}><ImageIcon size={11} /> {enq.photoUrls.length} photo{enq.photoUrls.length === 1 ? '' : 's'}</span>
+                    )}
                   </div>
                 </div>
               ))
@@ -327,6 +345,18 @@ export default function EnquirySupport() {
                 <div style={{ marginLeft: 46, padding: '12px 16px', background: C.bg, borderRadius: 10, fontSize: 13, color: C.text, lineHeight: 1.6 }}>
                   {selectedEnquiry.message}
                 </div>
+                {selectedEnquiry.photoUrls.length > 0 && (
+                  <div style={{ marginLeft: 46, marginTop: 12 }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: C.muted, marginBottom: 7, display: 'flex', alignItems: 'center', gap: 5 }}><ImageIcon size={13} /> USER ATTACHMENTS ({selectedEnquiry.photoUrls.length})</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(125px, 1fr))', gap: 9, maxWidth: 560 }}>
+                      {selectedEnquiry.photoUrls.map((photo, index) => (
+                        <button key={`${photo}-${index}`} type="button" onClick={() => setPreviewPhoto(photo)} style={{ display: 'block', height: 125, padding: 0, overflow: 'hidden', borderRadius: 12, border: `1px solid ${C.border}`, background: C.bg, cursor: 'zoom-in' }}>
+                          <img src={photo} alt={`User support attachment ${index + 1}`} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Replies */}
@@ -386,6 +416,12 @@ export default function EnquirySupport() {
           </div>
         )}
       </div>
+      {previewPhoto && (
+        <div role="dialog" aria-modal="true" aria-label="Support attachment preview" onClick={() => setPreviewPhoto(null)} style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(15,23,42,0.82)', display: 'grid', placeItems: 'center', padding: 24 }}>
+          <button type="button" aria-label="Close image preview" onClick={() => setPreviewPhoto(null)} style={{ position: 'fixed', right: 24, top: 20, width: 40, height: 40, border: 'none', borderRadius: 999, background: 'rgba(255,255,255,0.14)', color: '#fff', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><X size={22} /></button>
+          <img onClick={event => event.stopPropagation()} src={previewPhoto} alt="Full size support attachment" style={{ maxWidth: '92vw', maxHeight: '88vh', objectFit: 'contain', borderRadius: 12, background: '#fff', boxShadow: '0 24px 70px rgba(0,0,0,0.35)' }} />
+        </div>
+      )}
     </div>
   );
 }

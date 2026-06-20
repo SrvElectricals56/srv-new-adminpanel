@@ -16,6 +16,7 @@ const Dashboard          = lazy(() => import('@/components/Overview/Dashboard'))
 const ProActiveInactiveHub = lazy(() => import('@/components/Overview/ProActiveInactiveHub'));
 const ElectricianHub     = lazy(() => import('@/components/Electrician/ElectricianHub'));
 const DealerHub          = lazy(() => import('@/components/Dealer/DealerHub'));
+const SubDealers         = lazy(() => import('@/components/Dealer/SubDealers'));
 const AppUserHub         = lazy(() => import('@/components/AppUser/AppUserHub'));
 const CounterBoyHub      = lazy(() => import('@/components/CounterBoy/CounterBoyHub'));
 const Products           = lazy(() => import('@/components/Catalog/Products'));
@@ -51,6 +52,7 @@ const preloadPageChunk = (id: string) => {
     case 'pro-active-inactive': return import('@/components/Overview/ProActiveInactiveHub');
     case 'electricians': return import('@/components/Electrician/ElectricianHub');
     case 'dealers': return import('@/components/Dealer/DealerHub');
+    case 'sub-dealers': return import('@/components/Dealer/SubDealers');
     case 'app-users': return import('@/components/AppUser/AppUserHub');
     case 'counterboys': return import('@/components/CounterBoy/CounterBoyHub');
     case 'products': return import('@/components/Catalog/Products');
@@ -86,6 +88,7 @@ const DEFAULT_PRELOAD_PAGES = [
   'dashboard',
   'electricians',
   'dealers',
+  'sub-dealers',
   'app-users',
   'counterboys',
   'products',
@@ -165,6 +168,7 @@ const PAGE_LABELS: Record<string, { title: string; Icon: React.ElementType }> = 
   'pro-active-inactive': { title: 'Pro / Active / Inactive', Icon: Activity },
   electricians: { title: 'Electricians', Icon: Bolt },
   dealers: { title: 'Dealers', Icon: Store },
+  'sub-dealers': { title: 'Sub Dealers', Icon: Users },
   'app-users': { title: 'Customers', Icon: Users },
   counterboys: { title: 'Counter Boys', Icon: UserCheck },
   products: { title: 'Products', Icon: Package },
@@ -198,6 +202,7 @@ const PAGE_SEARCH_KEYWORDS: Record<string, string[]> = {
   dashboard: ['dashboard', 'home', 'overview', 'stats', 'analytics'],
   electricians: ['electrician', 'technician', 'worker', 'installer'],
   dealers: ['dealer', 'distributor', 'retailer', 'seller'],
+  'sub-dealers': ['sub dealer', 'unregistered dealer', 'dealer phone', 'srv dealer'],
   products: ['product', 'item', 'catalog', 'inventory', 'stock'],
   'points-config': ['points', 'config', 'rewards'],
   'qr-hub': ['qr hub', 'batch qr', 'qr batch', 'batch', 'quantity'],
@@ -544,6 +549,7 @@ export default function Home() {
       case 'pro-active-inactive': return <ProActiveInactiveHub />;
       case 'electricians': return <ElectricianHub role={role} defaultPage={electricianSubPage} onSubPageChange={(sp) => setElectricianSubPage(sp)} />;
       case 'dealers': return <DealerHub role={role} defaultPage={dealerSubPage} onSubPageChange={(sp) => setDealerSubPage(sp)} />;
+      case 'sub-dealers': return <SubDealers />;
       case 'app-users': return <AppUserHub key={`app-users-${appUserSubPage ?? 'users'}`} role={role} defaultPage={appUserSubPage} onSubPageChange={(sp) => setAppUserSubPage(sp)} />;
       case 'counterboys': return <CounterBoyHub key={`counterboys-${counterBoySubPage ?? 'counterboys'}`} role={role} defaultPage={counterBoySubPage} onSubPageChange={(sp) => setCounterBoySubPage(sp)} />;
       case 'products': return <Products role={role} initialCategory={productCategoryFilter} onCategoryUsed={() => setProductCategoryFilter(undefined)} />;

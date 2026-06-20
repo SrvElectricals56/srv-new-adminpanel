@@ -24,6 +24,7 @@ const NAV_GROUPS = [
     items: [
       { id: 'electricians', label: 'Electricians', Icon: Bolt },
       { id: 'dealers', label: 'Dealers', Icon: Store },
+      { id: 'sub-dealers', label: 'Sub Dealers', Icon: Users },
       { id: 'app-users', label: 'Customers', Icon: Users },
       { id: 'counterboys', label: 'Counter Boys', Icon: UserCheck },
     ]
