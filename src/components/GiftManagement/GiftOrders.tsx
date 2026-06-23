@@ -1,6 +1,6 @@
 ﻿'use client';
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, Bolt, Store, Eye, Check, X, Package, SlidersHorizontal, Search, User, FileSpreadsheet } from 'lucide-react';
+import { ShoppingBag, Bolt, Store, Eye, Check, X, Package, SlidersHorizontal, Search, User, FileSpreadsheet, Truck, Pencil } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { formatISTDateTime, formatISTDate, formatISTDateTimeFull } from '@/lib/dateIST';
 import { giftApi, redemptionApi } from '@/lib/api';
@@ -20,6 +20,13 @@ interface GiftOrder {
   pointsUsed: number;
   orderedAt: string;
   status: OrderStatus;
+  shippingAddress?: string;
+  trackingNumber?: string;
+  courierName?: string;
+  deliveryNotes?: string;
+  dispatchedAt?: string;
+  deliveredAt?: string;
+  rejectionReason?: string;
 }
 
 const STATUS_CONFIG: Record<OrderStatus, { bg: string; color: string; label: string }> = {
@@ -65,6 +72,10 @@ function OrderDetailModal({ order, onClose, C }: { order: GiftOrder; onClose: ()
               { label: 'Code', value: order.userCode },
               { label: 'Dealer', value: order.dealerName },
               { label: 'Ordered On', value: formatISTDate(order.orderedAt) },
+              { label: 'Courier', value: order.courierName || '—' },
+              { label: 'Tracking ID', value: order.trackingNumber || '—' },
+              { label: 'Dispatched', value: order.dispatchedAt ? formatISTDateTime(order.dispatchedAt) : '—' },
+              { label: 'Delivered', value: order.deliveredAt ? formatISTDateTime(order.deliveredAt) : '—' },
             ].map(item => (
               <div key={item.label} style={{ background: C.bg, borderRadius: 10, padding: '12px 14px' }}>
                 <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>{item.label}</div>
@@ -72,6 +83,75 @@ function OrderDetailModal({ order, onClose, C }: { order: GiftOrder; onClose: ()
               </div>
             ))}
           </div>
+          {(order.shippingAddress || order.deliveryNotes || order.rejectionReason) && (
+            <div style={{ marginTop: 14, display: 'grid', gap: 10 }}>
+              {order.shippingAddress && <div style={{ background: C.bg, borderRadius: 10, padding: '12px 14px', color: C.text, fontSize: 13 }}><strong>Shipping Address:</strong> {order.shippingAddress}</div>}
+              {order.deliveryNotes && <div style={{ background: '#F0FDF4', borderRadius: 10, padding: '12px 14px', color: '#166534', fontSize: 13, fontWeight: 700 }}>{order.deliveryNotes}</div>}
+              {order.rejectionReason && <div style={{ background: '#FEF2F2', borderRadius: 10, padding: '12px 14px', color: '#991B1B', fontSize: 13, fontWeight: 700 }}>Reject reason: {order.rejectionReason}</div>}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TrackingModal({ order, onClose, onSave, C }: { order: GiftOrder; onClose: () => void; onSave: (status: OrderStatus, data: { trackingNumber?: string; courierName?: string; deliveryNotes?: string; rejectionReason?: string }) => Promise<void>; C: any }) {
+  const [status, setStatus] = useState<OrderStatus>(order.status === 'pending' ? 'shipped' : order.status);
+  const [trackingNumber, setTrackingNumber] = useState(order.trackingNumber ?? '');
+  const [courierName, setCourierName] = useState(order.courierName ?? '');
+  const [deliveryNotes, setDeliveryNotes] = useState(order.deliveryNotes ?? '');
+  const [rejectionReason, setRejectionReason] = useState(order.rejectionReason ?? '');
+  const [saving, setSaving] = useState(false);
+  const inputStyle: React.CSSProperties = { width: '100%', boxSizing: 'border-box', padding: '10px 12px', border: `1.5px solid ${C.border}`, borderRadius: 10, background: C.inputBg, color: C.text, outline: 'none', fontSize: 13 };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={onClose}>
+      <div style={{ background: C.card, borderRadius: 20, width: 460, maxWidth: '95vw', boxShadow: '0 25px 70px rgba(0,0,0,0.25)', border: `1px solid ${C.border}` }} onClick={e => e.stopPropagation()}>
+        <div style={{ padding: '18px 22px', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: C.text }}>Update Gift Tracking</div>
+            <div style={{ fontSize: 12, color: C.muted, marginTop: 3 }}>{order.giftName} · {order.userName}</div>
+          </div>
+          <button onClick={onClose} style={{ background: C.bg, border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontSize: 16, color: C.muted }}>✕</button>
+        </div>
+        <div style={{ padding: 22, display: 'grid', gap: 14 }}>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 800, color: C.muted, textTransform: 'uppercase' }}>Status</label>
+            <select value={status} onChange={e => setStatus(e.target.value as OrderStatus)} style={{ ...inputStyle, marginTop: 6 }}>
+              <option value="approved">Approved</option>
+              <option value="shipped">Shipped / Dispatched</option>
+              <option value="delivered">Delivered</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </div>
+          {status !== 'rejected' ? (
+            <>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 800, color: C.muted, textTransform: 'uppercase' }}>Courier Name</label>
+                <input value={courierName} onChange={e => setCourierName(e.target.value)} placeholder="e.g. Delhivery, DTDC, Blue Dart" style={{ ...inputStyle, marginTop: 6 }} />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 800, color: C.muted, textTransform: 'uppercase' }}>Tracking ID</label>
+                <input value={trackingNumber} onChange={e => setTrackingNumber(e.target.value)} placeholder="Enter shipment/tracking id" style={{ ...inputStyle, marginTop: 6 }} />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 800, color: C.muted, textTransform: 'uppercase' }}>Delivery Notes</label>
+                <textarea value={deliveryNotes} onChange={e => setDeliveryNotes(e.target.value)} placeholder="Visible in app order tracking" style={{ ...inputStyle, marginTop: 6, minHeight: 78, resize: 'vertical' }} />
+              </div>
+            </>
+          ) : (
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 800, color: C.muted, textTransform: 'uppercase' }}>Reject Reason</label>
+              <textarea value={rejectionReason} onChange={e => setRejectionReason(e.target.value)} placeholder="Reason visible to user" style={{ ...inputStyle, marginTop: 6, minHeight: 90, resize: 'vertical' }} />
+            </div>
+          )}
+        </div>
+        <div style={{ padding: '0 22px 22px', display: 'flex', gap: 10 }}>
+          <button onClick={onClose} style={{ flex: 1, padding: '11px', borderRadius: 11, border: `1px solid ${C.border}`, background: C.bg, color: C.muted, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
+          <button disabled={saving} onClick={async () => { setSaving(true); try { await onSave(status, { trackingNumber, courierName, deliveryNotes, rejectionReason }); onClose(); } finally { setSaving(false); } }} style={{ flex: 1, padding: '11px', borderRadius: 11, border: 'none', background: 'linear-gradient(135deg, #7C3AED, #5B21B6)', color: 'white', fontSize: 13, fontWeight: 800, cursor: saving ? 'wait' : 'pointer' }}>
+            {saving ? 'Saving...' : 'Save Tracking'}
+          </button>
         </div>
       </div>
     </div>
@@ -91,6 +171,7 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
   const [selectedOrder, setSelectedOrder] = useState<GiftOrder | null>(null);
   const [showExport, setShowExport] = useState(false);
   const [showFilterPopup, setShowFilterPopup] = useState(false);
+  const [trackingOrder, setTrackingOrder] = useState<GiftOrder | null>(null);
   const [confirmState, setConfirmState] = useState<{ show: boolean; id: string; action: 'approve' | 'reject' }>({ show: false, id: '', action: 'approve' });
 
   const loadOrders = async () => {
@@ -109,6 +190,13 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
         pointsUsed: o.pointsUsed ?? o.points_used ?? 0,
         orderedAt: o.orderedAt ?? o.ordered_at ?? o.createdAt ?? new Date().toISOString(),
         status: o.status ?? 'pending',
+        shippingAddress: o.shippingAddress ?? o.shipping_address ?? '',
+        trackingNumber: o.trackingNumber ?? o.tracking_number ?? '',
+        courierName: o.courierName ?? o.courier_name ?? '',
+        deliveryNotes: o.deliveryNotes ?? o.delivery_notes ?? '',
+        dispatchedAt: o.dispatchedAt ?? o.dispatched_at ?? '',
+        deliveredAt: o.deliveredAt ?? o.delivered_at ?? '',
+        rejectionReason: o.rejectionReason ?? o.rejection_reason ?? '',
       })));
     } catch (err) {
       console.error('Failed to load gift orders:', err);
@@ -135,6 +223,16 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
     setConfirmState({ show: false, id: '', action: 'approve' });
   };
 
+  const saveTracking = async (order: GiftOrder, status: OrderStatus, data: { trackingNumber?: string; courierName?: string; deliveryNotes?: string; rejectionReason?: string }) => {
+    await giftApi.updateOrderStatus(order.id, status, {
+      trackingNumber: data.trackingNumber?.trim() || undefined,
+      courierName: data.courierName?.trim() || undefined,
+      deliveryNotes: data.deliveryNotes?.trim() || undefined,
+      rejectionReason: data.rejectionReason?.trim() || undefined,
+    });
+    await loadOrders();
+  };
+
   const activeFilters = [filterStatus !== 'all'].filter(Boolean).length;
   const inputStyle: React.CSSProperties = { padding: '8px 12px', border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 13, outline: 'none', background: C.inputBg, color: C.text };
 
@@ -142,7 +240,8 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
       <ConfirmDialog show={confirmState.show} title={confirmState.action === 'approve' ? 'Approve Order' : 'Reject Order'} message={`Are you sure you want to ${confirmState.action} this gift order?`} onConfirm={confirmAction} onCancel={() => setConfirmState({ show: false, id: '', action: 'approve' })} type={confirmState.action === 'approve' ? 'success' : 'danger'} />
       {selectedOrder && <OrderDetailModal order={selectedOrder} onClose={() => setSelectedOrder(null)} C={C} />}
-      <ExportModal show={showExport} onClose={() => setShowExport(false)} title={`${tab.charAt(0).toUpperCase() + tab.slice(1)} Gift Orders`} fileName={`gift-orders-${tab}`} getData={() => filtered.map(o => ({ ID: o.id, Type: o.type, Name: o.userName, Code: o.userCode, Dealer: o.dealerName, Gift: o.giftName, Points: o.pointsUsed, Date: o.orderedAt, Status: o.status }))} />
+      {trackingOrder && <TrackingModal order={trackingOrder} onClose={() => setTrackingOrder(null)} onSave={(status, data) => saveTracking(trackingOrder, status, data)} C={C} />}
+      <ExportModal show={showExport} onClose={() => setShowExport(false)} title={`${tab.charAt(0).toUpperCase() + tab.slice(1)} Gift Orders`} fileName={`gift-orders-${tab}`} getData={() => filtered.map(o => ({ ID: o.id, Type: o.type, Name: o.userName, Code: o.userCode, Dealer: o.dealerName, Gift: o.giftName, Points: o.pointsUsed, Date: o.orderedAt, Status: o.status, Courier: o.courierName, TrackingID: o.trackingNumber }))} />
 
       {/* Header */}
       <div style={{ background: 'linear-gradient(135deg, #7C3AED, #5B21B6)', borderRadius: 18, padding: '22px 28px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 8px 24px rgba(124,58,237,0.25)' }}>
@@ -237,7 +336,7 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
             {filtered.map(order => {
               const s = STATUS_CONFIG[order.status];
               return (
-                <tr key={order.id} style={{ borderBottom: `1px solid ${C.border}`, transition: 'background 0.2s' }}
+                <tr key={order.id} onClick={event => { if (!(event.target as HTMLElement).closest('button,select,input,a,textarea')) setSelectedOrder(order); }} style={{ borderBottom: `1px solid ${C.border}`, transition: 'background 0.2s', cursor: 'pointer' }}
                   onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = C.bg}
                   onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}>
                   <td style={{ padding: '14px 16px', fontSize: 13, fontWeight: 800, color: C.muted }}>{order.id}</td>
@@ -271,6 +370,9 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
                   <td style={{ padding: '14px 16px' }}>
                     <div style={{ display: 'flex', gap: 6 }}>
                       <button onClick={() => setSelectedOrder(order)} title="View" style={{ background: '#EFF6FF', color: '#1D4ED8', border: 'none', borderRadius: 7, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Eye size={14} /></button>
+                      {canEdit && (
+                        <button onClick={() => setTrackingOrder(order)} title="Edit tracking" style={{ background: '#EDE9FE', color: '#6D28D9', border: 'none', borderRadius: 7, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Truck size={14} /></button>
+                      )}
                       {canEdit && order.status === 'pending' && (
                         <>
                           <button onClick={() => setConfirmState({ show: true, id: order.id, action: 'approve' })} title="Approve" style={{ background: '#D1FAE5', color: '#065F46', border: 'none', borderRadius: 7, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Check size={14} /></button>

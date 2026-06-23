@@ -236,6 +236,10 @@ export const electricianApi = {
   getDistinctCategories: () =>
     request<{ categories: string[] }>('/electricians/distinct-categories'),
   getOne: (id: string) => request<any>(`/electricians/${id}`),
+  getScans: (id: string, params?: Record<string, string>) => {
+    const q = params ? '?' + new URLSearchParams(params).toString() : '';
+    return request<{ data: any[]; total: number; page: number; limit: number }>(`/electricians/${id}/scans${q}`);
+  },
   getActivity: (id: string) => request<any>(`/electricians/${id}/activity`),
   create: (body: object) => request<any>('/electricians', { method: 'POST', body: JSON.stringify(body) }),
   update: (id: string, body: object) => request<any>(`/electricians/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
@@ -262,6 +266,8 @@ export const dealerApi = {
     const q = params ? '?' + new URLSearchParams(params).toString() : '';
     return request<{ data: any[]; total: number; page: number; limit: number }>(`/dealers/sub-dealers${q}`);
   },
+  getSubDealerElectricians: (id: string) =>
+    request<{ data: any[]; total: number; phone: string }>(`/dealers/sub-dealers/${id}/electricians`),
   getTop: (params?: Record<string, string>) => {
     const q = params ? '?' + new URLSearchParams(params).toString() : '';
     return request<any[]>(`/dealers/top${q}`);
@@ -451,8 +457,8 @@ export const giftApi = {
     const q = params ? '?' + new URLSearchParams(params).toString() : '';
     return request<{ data: any[]; total: number }>(`/gifts/orders${q}`);
   },
-  updateOrderStatus: (id: string, status: string) =>
-    request<any>(`/gifts/orders/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  updateOrderStatus: (id: string, status: string, extra?: { rejectionReason?: string; trackingNumber?: string; courierName?: string; deliveryNotes?: string; processedBy?: string }) =>
+    request<any>(`/gifts/orders/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status, ...(extra ?? {}) }) }),
 };
 
 // ─── Product Orders ────────────────────────────────────────────────────────────
@@ -519,6 +525,7 @@ export const supportApi = {
 // ─── Settings ─────────────────────────────────────────────────────────────────
 export const settingsApi = {
   getAll: () => request<any[]>('/settings'),
+  getRatingHistory: () => request<any>('/settings/rate-us/history'),
   update: (key: string, value: string) =>
     request<any>(`/settings/${key}`, { method: 'PUT', body: JSON.stringify({ value }) }),
   setPointsConfig: (body: object) =>

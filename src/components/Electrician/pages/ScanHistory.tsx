@@ -173,7 +173,7 @@ export default function ElectricianScanHistory() {
                       {scan.mode === 'single' ? 'Single' : 'Multi'}
                     </span>
                   </td>
-                  <td style={{ padding: '13px 16px', textAlign: 'center', fontSize: 14, fontWeight: 700, color: '#F59E0B' }}>+{scan.points}</td>
+                  <td style={{ padding: '13px 16px', textAlign: 'center', fontSize: 14, fontWeight: 700, color: '#16A34A' }}>+{scan.points}</td>
                   <td style={{ padding: '13px 16px', fontSize: 12, color: C.muted }}>{formatISTDateTime(scan.scannedAt)}</td>
                   <td style={{ padding: '13px 16px', fontSize: 12, color: C.muted }}>{scan.location || '—'}</td>
                 </tr>

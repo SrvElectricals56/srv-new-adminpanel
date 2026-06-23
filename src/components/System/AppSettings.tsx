@@ -117,6 +117,9 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [activeSection, setActiveSection] = useState('app');
+  const [ratingHistory, setRatingHistory] = useState<any[]>([]);
+  const [ratingSummary, setRatingSummary] = useState<Record<string, number>>({});
+  const [ratingsLoading, setRatingsLoading] = useState(false);
   
   // Push Notification State
   const [notificationTarget, setNotificationTarget] = useState('all');
@@ -156,6 +159,27 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
       });
     }).catch(console.error).finally(() => setLoading(false));
   }, []);
+
+  const loadRatingHistory = async () => {
+    setRatingsLoading(true);
+    try {
+      const res = await settingsApi.getRatingHistory();
+      setRatingHistory(res?.data ?? []);
+      setRatingSummary(res?.summary ?? {});
+    } catch (err) {
+      console.error('Rating history failed:', err);
+      setRatingHistory([]);
+      setRatingSummary({});
+    } finally {
+      setRatingsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeSection === 'rateus') {
+      loadRatingHistory();
+    }
+  }, [activeSection]);
 
   const f = (k: keyof AppConfig, v: any) => setConfig(p => ({ ...p, [k]: v }));
 
@@ -532,6 +556,70 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
                         Rate Now
                       </div>
                     </div>
+                  </div>
+                </div>
+
+                <div style={{ padding: 16, background: C.bg, borderRadius: 12, border: `1px solid ${C.border}` }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
+                    <div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: C.text }}>User Rating History</div>
+                      <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>See who rated the app and how many stars they gave.</div>
+                    </div>
+                    <button
+                      onClick={loadRatingHistory}
+                      disabled={ratingsLoading}
+                      style={{ padding: '8px 13px', borderRadius: 9, border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: 12, fontWeight: 700, cursor: ratingsLoading ? 'not-allowed' : 'pointer' }}
+                    >
+                      {ratingsLoading ? 'Loading...' : 'Refresh'}
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(80px, 1fr))', gap: 10, marginBottom: 14 }}>
+                    {[5, 4, 3, 2, 1].map((star) => (
+                      <div key={star} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: 12, textAlign: 'center' }}>
+                        <div style={{ fontSize: 18, fontWeight: 900, color: '#F59E0B' }}>{ratingSummary[String(star)] ?? ratingSummary[star] ?? 0}</div>
+                        <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, marginTop: 2 }}>{star} Star</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{ overflowX: 'auto', border: `1px solid ${C.border}`, borderRadius: 10, background: C.card }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ background: C.surface, borderBottom: `1px solid ${C.border}` }}>
+                          {['User', 'Role', 'Rating', 'Review', 'Updated'].map((h) => (
+                            <th key={h} style={{ padding: '10px 12px', textAlign: 'left', fontSize: 11, fontWeight: 800, color: C.muted, textTransform: 'uppercase' }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {ratingHistory.map((item) => (
+                          <tr key={`${item.userId}-${item.updatedAt}`} style={{ borderBottom: `1px solid ${C.border}` }}>
+                            <td style={{ padding: '11px 12px' }}>
+                              <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{item.userName || 'Unknown User'}</div>
+                              <div style={{ fontSize: 11, color: C.muted }}>{item.phone || '—'} {item.code ? `• ${item.code}` : ''}</div>
+                            </td>
+                            <td style={{ padding: '11px 12px', fontSize: 12, color: C.muted, textTransform: 'capitalize' }}>{item.userRole || '—'}</td>
+                            <td style={{ padding: '11px 12px', whiteSpace: 'nowrap' }}>
+                              <span style={{ color: '#F59E0B', fontWeight: 900 }}>{'★'.repeat(Number(item.rating || 0))}</span>
+                              <span style={{ color: C.muted, fontSize: 12, marginLeft: 6 }}>{item.rating}/5</span>
+                            </td>
+                            <td style={{ padding: '11px 12px', fontSize: 12, color: C.text, maxWidth: 320 }}>{item.review || '—'}</td>
+                            <td style={{ padding: '11px 12px', fontSize: 12, color: C.muted, whiteSpace: 'nowrap' }}>{item.updatedAt ? new Date(item.updatedAt).toLocaleString('en-IN') : '—'}</td>
+                          </tr>
+                        ))}
+                        {!ratingsLoading && ratingHistory.length === 0 && (
+                          <tr>
+                            <td colSpan={5} style={{ padding: 24, textAlign: 'center', color: C.muted, fontSize: 13 }}>No ratings submitted yet.</td>
+                          </tr>
+                        )}
+                        {ratingsLoading && (
+                          <tr>
+                            <td colSpan={5} style={{ padding: 24, textAlign: 'center', color: C.muted, fontSize: 13 }}>Loading rating history...</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
 

@@ -718,7 +718,8 @@ export default function AllAppUsers({ role }: AllAppUsersProps) {
             return (
               <div
                 key={user.id}
-                style={{ background: C.card, borderRadius: 18, padding: 20, border: `1px solid ${C.border}`, boxShadow: '0 2px 10px rgba(0,0,0,0.04)', transition: 'all 0.2s' }}
+                style={{ background: C.card, borderRadius: 18, padding: 20, border: `1px solid ${C.border}`, boxShadow: '0 2px 10px rgba(0,0,0,0.04)', transition: 'all 0.2s', cursor: 'pointer' }}
+                onClick={event => { if (!(event.target as HTMLElement).closest('button,select,input,a')) void loadOne(user.id, 'view'); }}
                 onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-3px)'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 12px 30px rgba(0,0,0,0.1)'; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 2px 10px rgba(0,0,0,0.04)'; }}
               >
@@ -741,7 +742,7 @@ export default function AllAppUsers({ role }: AllAppUsersProps) {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
                   <div style={{ background: C.bg, borderRadius: 10, padding: '10px 12px' }}>
                     <div style={{ fontSize: 11, color: C.muted }}>Points</div>
-                    <div style={{ fontSize: 16, fontWeight: 800, color: '#F59E0B' }}>{(user.totalPoints ?? 0).toLocaleString('en-IN')}</div>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: '#16A34A' }}>{(user.totalPoints ?? 0).toLocaleString('en-IN')}</div>
                   </div>
                   <div style={{ background: C.bg, borderRadius: 10, padding: '10px 12px' }}>
                     <div style={{ fontSize: 11, color: C.muted }}>Wallet</div>
@@ -751,9 +752,9 @@ export default function AllAppUsers({ role }: AllAppUsersProps) {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ fontSize: 12, color: C.muted }}>{user.phone}</div>
                   <div style={{ display: 'flex', gap: 6 }}>
-                    <button onClick={() => loadOne(user.id, 'view')} style={{ background: '#EFF6FF', color: '#1D4ED8', border: 'none', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>View</button>
-                    {canEdit && <button onClick={() => loadOne(user.id, 'edit')} style={{ background: '#FFF7ED', color: '#C2410C', border: 'none', borderRadius: 8, padding: '6px 11px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Edit</button>}
-                    {canDelete && <button onClick={() => { setDeleteTarget(user); setConfirmDelete(true); }} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 8, padding: '6px 8px', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Trash2 size={13} /></button>}
+                    <button onClick={(event) => { event.stopPropagation(); loadOne(user.id, 'view'); }} style={{ background: '#EFF6FF', color: '#1D4ED8', border: 'none', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>View</button>
+                    {canEdit && <button onClick={(event) => { event.stopPropagation(); loadOne(user.id, 'edit'); }} style={{ background: '#FFF7ED', color: '#C2410C', border: 'none', borderRadius: 8, padding: '6px 11px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Edit</button>}
+                    {canDelete && <button onClick={(event) => { event.stopPropagation(); setDeleteTarget(user); setConfirmDelete(true); }} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 8, padding: '6px 8px', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Trash2 size={13} /></button>}
                   </div>
                 </div>
               </div>
@@ -778,7 +779,7 @@ export default function AllAppUsers({ role }: AllAppUsersProps) {
                 const status = STATUS_CONFIG[user.status] ?? STATUS_CONFIG.pending;
                 const tier = TIER_CONFIG[user.tier] ?? TIER_CONFIG.Silver;
                 return (
-                  <tr key={user.id} style={{ borderBottom: `1px solid ${C.border}`, background: index % 2 === 0 ? C.card : C.bg }}>
+                  <tr key={user.id} onClick={event => { if (!(event.target as HTMLElement).closest('button,select,input,a')) void loadOne(user.id, 'view'); }} style={{ borderBottom: `1px solid ${C.border}`, background: index % 2 === 0 ? C.card : C.bg, cursor: 'pointer' }}>
                     <td style={{ padding: '14px 16px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <div style={{ width: 36, height: 36, borderRadius: 10, background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 700, color: '#3B82F6', overflow: 'hidden', flexShrink: 0 }}>
@@ -795,7 +796,7 @@ export default function AllAppUsers({ role }: AllAppUsersProps) {
                     <td style={{ padding: '14px 16px' }}>
                       <span style={{ background: tier.bg, color: tier.color, fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 999 }}>{user.tier}</span>
                     </td>
-                    <td style={{ padding: '14px 16px', fontSize: 13, fontWeight: 700, color: '#F59E0B' }}>{(user.totalPoints ?? 0).toLocaleString('en-IN')}</td>
+                    <td style={{ padding: '14px 16px', fontSize: 13, fontWeight: 700, color: '#16A34A' }}>{(user.totalPoints ?? 0).toLocaleString('en-IN')}</td>
                     <td style={{ padding: '14px 16px', fontSize: 13, fontWeight: 700, color: '#10B981' }}>Rs {(user.walletBalance ?? 0).toLocaleString('en-IN')}</td>
                     <td style={{ padding: '14px 16px' }}>
                       <span style={{ background: user.appInstalled ? '#D1FAE5' : '#FEF3C7', color: user.appInstalled ? '#065F46' : '#92400E', fontSize: 11, fontWeight: 800, padding: '4px 10px', borderRadius: 999, whiteSpace: 'nowrap' }}>

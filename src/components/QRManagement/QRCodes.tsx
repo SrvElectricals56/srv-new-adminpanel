@@ -1,6 +1,6 @@
 ﻿'use client';
-import { useState, useEffect } from 'react';
-import { QrCode, Download, Eye, Trash2, Search, Filter, Calendar, Package, Copy, Check } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { QrCode, Download, Eye, Trash2, Search, Filter, Calendar, Package, Copy, Check, Share2 } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { formatISTDateTime, formatISTDate, formatISTDateTimeFull } from '@/lib/dateIST';
 import type { AdminRole } from '@/lib/types';
@@ -31,6 +31,37 @@ interface QRCodeItem {
   lastScannedPhone?: string;
   lastScannedCode?: string;
   qrImage: string;
+}
+
+function LazyQrImage({ value, alt, size, borderColor, onClick }: { value: string; alt: string; size: number; borderColor: string; onClick?: () => void }) {
+  const hostRef = useRef<HTMLDivElement | null>(null);
+  const [visible, setVisible] = useState(size >= 200);
+  const [src, setSrc] = useState('');
+
+  useEffect(() => {
+    if (visible || !hostRef.current) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setVisible(true);
+        observer.disconnect();
+      }
+    }, { rootMargin: '180px' });
+    observer.observe(hostRef.current);
+    return () => observer.disconnect();
+  }, [visible]);
+
+  useEffect(() => {
+    if (!visible || src) return;
+    let active = true;
+    void QRCodeLib.toDataURL(value, { width: Math.max(300, size), margin: 2, color: { dark: '#000000', light: '#FFFFFF' }, errorCorrectionLevel: 'H' })
+      .then(dataUrl => { if (active) setSrc(dataUrl); })
+      .catch(() => { if (active) setSrc(''); });
+    return () => { active = false; };
+  }, [size, src, value, visible]);
+
+  return <div ref={hostRef} onClick={onClick} style={{ width: size, height: size, borderRadius: 8, border: `2px solid ${borderColor}`, cursor: onClick ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FFFFFF', overflow: 'hidden' }}>
+    {src ? <img src={src} alt={alt} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : <QrCode size={Math.min(28, size / 2)} color="#94A3B8" />}
+  </div>;
 }
 
 // Generate REAL scannable QR code
@@ -126,16 +157,8 @@ export default function QRCodes({ role }: QRCodesProps) {
       const total = Array.isArray(res) ? data.length : (res as any).total ?? data.length;
       setTotalCount(total);
 
-      const qrCodesWithImages = await Promise.all(
-        data.map(async (qr: any) => {
-          // Generate QR image from the code string (not stored in DB anymore)
+      const qrCodesWithImages = data.map((qr: any) => {
           const codeStr = qr.code ?? qr.qrId ?? String(qr.id);
-          const qrImage = await QRCodeLib.toDataURL(codeStr, {
-            width: 300, margin: 2,
-            color: { dark: '#000000', light: '#FFFFFF' },
-            errorCorrectionLevel: 'H',
-          }).catch(() => '');
-
           const item: QRCodeItem = {
             id: String(qr.id),
             qrId: codeStr,
@@ -151,11 +174,10 @@ export default function QRCodes({ role }: QRCodesProps) {
             usedBy: qr.lastScannedBy ?? qr.usedBy,
             lastScannedPhone: qr.lastScannedPhone,
             lastScannedCode: qr.lastScannedCode,
-            qrImage,
+            qrImage: '',
           };
           return item;
-        })
-      );
+        });
       setQRCodes(qrCodesWithImages);
     } catch (err) {
       console.error('Failed to load QR codes:', err);
@@ -170,7 +192,7 @@ export default function QRCodes({ role }: QRCodesProps) {
     loadQRCodes(1);
   }, [searchTerm, filterStatus]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => { loadQRCodes(1); loadStats(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { loadStats(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filteredQRCodes = qrCodes; // server-side filtering
 
@@ -194,11 +216,39 @@ export default function QRCodes({ role }: QRCodesProps) {
     }
   };
 
-  const handleDownloadQR = (qr: QRCodeItem) => {
+  const handleDownloadQR = async (qr: QRCodeItem) => {
+    const qrImage = qr.qrImage || await QRCodeLib.toDataURL(qr.qrId, { width: 600, margin: 2, errorCorrectionLevel: 'H' });
     const link = document.createElement('a');
-    link.href = qr.qrImage;
+    link.href = qrImage;
     link.download = `${qr.qrId}.png`;
     link.click();
+  };
+
+  const handleShareQR = async (qr: QRCodeItem) => {
+    const qrImage = qr.qrImage || await QRCodeLib.toDataURL(qr.qrId, { width: 600, margin: 2, errorCorrectionLevel: 'H' });
+    const message = `SRV QR Code: ${qr.qrId}\nProduct: ${qr.productName}`;
+
+    try {
+      const imageResponse = await fetch(qrImage);
+      const imageBlob = await imageResponse.blob();
+      const imageFile = new File([imageBlob], `${qr.qrId}.png`, { type: imageBlob.type || 'image/png' });
+      const shareData = { title: 'SRV QR Code', text: message, files: [imageFile] };
+
+      if (navigator.share && (!navigator.canShare || navigator.canShare(shareData))) {
+        await navigator.share(shareData);
+        return;
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return;
+      console.warn('Native QR sharing is unavailable; using WhatsApp fallback.', error);
+    }
+
+    await handleDownloadQR(qr);
+    window.open(
+      `https://wa.me/?text=${encodeURIComponent(`${message}\nThe QR image has been downloaded. Please attach it to this WhatsApp message.`)}`,
+      '_blank',
+      'noopener,noreferrer',
+    );
   };
 
   const copyQRId = (qrId: string) => {
@@ -332,12 +382,7 @@ export default function QRCodes({ role }: QRCodesProps) {
                   onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}
                 >
                   <td style={{ padding: '16px 20px' }}>
-                    <img 
-                      src={qr.qrImage} 
-                      alt={qr.qrId}
-                      style={{ width: 60, height: 60, borderRadius: 8, border: `2px solid ${C.border}`, cursor: 'pointer' }}
-                      onClick={() => setSelectedQR(qr)}
-                    />
+                    <LazyQrImage value={qr.qrId} alt={qr.qrId} size={60} borderColor={C.border} onClick={() => setSelectedQR(qr)} />
                   </td>
                   <td style={{ padding: '16px 20px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -446,6 +491,24 @@ export default function QRCodes({ role }: QRCodesProps) {
                         }}
                       >
                         <Download size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleShareQR(qr)}
+                        title="Share QR to WhatsApp"
+                        style={{
+                          background: '#DCFCE7',
+                          color: '#16A34A',
+                          border: 'none',
+                          borderRadius: 8,
+                          width: 32,
+                          height: 32,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Share2 size={16} />
                       </button>
                       {permissions.canDelete && (
                         <button
@@ -556,11 +619,7 @@ export default function QRCodes({ role }: QRCodesProps) {
 
             {/* QR Image */}
             <div style={{ textAlign: 'center', marginBottom: 24 }}>
-              <img 
-                src={selectedQR.qrImage} 
-                alt={selectedQR.qrId}
-                style={{ width: 250, height: 250, borderRadius: 12, border: `3px solid ${C.border}`, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-              />
+              <div style={{ display: 'flex', justifyContent: 'center' }}><LazyQrImage value={selectedQR.qrId} alt={selectedQR.qrId} size={250} borderColor={C.border} /></div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
@@ -631,6 +690,27 @@ export default function QRCodes({ role }: QRCodesProps) {
               >
                 <Download size={16} />
                 Download QR
+              </button>
+              <button
+                onClick={() => handleShareQR(selectedQR)}
+                style={{
+                  flex: 1,
+                  background: '#16A34A',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: 12,
+                  padding: '12px',
+                  fontSize: 14,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                }}
+              >
+                <Share2 size={16} />
+                Share
               </button>
               <button
                 onClick={() => setSelectedQR(null)}

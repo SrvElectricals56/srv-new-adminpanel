@@ -23,6 +23,7 @@ export default function TopElectricians() {
   const C = useThemePalette();
   const [range, setRange] = useState<Range>('monthly');
   const [sortBy, setSortBy] = useState<SortBy>('points');
+  const [resultLimit, setResultLimit] = useState<20 | 100>(20);
   const [fromDate, setFromDate] = useState('2024-01-01');
   const [toDate, setToDate] = useState(new Date().toISOString().split('T')[0]);
   const [topList, setTopList] = useState<any[]>([]);
@@ -49,11 +50,11 @@ export default function TopElectricians() {
   useEffect(() => {
     const { from, to } = getDateRange();
     setLoading(true);
-    electricianApi.getTop({ from, to, sortBy, limit: '10' })
+    electricianApi.getTop({ from, to, sortBy, limit: String(resultLimit) })
       .then(res => setTopList(Array.isArray(res) ? res : []))
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [range, sortBy, fromDate, toDate, getDateRange]);
+  }, [range, sortBy, resultLimit, fromDate, toDate, getDateRange]);
 
   const maxVal = topList[0]
     ? sortBy === 'points' ? topList[0].periodPoints
@@ -99,7 +100,7 @@ export default function TopElectricians() {
             <Medal size={26} /> Top Electricians
           </div>
           <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 4 }}>
-            {rangeLabels[range]} — Top 10 performers by {sortBy}
+            {rangeLabels[range]} — Top {resultLimit} performers by {sortBy}
           </div>
         </div>
         <button
@@ -131,6 +132,11 @@ export default function TopElectricians() {
             <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} style={inputStyle} />
           </div>
         )}
+
+        <select value={resultLimit} onChange={e => setResultLimit(Number(e.target.value) as 20 | 100)} style={inputStyle} aria-label="Leaderboard size">
+          <option value={20}>Top 20</option>
+          <option value={100}>Top 100</option>
+        </select>
 
         {/* Sort by */}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>

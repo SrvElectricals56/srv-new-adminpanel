@@ -9,7 +9,7 @@ import ExportModal from '@/components/Shared/ExportModal';
 import AlertDialog from '@/components/Shared/AlertDialog';
 
 interface Category {
-  id: number;
+  id: string | number;
   name: string;
   slug: string;
   description: string;
@@ -44,9 +44,9 @@ export default function ProductCategories({ role, onNavigate }: { role?: import(
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | number | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
-  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [deleteId, setDeleteId] = useState<string | number | null>(null);
   const [showExport, setShowExport] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
   const [alertDialog, setAlertDialog] = useState<{ show: boolean; title: string; message: string; type: 'error' | 'success' | 'warning' | 'info' }>({ show: false, title: '', message: '', type: 'error' });
@@ -163,8 +163,8 @@ export default function ProductCategories({ role, onNavigate }: { role?: import(
     try {
       const payload = {
         label: form.name,
-        imageUrl: form.image,
-        sortOrder: form.sortOrder,
+        imageUrl: form.image?.trim() || undefined,
+        sortOrder: Number(form.sortOrder || 0),
         isActive: form.isActive,
       };
       
@@ -186,7 +186,7 @@ export default function ProductCategories({ role, onNavigate }: { role?: import(
     }
   };
 
-  const handleToggle = async (id: number) => {
+  const handleToggle = async (id: string | number) => {
     try {
       const category = categories.find(c => c.id === id);
       if (!category) return;

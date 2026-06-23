@@ -1,9 +1,10 @@
 'use client';
 import React, { useEffect, useState } from 'react';
-import { Activity, Eye, Package, ScanLine, ShoppingCart, Wallet } from 'lucide-react';
+import { Activity, Eye, FileSpreadsheet, Package, ScanLine, ShoppingCart, Wallet } from 'lucide-react';
 import type { CustomerActivityInsight } from '@/lib/types';
 import { useThemePalette } from '@/lib/theme';
 import { formatISTDate } from '@/lib/dateIST';
+import ExportModal from './ExportModal';
 
 type Props = {
   customerId: string;
@@ -39,6 +40,7 @@ export default function CustomerActivityPanel({ customerId, roleLabel, loadActiv
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showExport, setShowExport] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -101,6 +103,10 @@ export default function CustomerActivityPanel({ customerId, roleLabel, loadActiv
 
   return (
     <div style={{ marginBottom: 22 }}>
+      <ExportModal show={showExport} onClose={() => setShowExport(false)} title={`${roleLabel} Activity`} fileName={`${roleLabel.toLowerCase().replace(/\s+/g, '-')}-activity`} getData={() => [
+        ...activity.productInterests.map(product => ({ RecordType: 'Product Interest', Product: product.productName, Category: product.category ?? '', Views: product.viewCount ?? 0, Scans: product.scanCount, CartQuantity: product.cartQuantity, OrderQuantity: product.orderQuantity, IntentScore: product.intentScore })),
+        ...activity.recentTimeline.map(event => ({ RecordType: 'Activity Timeline', Type: event.type, Title: event.title, Detail: event.detail, OccurredAt: event.occurredAt })),
+      ]} />
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 15, fontWeight: 800, color: C.text }}>
@@ -111,6 +117,7 @@ export default function CustomerActivityPanel({ customerId, roleLabel, loadActiv
           </div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 5 }}>
+          <button onClick={() => setShowExport(true)} style={{ display: 'flex', alignItems: 'center', gap: 5, border: `1px solid ${C.border}`, borderRadius: 8, padding: '6px 9px', background: C.card, color: C.text, fontSize: 11, fontWeight: 800, cursor: 'pointer' }}><FileSpreadsheet size={13} /> Export</button>
           <span style={{ background: '#EFF6FF', color: '#1D4ED8', borderRadius: 999, padding: '5px 10px', fontSize: 11, fontWeight: 800 }}>
             Last active: {summary.lastActivityAt ? formatISTDate(summary.lastActivityAt) : 'No activity'}
           </span>

@@ -8,6 +8,7 @@ import ExportModal from '@/components/Shared/ExportModal';
 import AlertDialog from '@/components/Shared/AlertDialog';
 import { I } from '@/lib/iconMap';
 import { formatISTDate } from '@/lib/dateIST';
+import SearchableSelect from '@/components/Shared/SearchableSelect';
 
 const TIER_CONFIG: Record<MemberTier, { bg: string; color: string; icon: string }> = {
   Silver: { bg: '#F1F5F9', color: '#475569', icon: '' },
@@ -664,10 +665,17 @@ export default function AssociatedElectricians() {
           placeholder="Search dealer, electrician, phone, code..."
           style={{ padding: '9px 12px', border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 13.5, outline: 'none', background: C.surface, color: C.text, boxSizing: 'border-box', minWidth: 240, flex: 1 }}
         />
-        <select value={filterDealer} onChange={e => setFilterDealer(e.target.value)} style={{ padding: '9px 12px', border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 13.5, outline: 'none', background: C.surface, color: C.text, boxSizing: 'border-box' }}>
-          <option value="all">All Dealers ({electricians.length})</option>
-          {visibleDealers.map(d => <option key={d} value={d}>{d} ({dealerCounts[d]})</option>)}
-        </select>
+        <SearchableSelect
+          value={filterDealer}
+          placeholder={`All Dealers (${electricians.length})`}
+          searchPlaceholder="Search dealer..."
+          minWidth={240}
+          options={[
+            { value: 'all', label: `All Dealers (${electricians.length})` },
+            ...visibleDealers.map(d => ({ value: d, label: `${d} (${dealerCounts[d]})` })),
+          ]}
+          onChange={setFilterDealer}
+        />
         <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as 'all' | UserStatus)} style={{ padding: '9px 12px', border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 13.5, outline: 'none', background: C.surface, color: C.text, boxSizing: 'border-box' }}>
           <option value="all">All Status</option>
           <option value="active">Active</option>

@@ -15,7 +15,7 @@ import SearchableSelect from '@/components/Shared/SearchableSelect';
 import PasswordInputField from '@/components/Shared/PasswordInputField';
 import CustomerActivityPanel from '@/components/Shared/CustomerActivityPanel';
 import { I } from '@/lib/iconMap';
-import { formatISTDate } from '@/lib/dateIST';
+import { formatISTDate, formatISTDateTime } from '@/lib/dateIST';
 
 interface ElectriciansProps {
   role: AdminRole;
@@ -60,7 +60,32 @@ function ViewModal({
   const [confirmPassword, setConfirmPassword] = useState('');
   const [savingPassword, setSavingPassword] = useState(false);
   const [passwordFeedback, setPasswordFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [showScanHistory, setShowScanHistory] = useState(false);
+  const [scanHistory, setScanHistory] = useState<any[]>([]);
+  const [scanHistoryTotal, setScanHistoryTotal] = useState(0);
+  const [scanHistoryPage, setScanHistoryPage] = useState(0);
+  const [scanHistoryLoading, setScanHistoryLoading] = useState(false);
+  const [showScanExport, setShowScanExport] = useState(false);
   const loadActivity = useCallback((id: string) => electricianApi.getActivity(id), []);
+
+  const loadScanHistoryPage = async (page: number) => {
+    if (scanHistoryLoading) return;
+    setScanHistoryLoading(true);
+    try {
+      const response = await electricianApi.getScans(el.id, { page: String(page), limit: '100' });
+      const rows = Array.isArray(response) ? response : response.data ?? [];
+      setScanHistory(current => page === 1 ? rows : [...current, ...rows]);
+      setScanHistoryTotal(Array.isArray(response) ? rows.length : response.total ?? 0);
+      setScanHistoryPage(page);
+    } finally {
+      setScanHistoryLoading(false);
+    }
+  };
+
+  const openScanHistory = () => {
+    setShowScanHistory(true);
+    if (!scanHistory.length) void loadScanHistoryPage(1);
+  };
 
   const handlePasswordSubmit = async () => {
     const nextPassword = password.trim();
@@ -100,6 +125,7 @@ function ViewModal({
         onMouseDown={e => { e.stopPropagation(); mouseDownInside.current = true; }}
         onMouseUp={e => e.stopPropagation()}
       >
+        <ExportModal show={showScanExport} onClose={() => setShowScanExport(false)} title={`${el.name} Scan History`} fileName={`${el.electricianCode || el.name}-scan-history`} getData={() => scanHistory.map(scan => ({ QRCode: scan.qrCodeId || '', Product: scan.productName || '', Type: scan.mode || 'single', Points: scan.points ?? 0, ScannedAt: scan.scannedAt, Location: scan.location || '' }))} />
         {/* Header */}
         <div style={{ background: C.heroGradient, padding: '24px 28px', borderRadius: '20px 20px 0 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -131,13 +157,51 @@ function ViewModal({
               { label: 'Total Scans', value: el.totalScans, Icon: ScanLine, color: '#3B82F6' },
               { label: 'Wallet Balance', value: `₹${el.walletBalance}`, Icon: Wallet, color: '#10B981' },
             ].map((s, i) => (
-              <div key={i} style={{ background: C.bg, borderRadius: 12, padding: '14px 16px', textAlign: 'center' }}>
+              <div key={i} onClick={s.label === 'Total Scans' ? () => { void openScanHistory(); } : undefined} style={{ background: C.bg, borderRadius: 12, padding: '14px 16px', textAlign: 'center', cursor: s.label === 'Total Scans' ? 'pointer' : 'default', border: s.label === 'Total Scans' ? '1px solid #BFDBFE' : '1px solid transparent' }}>
                 <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4, color: s.color }}><s.Icon size={20} /></div>
                 <div style={{ fontSize: 18, fontWeight: 800, color: C.text }}>{s.value}</div>
                 <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{s.label}</div>
               </div>
             ))}
           </div>
+
+          {showScanHistory && (
+            <div style={{ background: C.bg, borderRadius: 14, padding: 16, marginBottom: 22, border: `1px solid ${C.border}` }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: C.text }}>Scan History</div>
+                  <div style={{ fontSize: 11, color: C.muted }}>{scanHistory.length} of {scanHistoryTotal} scans shown</div>
+                </div>
+                <div style={{ display: 'flex', gap: 7 }}>
+                  <button onClick={() => setShowScanExport(true)} disabled={scanHistory.length === 0} style={{ border: `1px solid ${C.border}`, background: C.card, color: C.text, borderRadius: 8, padding: '6px 10px', cursor: scanHistory.length ? 'pointer' : 'not-allowed', fontWeight: 700 }}>Export</button>
+                  <button onClick={() => setShowScanHistory(false)} style={{ border: 'none', background: C.card, color: C.muted, borderRadius: 8, padding: '6px 10px', cursor: 'pointer' }}>Hide</button>
+                </div>
+              </div>
+              {scanHistoryLoading ? (
+                <div style={{ padding: 22, textAlign: 'center', color: C.muted }}>Loading scan history...</div>
+              ) : scanHistory.length === 0 ? (
+                <div style={{ padding: 22, textAlign: 'center', color: C.muted }}>No scans found for this electrician.</div>
+              ) : (
+                <div style={{ maxHeight: 280, overflowY: 'auto', borderRadius: 10, border: `1px solid ${C.border}` }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead><tr style={{ background: C.card }}>{['QR Code', 'Product', 'Type', 'Points', 'Scanned At'].map(h => <th key={h} style={{ padding: '9px 10px', textAlign: 'left', fontSize: 10, color: C.muted, textTransform: 'uppercase' }}>{h}</th>)}</tr></thead>
+                    <tbody>{scanHistory.map(scan => <tr key={scan.id} style={{ borderTop: `1px solid ${C.border}` }}>
+                      <td style={{ padding: '9px 10px', fontSize: 11, color: C.text, fontFamily: 'monospace' }}>{scan.qrCodeId || '—'}</td>
+                      <td style={{ padding: '9px 10px', fontSize: 12, color: C.text }}>{scan.productName || '—'}</td>
+                      <td style={{ padding: '9px 10px', fontSize: 11, color: C.muted, textTransform: 'capitalize' }}>{scan.mode || 'single'}</td>
+                      <td style={{ padding: '9px 10px', fontSize: 12, color: '#16A34A', fontWeight: 800 }}>+{scan.points ?? 0}</td>
+                      <td style={{ padding: '9px 10px', fontSize: 11, color: C.muted }}>{formatISTDateTime(scan.scannedAt)}</td>
+                    </tr>)}</tbody>
+                  </table>
+                </div>
+              )}
+              {scanHistory.length < scanHistoryTotal && (
+                <button onClick={() => { void loadScanHistoryPage(scanHistoryPage + 1); }} disabled={scanHistoryLoading} style={{ width: '100%', marginTop: 10, padding: '9px 12px', border: `1px solid ${C.border}`, borderRadius: 9, background: C.card, color: C.text, fontWeight: 700, cursor: scanHistoryLoading ? 'wait' : 'pointer' }}>
+                  {scanHistoryLoading ? 'Loading more...' : 'Load More Scan History'}
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Details */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 22 }}>
@@ -1036,7 +1100,7 @@ export default function Electricians({ role }: ElectriciansProps) {
               const tier = TIER_CONFIG[e.tier] ?? TIER_CONFIG['Silver'];
               const status = STATUS_CONFIG[e.status] ?? STATUS_CONFIG['inactive'];
               return (
-                <tr key={e.id} style={{ borderBottom: `1px solid ${C.border}`, transition: 'background 0.12s' }}
+                <tr key={e.id} onClick={event => { if (!(event.target as HTMLElement).closest('button,select,input,a')) setViewing(e); }} style={{ borderBottom: `1px solid ${C.border}`, transition: 'background 0.12s', cursor: 'pointer' }}
                   onMouseEnter={ev => (ev.currentTarget as HTMLTableRowElement).style.background = C.hoverRow}
                   onMouseLeave={ev => (ev.currentTarget as HTMLTableRowElement).style.background = 'transparent'}>
                   <td style={{ padding: '13px 14px' }}>

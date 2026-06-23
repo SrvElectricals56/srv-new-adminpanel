@@ -892,7 +892,7 @@ export default function Dealers({ role }: DealersProps) {
                 const tier = TIER_CONFIG[d.tier] ?? TIER_CONFIG['Silver'];
                 const status = STATUS_CONFIG[d.status] ?? STATUS_CONFIG['inactive'];
                 return (
-                  <tr key={d.id} style={{ borderBottom: `1px solid ${C.border}` }}
+                  <tr key={d.id} onClick={event => { if (!(event.target as HTMLElement).closest('button,select,input,a')) setViewing(d); }} style={{ borderBottom: `1px solid ${C.border}`, cursor: 'pointer' }}
                     onMouseEnter={ev => (ev.currentTarget as HTMLTableRowElement).style.background = C.hoverRow}
                     onMouseLeave={ev => (ev.currentTarget as HTMLTableRowElement).style.background = 'transparent'}>
                     <td style={{ padding: '13px 16px' }}>

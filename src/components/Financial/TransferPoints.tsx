@@ -13,8 +13,12 @@ interface Transfer {
   id: string;
   fromName: string;
   fromCode: string;
+  fromPhone: string;
+  fromRole: string;
   toName: string;
   toPhone: string;
+  toCode: string;
+  toRole: string;
   points: number;
   date: string;
   reason: string;
@@ -79,9 +83,13 @@ export default function TransferPoints({ role }: { role?: import('@/lib/types').
       setTransfers(data.map((t: any, i: number) => ({
         id: t.id ?? String(i + 1),
         fromName: t.fromName ?? t.from_name ?? (t.description?.split(' to ')?.[0]?.replace('Manual transfer from ', '') ?? 'Admin'),
-        fromCode: t.fromCode ?? t.from_code ?? 'ADM',
+        fromCode: t.fromCode ?? t.from_code ?? t.fromPhone ?? 'ADM',
+        fromPhone: t.fromPhone ?? t.from_phone ?? '',
+        fromRole: t.fromRole ?? t.from_role ?? '',
         toName: t.toName ?? t.to_name ?? (t.description?.split(' to ')?.[1] ?? 'User'),
         toPhone: t.toPhone ?? t.to_phone ?? '—',
+        toCode: t.toCode ?? t.to_code ?? '',
+        toRole: t.toRole ?? t.to_role ?? '',
         // Ensure numeric so totals don't become string concatenations.
         points: Number(t.points ?? t.amount ?? 0),
         date: t.date ?? t.createdAt ?? t.created_at ?? new Date().toISOString(),
@@ -113,7 +121,14 @@ export default function TransferPoints({ role }: { role?: import('@/lib/types').
     if (dateTo) list = list.filter(t => t.date <= dateTo);
     if (search) {
       const q = search.toLowerCase();
-      list = list.filter(t => t.fromName.toLowerCase().includes(q) || t.toName.toLowerCase().includes(q) || t.toPhone.includes(q) || t.fromCode.toLowerCase().includes(q));
+      list = list.filter(t =>
+        t.fromName.toLowerCase().includes(q) ||
+        t.toName.toLowerCase().includes(q) ||
+        t.toPhone.includes(q) ||
+        t.fromPhone.includes(q) ||
+        t.fromCode.toLowerCase().includes(q) ||
+        t.toCode.toLowerCase().includes(q)
+      );
     }
     return list;
   }, [transfers, statusFilter, dateFrom, dateTo, search]);
@@ -325,10 +340,12 @@ export default function TransferPoints({ role }: { role?: import('@/lib/types').
                   <td style={{ padding: '12px 16px' }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{t.fromName}</div>
                     <div style={{ fontSize: 11, color: C.muted, fontFamily: 'monospace' }}>{t.fromCode}</div>
+                    <div style={{ fontSize: 11, color: C.muted }}>{t.fromPhone || '—'} {t.fromRole ? `• ${t.fromRole}` : ''}</div>
                   </td>
                   <td style={{ padding: '12px 16px' }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{t.toName}</div>
                     <div style={{ fontSize: 11, color: C.muted }}>{t.toPhone}</div>
+                    <div style={{ fontSize: 11, color: C.muted, fontFamily: 'monospace' }}>{t.toCode || '—'} {t.toRole ? `• ${t.toRole}` : ''}</div>
                   </td>
                   <td style={{ padding: '12px 16px' }}>
                     <span style={{ fontSize: 14, fontWeight: 800, color: '#0F766E' }}>+{t.points.toLocaleString()}</span>
@@ -375,7 +392,9 @@ export default function TransferPoints({ role }: { role?: import('@/lib/types').
               {[
                 ['Transfer ID', `#${viewItem.id}`], ['Points', `${viewItem.points.toLocaleString()} pts`],
                 ['From', viewItem.fromName], ['From Code', viewItem.fromCode],
+                ['From Phone', viewItem.fromPhone || '—'], ['From Role', viewItem.fromRole || '—'],
                 ['To', viewItem.toName], ['To Phone', viewItem.toPhone],
+                ['To Code', viewItem.toCode || '—'], ['To Role', viewItem.toRole || '—'],
                 ['Date', formatISTDate(viewItem.date)], ['Status', viewItem.status],
                 ['Reason', viewItem.reason],
               ].map(([label, value]) => (
@@ -577,7 +596,7 @@ export default function TransferPoints({ role }: { role?: import('@/lib/types').
         show={showExport}
         onClose={() => setShowExport(false)}
         title="Transfer Points"
-        getData={() => filtered.map(t => ({ ID: t.id, From: t.fromName, 'From Code': t.fromCode, To: t.toName, 'To Phone': t.toPhone, Points: t.points, Date: t.date, Reason: t.reason, Status: t.status }))}
+        getData={() => filtered.map(t => ({ ID: t.id, From: t.fromName, 'From Code': t.fromCode, 'From Phone': t.fromPhone, 'From Role': t.fromRole, To: t.toName, 'To Phone': t.toPhone, 'To Code': t.toCode, 'To Role': t.toRole, Points: t.points, Date: t.date, Reason: t.reason, Status: t.status }))}
         fileName="transfer-points"
       />
       <AlertDialog show={alertDialog.show} title={alertDialog.title} message={alertDialog.message} type={alertDialog.type} onClose={() => setAlertDialog({ ...alertDialog, show: false })} />

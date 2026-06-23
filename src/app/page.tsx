@@ -233,6 +233,7 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [routeLoading, setRouteLoading] = useState(false);
   const routeLoadingTimeoutRef = useRef<number | null>(null);
+  const applyingBrowserHistoryRef = useRef(false);
 
   const loggedIn = auth.isLoggedIn;
   const role = auth.role;
@@ -329,6 +330,47 @@ export default function Home() {
     }));
   }, [active, appUserSubPage, counterBoySubPage, dealerSubPage, electricianSubPage, loggedIn, productCategoryFilter]);
 
+  const buildCurrentPageState = (nextActive = active, subPage?: string): AdminPageState => ({
+    active: nextActive,
+    electricianSubPage: nextActive === 'electricians' ? subPage : electricianSubPage,
+    dealerSubPage: nextActive === 'dealers' ? subPage : dealerSubPage,
+    appUserSubPage: nextActive === 'app-users' ? subPage : appUserSubPage,
+    counterBoySubPage: nextActive === 'counterboys' ? subPage : counterBoySubPage,
+    productCategoryFilter,
+  });
+
+  const applyPageState = (state: AdminPageState) => {
+    const nextActive = state.active && PAGE_LABELS[state.active] ? state.active : 'dashboard';
+    void preloadPageChunk(nextActive);
+    showRouteLoader();
+    startTransition(() => {
+      setActive(nextActive);
+      setElectricianSubPage(state.electricianSubPage);
+      setDealerSubPage(state.dealerSubPage);
+      setAppUserSubPage(state.appUserSubPage);
+      setCounterBoySubPage(state.counterBoySubPage);
+      setProductCategoryFilter(state.productCategoryFilter);
+      setGlobalSearch('');
+    });
+  };
+
+  useEffect(() => {
+    if (!loggedIn || typeof window === 'undefined') return;
+    const currentState = buildCurrentPageState();
+    if (!window.history.state?.srvAdminPage) {
+      window.history.replaceState({ srvAdminPage: currentState }, '', window.location.href);
+    }
+    const onPopState = (event: PopStateEvent) => {
+      const pageState = event.state?.srvAdminPage as AdminPageState | undefined;
+      if (!pageState) return;
+      applyingBrowserHistoryRef.current = true;
+      applyPageState(pageState);
+      window.setTimeout(() => { applyingBrowserHistoryRef.current = false; }, 0);
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [loggedIn]);
+
   useEffect(() => () => {
     if (routeLoadingTimeoutRef.current) {
       window.clearTimeout(routeLoadingTimeoutRef.current);
@@ -369,6 +411,10 @@ export default function Home() {
     void preloadPageChunk(id);
     if (id !== active || subPage) {
       showRouteLoader();
+    }
+    const nextState = buildCurrentPageState(id, subPage);
+    if (typeof window !== 'undefined' && !applyingBrowserHistoryRef.current) {
+      window.history.pushState({ srvAdminPage: nextState }, '', window.location.href);
     }
     startTransition(() => {
       setActive(id);
@@ -547,11 +593,11 @@ export default function Home() {
     switch (active) {
       case 'dashboard': return <Dashboard role={role} adminName={adminName} onNavigate={handleNavigate} />;
       case 'pro-active-inactive': return <ProActiveInactiveHub />;
-      case 'electricians': return <ElectricianHub role={role} defaultPage={electricianSubPage} onSubPageChange={(sp) => setElectricianSubPage(sp)} />;
-      case 'dealers': return <DealerHub role={role} defaultPage={dealerSubPage} onSubPageChange={(sp) => setDealerSubPage(sp)} />;
+      case 'electricians': return <ElectricianHub role={role} defaultPage={electricianSubPage} onSubPageChange={(sp) => { showRouteLoader(); setElectricianSubPage(sp); }} />;
+      case 'dealers': return <DealerHub role={role} defaultPage={dealerSubPage} onSubPageChange={(sp) => { showRouteLoader(); setDealerSubPage(sp); }} />;
       case 'sub-dealers': return <SubDealers />;
-      case 'app-users': return <AppUserHub key={`app-users-${appUserSubPage ?? 'users'}`} role={role} defaultPage={appUserSubPage} onSubPageChange={(sp) => setAppUserSubPage(sp)} />;
-      case 'counterboys': return <CounterBoyHub key={`counterboys-${counterBoySubPage ?? 'counterboys'}`} role={role} defaultPage={counterBoySubPage} onSubPageChange={(sp) => setCounterBoySubPage(sp)} />;
+      case 'app-users': return <AppUserHub key={`app-users-${appUserSubPage ?? 'users'}`} role={role} defaultPage={appUserSubPage} onSubPageChange={(sp) => { showRouteLoader(); setAppUserSubPage(sp); }} />;
+      case 'counterboys': return <CounterBoyHub key={`counterboys-${counterBoySubPage ?? 'counterboys'}`} role={role} defaultPage={counterBoySubPage} onSubPageChange={(sp) => { showRouteLoader(); setCounterBoySubPage(sp); }} />;
       case 'products': return <Products role={role} initialCategory={productCategoryFilter} onCategoryUsed={() => setProductCategoryFilter(undefined)} />;
       case 'product-categories': return <ProductCategories role={role} onNavigate={(page, category) => {
         if (page === 'products') {

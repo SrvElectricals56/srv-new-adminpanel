@@ -797,7 +797,7 @@ export default function AllCounterBoys({ role }: AllCounterBoysProps) {
               ) : counterBoys.map((counterBoy, index) => {
                 const status = STATUS_CONFIG[counterBoy.status] ?? STATUS_CONFIG.pending;
                 return (
-                  <tr key={counterBoy.id} style={{ borderBottom: `1px solid ${C.border}`, background: index % 2 === 0 ? C.card : C.bg }}>
+                  <tr key={counterBoy.id} onClick={event => { if (!(event.target as HTMLElement).closest('button,select,input,a')) void loadOne(counterBoy.id, 'view'); }} style={{ borderBottom: `1px solid ${C.border}`, background: index % 2 === 0 ? C.card : C.bg, cursor: 'pointer' }}>
                     <td style={{ padding: '14px 16px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <div style={{ width: 36, height: 36, borderRadius: 10, background: '#F5F3FF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 700, color: '#8B5CF6', overflow: 'hidden', flexShrink: 0 }}>
