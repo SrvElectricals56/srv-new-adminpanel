@@ -118,7 +118,8 @@ const FEATURE_GROUPS: { title: string; items: { key: AppFeatureKey; label: strin
       { key: 'product', label: 'Products', hint: 'Product listing and categories entry' },
       { key: 'play', label: 'Play', hint: 'Customer play section' },
       { key: 'categories', label: 'Categories', hint: 'Customer categories tab' },
-      { key: 'cart', label: 'Cart', hint: 'Customer cart page' },
+      { key: 'cart', label: 'Cart', hint: 'Product cart page' },
+      { key: 'checkout', label: 'Checkout', hint: 'COD and Razorpay purchase flow' },
       { key: 'electricians', label: 'Associate Electricians', hint: 'Dealer electricians page' },
       { key: 'call_electrician', label: 'Call Electrician', hint: 'Dealer contact screen' },
       { key: 'support', label: 'Support', hint: 'Counter boy support page' },
@@ -196,15 +197,17 @@ const BASE_FEATURES: Record<AppFeatureKey, boolean> = {
 
 const DEFAULT_CONTROLS: RolePageControls = {
   electrician: { ...BASE_FEATURES, cart: true, checkout: true, rewards: true, scan: true, electrician_tier: true, scan_history: true },
-  dealer: { ...BASE_FEATURES, electricians: true, call_electrician: true, dealer_tier: true, dealer_bonus: true },
-  user: { ...BASE_FEATURES, play: true, categories: true, cart: true, rewards: true, transfer_points: false },
-  counterboy: { ...BASE_FEATURES, support: true, transfer_points: false },
+  dealer: { ...BASE_FEATURES, cart: true, checkout: true, electricians: true, call_electrician: true, dealer_tier: true, dealer_bonus: true },
+  user: { ...BASE_FEATURES, play: true, categories: true, cart: true, checkout: true, rewards: true, transfer_points: false },
+  counterboy: { ...BASE_FEATURES, cart: true, checkout: true, support: true, transfer_points: false },
 };
 
 const ROLE_ALLOWED_FEATURES: Record<UserRole, AppFeatureKey[]> = {
   dealer: [
     'home',
     'product',
+    'cart',
+    'checkout',
     'electricians',
     'call_electrician',
     'profile',
@@ -258,6 +261,7 @@ const ROLE_ALLOWED_FEATURES: Record<UserRole, AppFeatureKey[]> = {
     'play',
     'categories',
     'cart',
+    'checkout',
     'rewards',
     'profile',
     'wallet',
@@ -278,6 +282,8 @@ const ROLE_ALLOWED_FEATURES: Record<UserRole, AppFeatureKey[]> = {
   counterboy: [
     'home',
     'product',
+    'cart',
+    'checkout',
     'support',
     'profile',
     'wallet',
@@ -712,6 +718,11 @@ function normalizeControls(input?: unknown): RolePageControls {
         next[role][feature as AppFeatureKey] = maybe;
       }
     });
+  });
+
+  (Object.keys(DEFAULT_CONTROLS) as UserRole[]).forEach((role) => {
+    next[role].cart = true;
+    next[role].checkout = true;
   });
 
   return next;

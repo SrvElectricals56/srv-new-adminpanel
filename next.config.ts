@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 import path from "path";
 
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
+const apiOrigin = apiUrl.replace(/\/api\/v\d+\/?$/i, "").replace(/\/$/, "");
+
 const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(__dirname),
   // Allow cross-origin dev access (mobile/network devices)
@@ -21,6 +24,15 @@ const nextConfig: NextConfig = {
   // Production optimizations
   compress: true,
   poweredByHeader: false,
+
+  async rewrites() {
+    return [
+      {
+        source: "/uploads/:path*",
+        destination: `${apiOrigin}/uploads/:path*`,
+      },
+    ];
+  },
 
   // ── Chunk splitting: each lazy-loaded page gets its own small bundle ──────
   webpack(config, { isServer }) {

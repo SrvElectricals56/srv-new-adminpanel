@@ -22,6 +22,24 @@ interface Category {
 const toSlug = (name: string) =>
   name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
+const getBackendOrigin = () => {
+  const base = process.env.NEXT_PUBLIC_API_URL || '';
+  return base.replace(/\/api\/v\d+\/?$/i, '').replace(/\/$/, '');
+};
+
+const normalizeCategoryImageUrl = (url: string | null | undefined): string => {
+  const value = String(url ?? '').trim();
+  if (!value) return '';
+  if (value.startsWith('//')) return `https:${value}`;
+  if (/^www\./i.test(value)) return `https://${value}`;
+  if (/^uploads\//i.test(value)) return `${getBackendOrigin()}/${value}`;
+  if (/^\/uploads\//i.test(value)) return `${getBackendOrigin()}${value}`;
+  return value.replace(
+    /http:\/\/(10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.\d+\.\d+\.\d+)(:\d+)?/g,
+    (_, _ip, port) => `http://localhost${port || ''}`
+  );
+};
+
 const EMPTY_FORM = {
   name: '',
   slug: '',
@@ -86,22 +104,12 @@ export default function ProductCategories({ role, onNavigate }: { role?: import(
         setCategories(derived);
       } else {
         // Map backend categories to frontend format
-        // Normalize any LAN IP in image URLs to localhost so the admin browser can load them
-        const normalizeImageUrl = (url: string | null | undefined): string => {
-          if (!url) return '';
-          // Replace any private LAN IP (10.x.x.x, 192.168.x.x, 172.x.x.x) with localhost
-          return url.replace(
-            /http:\/\/(10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.\d+\.\d+\.\d+)(:\d+)?/g,
-            (_, _ip, port) => `http://localhost${port || ''}`
-          );
-        };
-
         const mapped: Category[] = categories.map((c: any, i: number) => ({
           id: c.id || i + 1,
           name: c.label || c.name || 'Unnamed',
           slug: c.slug || toSlug(c.label || c.name || ''),
           description: c.description || '',
-          image: normalizeImageUrl(c.imageUrl || c.image || ''),
+          image: normalizeCategoryImageUrl(c.imageUrl || c.image || ''),
           productCount: c.productCount || 0,
           isActive: c.isActive ?? true,
           sortOrder: c.sortOrder ?? i + 1,
@@ -163,7 +171,7 @@ export default function ProductCategories({ role, onNavigate }: { role?: import(
     try {
       const payload = {
         label: form.name,
-        imageUrl: form.image?.trim() || undefined,
+        imageUrl: normalizeCategoryImageUrl(form.image) || undefined,
         sortOrder: Number(form.sortOrder || 0),
         isActive: form.isActive,
       };
@@ -584,6 +592,7 @@ export default function ProductCategories({ role, onNavigate }: { role?: import(
                   <input
                     value={form.image}
                     onChange={e => setForm(f => ({ ...f, image: e.target.value }))}
+                    onBlur={e => setForm(f => ({ ...f, image: normalizeCategoryImageUrl(e.target.value) }))}
                     placeholder="https://..."
                     style={{ ...inputStyle, flex: 1 }}
                   />
@@ -613,7 +622,7 @@ export default function ProductCategories({ role, onNavigate }: { role?: import(
                 </div>
                 {form.image && (
                   <div style={{ marginTop: 8, borderRadius: 8, overflow: 'hidden', border: `1px solid ${C.border}`, height: 80, background: C.inputBg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <img src={form.image} alt="preview" style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} />
+                    <img src={normalizeCategoryImageUrl(form.image)} alt="preview" style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} />
                   </div>
                 )}
               </div>

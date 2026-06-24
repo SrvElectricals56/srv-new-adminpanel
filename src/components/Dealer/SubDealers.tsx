@@ -28,8 +28,13 @@ type AssociatedElectrician = {
   district?: string;
   state?: string;
   pincode?: string;
+  address?: string;
+  fallbackDealerName?: string;
+  fallbackDealerPhone?: string;
   totalPoints?: number;
   totalScans?: number;
+  walletBalance?: number;
+  joinedDate?: string;
 };
 
 export default function SubDealers() {
@@ -42,6 +47,7 @@ export default function SubDealers() {
   const [viewing, setViewing] = useState<SubDealer | null>(null);
   const [associatedElectricians, setAssociatedElectricians] = useState<AssociatedElectrician[]>([]);
   const [associatedLoading, setAssociatedLoading] = useState(false);
+  const [associatedError, setAssociatedError] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -65,11 +71,13 @@ export default function SubDealers() {
   const openAssociatedElectricians = async (row: SubDealer) => {
     setViewing(row);
     setAssociatedLoading(true);
+    setAssociatedError('');
     try {
       const response = await dealerApi.getSubDealerElectricians(row.id);
       setAssociatedElectricians(response.data ?? []);
-    } catch {
+    } catch (err) {
       setAssociatedElectricians([]);
+      setAssociatedError(err instanceof Error ? err.message : 'Unable to load associated electricians.');
     } finally {
       setAssociatedLoading(false);
     }
@@ -77,46 +85,91 @@ export default function SubDealers() {
 
   const linkedElectricians = rows.reduce((sum, row) => sum + Number(row.electricianCount || 0), 0);
   const date = (value: string) => value ? new Date(value).toLocaleString('en-IN') : '—';
+  const selectedCount = associatedElectricians.length || viewing?.electricianCount || 0;
 
   return (
     <div style={{ padding: 24, color: C.text }}>
       {viewing && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={() => setViewing(null)}>
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, width: 920, maxWidth: '96vw', maxHeight: '88vh', overflow: 'hidden', boxShadow: '0 25px 70px rgba(0,0,0,0.25)' }} onClick={event => event.stopPropagation()}>
+          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, width: 1080, maxWidth: '96vw', maxHeight: '88vh', overflow: 'hidden', boxShadow: '0 25px 70px rgba(0,0,0,0.25)' }} onClick={event => event.stopPropagation()}>
             <div style={{ padding: '18px 22px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
                 <div style={{ fontSize: 18, fontWeight: 800, color: C.text }}>Associated Electricians</div>
-                <div style={{ fontSize: 12, color: C.muted, marginTop: 3 }}>SRV Dealer · {viewing.phone}</div>
+                <div style={{ fontSize: 12, color: C.muted, marginTop: 3 }}>
+                  SRV Dealer · {viewing.phone} · {selectedCount} electrician{selectedCount === 1 ? '' : 's'}
+                </div>
               </div>
-              <button onClick={() => setViewing(null)} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, width: 32, height: 32, cursor: 'pointer', color: C.muted }}>✕</button>
+              <button onClick={() => setViewing(null)} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, width: 32, height: 32, cursor: 'pointer', color: C.muted }}>×</button>
             </div>
+
             <div style={{ padding: 18, overflow: 'auto', maxHeight: 'calc(88vh - 78px)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 12, marginBottom: 16 }}>
+                <div style={{ border: `1px solid ${C.border}`, borderRadius: 14, padding: 14, background: C.surface }}>
+                  <div style={{ fontSize: 12, color: C.muted, fontWeight: 700 }}>Sub Dealer Name</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, marginTop: 4 }}>{viewing.name || 'SRV Dealer'}</div>
+                </div>
+                <div style={{ border: `1px solid ${C.border}`, borderRadius: 14, padding: 14, background: C.surface }}>
+                  <div style={{ fontSize: 12, color: C.muted, fontWeight: 700 }}>Phone Number</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, marginTop: 4 }}>{viewing.phone}</div>
+                </div>
+                <div style={{ border: `1px solid ${C.border}`, borderRadius: 14, padding: 14, background: C.surface }}>
+                  <div style={{ fontSize: 12, color: C.muted, fontWeight: 700 }}>District / Pincode</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, marginTop: 4 }}>{[viewing.district, viewing.pincode].filter(Boolean).join(' - ') || '—'}</div>
+                </div>
+                <div style={{ border: `1px solid ${C.border}`, borderRadius: 14, padding: 14, background: C.surface }}>
+                  <div style={{ fontSize: 12, color: C.muted, fontWeight: 700 }}>Associated Electricians</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, marginTop: 4, color: C.accentText }}>{selectedCount}</div>
+                </div>
+              </div>
+
               {associatedLoading ? (
                 <div style={{ padding: 30, textAlign: 'center', color: C.muted }}>Loading associated electricians...</div>
+              ) : associatedError ? (
+                <div style={{ padding: 30, textAlign: 'center', color: C.dangerText }}>{associatedError}</div>
               ) : associatedElectricians.length === 0 ? (
                 <div style={{ padding: 30, textAlign: 'center', color: C.muted }}>No associated electricians found for this dealer number.</div>
               ) : (
-                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 760 }}>
-                  <thead><tr style={{ background: C.surface, color: C.muted, textAlign: 'left' }}>
-                    {['Electrician', 'Phone', 'Category', 'Location', 'Points', 'Scans', 'Status'].map((head) => <th key={head} style={{ padding: '12px 14px', fontSize: 12, fontWeight: 800 }}>{head}</th>)}
-                  </tr></thead>
-                  <tbody>{associatedElectricians.map((electrician) => (
-                    <tr key={electrician.id} style={{ borderTop: `1px solid ${C.border}` }}>
-                      <td style={{ padding: 14 }}><div style={{ fontWeight: 800 }}>{electrician.name}</div><div style={{ color: C.muted, fontSize: 12 }}>{electrician.electricianCode || '—'}</div></td>
-                      <td style={{ padding: 14 }}>{electrician.phone}</td>
-                      <td style={{ padding: 14 }}>{electrician.subCategory || electrician.tier || '—'}</td>
-                      <td style={{ padding: 14, color: C.muted }}>{[electrician.city || electrician.district, electrician.state, electrician.pincode].filter(Boolean).join(', ') || '—'}</td>
-                      <td style={{ padding: 14, fontWeight: 800, color: '#16A34A' }}>{Number(electrician.totalPoints ?? 0).toLocaleString('en-IN')}</td>
-                      <td style={{ padding: 14, fontWeight: 800 }}>{Number(electrician.totalScans ?? 0).toLocaleString('en-IN')}</td>
-                      <td style={{ padding: 14 }}><span style={{ background: electrician.status === 'active' ? '#D1FAE5' : '#FEF3C7', color: electrician.status === 'active' ? '#065F46' : '#92400E', padding: '4px 10px', borderRadius: 999, fontSize: 11, fontWeight: 800 }}>{electrician.status || 'pending'}</span></td>
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 1040 }}>
+                  <thead>
+                    <tr style={{ background: C.surface, color: C.muted, textAlign: 'left' }}>
+                      {['Electrician', 'Phone', 'Category', 'Address / Location', 'Points', 'Wallet', 'Scans', 'Joined', 'Status'].map((head) => (
+                        <th key={head} style={{ padding: '12px 14px', fontSize: 12, fontWeight: 800 }}>{head}</th>
+                      ))}
                     </tr>
-                  ))}</tbody>
+                  </thead>
+                  <tbody>
+                    {associatedElectricians.map((electrician) => (
+                      <tr key={electrician.id} style={{ borderTop: `1px solid ${C.border}` }}>
+                        <td style={{ padding: 14 }}>
+                          <div style={{ fontWeight: 800 }}>{electrician.name}</div>
+                          <div style={{ color: C.muted, fontSize: 12 }}>{electrician.electricianCode || '—'}</div>
+                          <div style={{ color: C.muted, fontSize: 11, marginTop: 3 }}>
+                            Dealer: {electrician.fallbackDealerName || viewing.name || 'SRV Dealer'} {electrician.fallbackDealerPhone || viewing.phone ? `(${electrician.fallbackDealerPhone || viewing.phone})` : ''}
+                          </div>
+                        </td>
+                        <td style={{ padding: 14 }}>{electrician.phone}</td>
+                        <td style={{ padding: 14 }}>{electrician.subCategory || electrician.tier || '—'}</td>
+                        <td style={{ padding: 14, color: C.muted, minWidth: 210 }}>
+                          <div style={{ color: C.text, fontWeight: 700 }}>{electrician.address || '—'}</div>
+                          <div style={{ fontSize: 12, marginTop: 3 }}>{[electrician.city || electrician.district, electrician.state, electrician.pincode].filter(Boolean).join(', ') || '—'}</div>
+                        </td>
+                        <td style={{ padding: 14, fontWeight: 800, color: '#16A34A' }}>{Number(electrician.totalPoints ?? 0).toLocaleString('en-IN')}</td>
+                        <td style={{ padding: 14, fontWeight: 800, color: '#0F766E' }}>₹{Number(electrician.walletBalance ?? 0).toLocaleString('en-IN')}</td>
+                        <td style={{ padding: 14, fontWeight: 800 }}>{Number(electrician.totalScans ?? 0).toLocaleString('en-IN')}</td>
+                        <td style={{ padding: 14, color: C.muted, fontSize: 13 }}>{electrician.joinedDate ? new Date(electrician.joinedDate).toLocaleDateString('en-IN') : '—'}</td>
+                        <td style={{ padding: 14 }}>
+                          <span style={{ background: electrician.status === 'active' ? '#D1FAE5' : '#FEF3C7', color: electrician.status === 'active' ? '#065F46' : '#92400E', padding: '4px 10px', borderRadius: 999, fontSize: 11, fontWeight: 800 }}>{electrician.status || 'pending'}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
                 </table>
               )}
             </div>
           </div>
         </div>
       )}
+
       <div style={{ marginBottom: 20 }}>
         <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800 }}>Sub Dealers</h1>
         <p style={{ margin: '6px 0 0', color: C.muted }}>Dealer numbers entered by electricians that are not registered in the dealer database.</p>
@@ -142,20 +195,28 @@ export default function SubDealers() {
           </div>
         </div>
 
-        {error ? <div style={{ padding: 22, color: C.dangerText }}>{error}</div> : loading ? <div style={{ padding: 32, textAlign: 'center', color: C.muted }}>Loading sub dealers…</div> : rows.length === 0 ? <div style={{ padding: 32, textAlign: 'center', color: C.muted }}>No unregistered dealer numbers found.</div> : (
+        {error ? <div style={{ padding: 22, color: C.dangerText }}>{error}</div> : loading ? <div style={{ padding: 32, textAlign: 'center', color: C.muted }}>Loading sub dealers...</div> : rows.length === 0 ? <div style={{ padding: 32, textAlign: 'center', color: C.muted }}>No unregistered dealer numbers found.</div> : (
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 850 }}>
-              <thead><tr style={{ background: C.surface, color: C.muted, textAlign: 'left' }}>
-                {['Dealer Name', 'Phone Number', 'District / Pincode', 'Electricians', 'First Seen', 'Last Seen'].map((head) => <th key={head} style={{ padding: '13px 16px', fontSize: 12, fontWeight: 700 }}>{head}</th>)}
-              </tr></thead>
-              <tbody>{rows.map((row) => <tr key={row.id} onClick={() => openAssociatedElectricians(row)} style={{ borderTop: `1px solid ${C.border}`, cursor: 'pointer' }}>
-                <td style={{ padding: 16, fontWeight: 700 }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Store size={17} color={C.accentText} />SRV Dealer</span></td>
-                <td style={{ padding: 16 }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><Phone size={15} color={C.muted} />{row.phone}</span></td>
-                <td style={{ padding: 16 }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><MapPin size={15} color={C.muted} />{row.district || '—'}{row.pincode ? ` - ${row.pincode}` : ''}</span></td>
-                <td style={{ padding: 16, fontWeight: 700 }}><button onClick={(event) => { event.stopPropagation(); openAssociatedElectricians(row); }} style={{ border: 0, borderRadius: 999, background: C.accentSoft, color: C.accentText, padding: '6px 12px', fontWeight: 800, cursor: 'pointer' }}>View {row.electricianCount}</button></td>
-                <td style={{ padding: 16, color: C.muted, fontSize: 13 }}>{date(row.firstSeenAt)}</td>
-                <td style={{ padding: 16, color: C.muted, fontSize: 13 }}>{date(row.lastSeenAt)}</td>
-              </tr>)}</tbody>
+              <thead>
+                <tr style={{ background: C.surface, color: C.muted, textAlign: 'left' }}>
+                  {['Dealer Name', 'Phone Number', 'District / Pincode', 'Electricians', 'First Seen', 'Last Seen'].map((head) => (
+                    <th key={head} style={{ padding: '13px 16px', fontSize: 12, fontWeight: 700 }}>{head}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.id} onClick={() => openAssociatedElectricians(row)} title="Click to view associated electricians" style={{ borderTop: `1px solid ${C.border}`, cursor: 'pointer' }}>
+                    <td style={{ padding: 16, fontWeight: 700 }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Store size={17} color={C.accentText} />SRV Dealer</span></td>
+                    <td style={{ padding: 16 }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><Phone size={15} color={C.muted} />{row.phone}</span></td>
+                    <td style={{ padding: 16 }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><MapPin size={15} color={C.muted} />{row.district || '—'}{row.pincode ? ` - ${row.pincode}` : ''}</span></td>
+                    <td style={{ padding: 16, fontWeight: 700 }}><button onClick={(event) => { event.stopPropagation(); openAssociatedElectricians(row); }} style={{ border: 0, borderRadius: 999, background: C.accentSoft, color: C.accentText, padding: '6px 12px', fontWeight: 800, cursor: 'pointer' }}>View {row.electricianCount}</button></td>
+                    <td style={{ padding: 16, color: C.muted, fontSize: 13 }}>{date(row.firstSeenAt)}</td>
+                    <td style={{ padding: 16, color: C.muted, fontSize: 13 }}>{date(row.lastSeenAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
             </table>
           </div>
         )}
