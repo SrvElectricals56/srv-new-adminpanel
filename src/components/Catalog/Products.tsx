@@ -322,16 +322,6 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
   const canDelete = userPermissions.canDeleteInModule('products');
   
   // Debug logging
-  console.log('=== PRODUCTS PERMISSIONS DEBUG ===');
-  console.log('Auth:', auth);
-  console.log('Role:', role);
-  console.log('Admin ID:', auth.adminId);
-  console.log('Can Create:', canCreate);
-  console.log('Can Edit:', canEdit);
-  console.log('Can Delete:', canDelete);
-  console.log('User Permissions:', userPermissions);
-  console.log('================================');
-  
   const inputStyle: React.CSSProperties = { width: '100%', padding: '9px 12px', border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 13.5, outline: 'none', background: C.surface, color: C.text, boxSizing: 'border-box' };
 
   const uniqueBadges = Array.from(new Set(data.map((p: Product) => p.badge).filter(Boolean)));

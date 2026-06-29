@@ -1,7 +1,11 @@
 // Central API client for SRV Admin Backend
 // Backend runs at http://localhost:3001/api/v1
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL!;
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '');
+
+if (!BASE_URL) {
+  throw new Error('NEXT_PUBLIC_API_URL must be configured for the admin panel.');
+}
 
 // ─── Token helpers ────────────────────────────────────────────────────────────
 export const getToken = (): string | null =>
@@ -30,8 +34,13 @@ export const removeToken = () => {
 
 export const getStoredAdmin = () => {
   if (typeof window === 'undefined') return null;
-  const raw = localStorage.getItem('srv_admin');
-  return raw ? JSON.parse(raw) : null;
+  try {
+    const raw = localStorage.getItem('srv_admin');
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    localStorage.removeItem('srv_admin');
+    return null;
+  }
 };
 
 export const setStoredAdmin = (admin: object) =>
@@ -204,9 +213,7 @@ export const adminApi = {
   },
   getOne: (id: string) => request<any>(`/admins/${id}`),
   create: (body: object) => {
-    // Generate UUID on client side since database id column is TEXT type
-    const uuid = crypto.randomUUID();
-    return request<any>('/admins', { method: 'POST', body: JSON.stringify({ ...body, id: uuid }) });
+    return request<any>('/admins', { method: 'POST', body: JSON.stringify(body) });
   },
   update: (id: string, body: object) => request<any>(`/admins/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   delete: (id: string) => request<void>(`/admins/${id}`, { method: 'DELETE' }),
