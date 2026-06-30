@@ -1,8 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Search, Store, Users, MapPin, Phone } from 'lucide-react';
-import { dealerApi } from '@/lib/api';
+import { Plus, Search, Store, Users, MapPin, Phone } from 'lucide-react';
+import { dealerApi, electricianApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
 
 type SubDealer = {
@@ -52,6 +52,18 @@ export default function SubDealers() {
   const [associatedElectricians, setAssociatedElectricians] = useState<AssociatedElectrician[]>([]);
   const [associatedLoading, setAssociatedLoading] = useState(false);
   const [associatedError, setAssociatedError] = useState('');
+  const [showAddElectrician, setShowAddElectrician] = useState(false);
+  const [savingElectrician, setSavingElectrician] = useState(false);
+  const [electricianForm, setElectricianForm] = useState({
+    name: '',
+    phone: '',
+    dealerName: '',
+    city: '',
+    state: '',
+    district: '',
+    pincode: '',
+    address: '',
+  });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -74,6 +86,17 @@ export default function SubDealers() {
 
   const openAssociatedElectricians = async (row: SubDealer) => {
     setViewing(row);
+    setShowAddElectrician(false);
+    setElectricianForm({
+      name: '',
+      phone: '',
+      dealerName: row.name || 'SRV Dealer',
+      city: '',
+      state: '',
+      district: row.district || '',
+      pincode: row.pincode || '',
+      address: '',
+    });
     setAssociatedLoading(true);
     setAssociatedError('');
     try {
@@ -92,6 +115,38 @@ export default function SubDealers() {
   const selectedCount = associatedElectricians.length || viewing?.electricianCount || 0;
   const selectedIdentifier = viewing?.identifier || viewing?.phone || viewing?.dealerCode || '';
 
+  const saveElectrician = async () => {
+    if (!viewing || savingElectrician) return;
+    if (!electricianForm.name.trim() || !electricianForm.phone.trim()) {
+      setAssociatedError('Electrician name and phone are required.');
+      return;
+    }
+
+    setSavingElectrician(true);
+    setAssociatedError('');
+    try {
+      await electricianApi.create({
+        name: electricianForm.name.trim(),
+        phone: electricianForm.phone.trim(),
+        city: electricianForm.city.trim() || viewing.district || 'Not provided',
+        state: electricianForm.state.trim() || 'Not provided',
+        district: electricianForm.district.trim() || viewing.district || 'Not provided',
+        pincode: electricianForm.pincode.trim() || viewing.pincode || undefined,
+        address: electricianForm.address.trim() || undefined,
+        dealerId: '',
+        fallbackDealerName: electricianForm.dealerName.trim() || viewing.name || 'SRV Dealer',
+        fallbackDealerPhone: viewing.phone,
+      });
+      setShowAddElectrician(false);
+      await openAssociatedElectricians(viewing);
+      await load();
+    } catch (err) {
+      setAssociatedError(err instanceof Error ? err.message : 'Unable to add electrician.');
+    } finally {
+      setSavingElectrician(false);
+    }
+  };
+
   return (
     <div style={{ padding: 24, color: C.text }}>
       {viewing && (
@@ -104,10 +159,43 @@ export default function SubDealers() {
                   {viewing.identifierType === 'legacy_code' ? 'Legacy dealer code' : 'SRV Dealer'} · {selectedIdentifier} · {selectedCount} electrician{selectedCount === 1 ? '' : 's'}
                 </div>
               </div>
-              <button onClick={() => setViewing(null)} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, width: 32, height: 32, cursor: 'pointer', color: C.muted }}>×</button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button onClick={() => setShowAddElectrician((value) => !value)} style={{ background: C.accentSoft, border: `1px solid ${C.border}`, borderRadius: 9, padding: '8px 12px', cursor: 'pointer', color: C.accentText, fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 7 }}><Plus size={15} /> Add Electrician</button>
+                <button onClick={() => setViewing(null)} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, width: 32, height: 32, cursor: 'pointer', color: C.muted }}>×</button>
+              </div>
             </div>
 
             <div style={{ padding: 18, overflow: 'auto', maxHeight: 'calc(88vh - 78px)' }}>
+              {showAddElectrician && (
+                <div style={{ border: `1px solid ${C.border}`, borderRadius: 14, padding: 14, background: C.surface, marginBottom: 16 }}>
+                  <div style={{ fontSize: 14, fontWeight: 900, marginBottom: 12 }}>Add Electrician for this Sub Dealer</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 10 }}>
+                    {[
+                      ['name', 'Electrician name', true],
+                      ['phone', 'Phone number', true],
+                      ['dealerName', 'Dealer name', false],
+                      ['city', 'City', false],
+                      ['district', 'District', false],
+                      ['state', 'State', false],
+                      ['pincode', 'Pincode', false],
+                      ['address', 'Address', false],
+                    ].map(([key, label, required]) => (
+                      <input
+                        key={key as string}
+                        value={(electricianForm as any)[key as string]}
+                        onChange={(event) => setElectricianForm((prev) => ({ ...prev, [key as string]: event.target.value }))}
+                        placeholder={`${label}${required ? ' *' : ''}`}
+                        style={{ padding: '10px 12px', borderRadius: 10, border: `1px solid ${C.border}`, background: C.inputBg, color: C.text, outline: 'none' }}
+                      />
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
+                    <button onClick={() => setShowAddElectrician(false)} style={{ border: `1px solid ${C.border}`, background: C.bg, color: C.muted, borderRadius: 9, padding: '9px 12px', cursor: 'pointer', fontWeight: 800 }}>Cancel</button>
+                    <button onClick={() => void saveElectrician()} disabled={savingElectrician} style={{ border: 0, background: C.accentText, color: 'white', borderRadius: 9, padding: '9px 13px', cursor: savingElectrician ? 'wait' : 'pointer', fontWeight: 900 }}>{savingElectrician ? 'Saving...' : 'Save Electrician'}</button>
+                  </div>
+                </div>
+              )}
+
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 12, marginBottom: 16 }}>
                 <div style={{ border: `1px solid ${C.border}`, borderRadius: 14, padding: 14, background: C.surface }}>
                   <div style={{ fontSize: 12, color: C.muted, fontWeight: 700 }}>Sub Dealer Name</div>

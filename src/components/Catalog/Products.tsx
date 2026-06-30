@@ -1,11 +1,11 @@
-'use client';
+﻿'use client';
 import React, { useState, useEffect } from 'react';
-import { Package, Box, Plus, CheckCircle, ScanLine, AlertTriangle, Star, Ban, SlidersHorizontal } from 'lucide-react';
+import { Package, Box, Plus, CheckCircle, ScanLine, AlertTriangle, Star, Ban, SlidersHorizontal, Search, X } from 'lucide-react';
 import type { Product, AdminRole } from '@/lib/types';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
 import { useAppContext } from '@/lib/appContext';
 import { useThemePalette } from '@/lib/theme';
-import { productApi } from '@/lib/api';
+import { productApi, productCategoryApi } from '@/lib/api';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 import AlertDialog from '@/components/Shared/AlertDialog';
 import { I } from '@/lib/iconMap';
@@ -51,7 +51,7 @@ function ProductModal({ product, onClose, onEdit, canEdit }: { product: Product;
       >
         <div style={{ padding: '22px 24px', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ fontSize: 17, fontWeight: 800, color: C.text }}>Product Details</div>
-          <button onClick={onClose} style={{ background: C.bg, border: 'none', borderRadius: 10, width: 32, height: 32, cursor: 'pointer', fontSize: 16 }}>✕</button>
+          <button onClick={onClose} style={{ background: C.bg, border: 'none', borderRadius: 10, width: 32, height: 32, cursor: 'pointer', fontSize: 16 }}><X size={16} /></button>
         </div>
         <div style={{ padding: 24 }}>
           <div style={{ textAlign: 'center', marginBottom: 20, background: C.bg, borderRadius: 16, padding: 20, minHeight: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -74,8 +74,8 @@ function ProductModal({ product, onClose, onEdit, canEdit }: { product: Product;
               { label: 'Points', value: `${product.points} pts`, icon: 'Star', color: '#D97706', bg: '#FEF3C7' },
               { label: 'Stock', value: product.stock.toLocaleString('en-IN'), icon: 'Package', color: '#1D4ED8', bg: '#EFF6FF' },
               { label: 'Total Scanned', value: product.totalScanned.toLocaleString('en-IN'), icon: 'Camera', color: '#7C3AED', bg: '#F5F3FF' },
-              { label: 'SKU', value: product.sku || '—', icon: 'Bookmark', color: '#DB2777', bg: '#FDF2F8' },
-              { label: 'MRP', value: product.mrp || '—', icon: 'Tags', color: '#C2410C', bg: '#FFF7ED' },
+              { label: 'SKU', value: product.sku || '-', icon: 'Bookmark', color: '#DB2777', bg: '#FDF2F8' },
+              { label: 'MRP', value: product.mrp || '-', icon: 'Tags', color: '#C2410C', bg: '#FFF7ED' },
             ].map((s, i) => (
               <div key={i} style={{ background: C.card, borderRadius: 12, padding: '16px 14px', textAlign: 'center', border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
                 <div style={{ width: 40, height: 40, borderRadius: 10, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px' }}><I name={s.icon} size={18} style={{ color: s.color }} /></div>
@@ -114,7 +114,24 @@ function EditModal({ product, onClose, onSave, onDelete, categories, role, canDe
     name: '', sub: '', category: categories[0] ?? 'Fan Box', image: '', points: 10, badge: '', price: '', mrp: '',
     stock: 0, totalScanned: 0, sku: '', description: '', isActive: true,
   });
+  const categoryPickerRef = React.useRef<HTMLDivElement | null>(null);
+  const [showCategoryList, setShowCategoryList] = useState(false);
+  const [categorySearch, setCategorySearch] = useState(String(product?.category ?? categories[0] ?? 'Fan Box'));
+  const categoryOptions = Array.from(new Set([...(form.category ? [String(form.category)] : []), ...categories].filter(Boolean)));
+  const categoryQuery = showCategoryList && categorySearch !== String(form.category ?? '') ? categorySearch.trim().toLowerCase() : '';
+  const visibleCategories = categoryOptions.filter(c => c.toLowerCase().includes(categoryQuery));
   const f = (k: keyof Product, v: unknown) => setForm(p => ({ ...p, [k]: v }));
+
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (categoryPickerRef.current && !categoryPickerRef.current.contains(event.target as Node)) {
+        setShowCategoryList(false);
+        setCategorySearch(String(form.category ?? ''));
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [form.category]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -135,19 +152,46 @@ function EditModal({ product, onClose, onSave, onDelete, categories, role, canDe
       <div style={{ background: C.card, borderRadius: 20, width: 600, maxWidth: '95vw', maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 25px 70px rgba(0,0,0,0.2)' }}>
         <div style={{ padding: '22px 28px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: C.text }}>{isAdd ? 'Add New Product' : `Edit — ${product?.name}`}</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: C.text }}>{isAdd ? 'Add New Product' : `Edit - ${product?.name}`}</div>
             <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Manage product info, points and stock</div>
           </div>
-          <button onClick={onClose} style={{ background: C.bg, border: 'none', borderRadius: 10, width: 34, height: 34, cursor: 'pointer', fontSize: 16 }}>✕</button>
+          <button onClick={onClose} style={{ background: C.bg, border: 'none', borderRadius: 10, width: 34, height: 34, cursor: 'pointer', fontSize: 16 }}><X size={16} /></button>
         </div>
         <div style={{ padding: 28 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             <div style={{ gridColumn: '1/-1' }}><label style={labelStyle}>Product Name *</label><input style={inputStyle} value={form.name ?? ''} onChange={e => f('name', e.target.value)} placeholder="e.g. FAN BOX 3 RANGE" /></div>
             <div style={{ gridColumn: '1/-1' }}><label style={labelStyle}>Sub-description *</label><input style={inputStyle} value={form.sub ?? ''} onChange={e => f('sub', e.target.value)} placeholder="Short product description" /></div>
-            <div><label style={labelStyle}>Category *</label>
-              <select style={inputStyle} value={form.category ?? ''} onChange={e => f('category', e.target.value)}>
-                {categories.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
+            <div ref={categoryPickerRef} style={{ position: 'relative' }}><label style={labelStyle}>Category *</label>
+              <div style={{ position: 'relative' }}>
+                <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: C.muted }} />
+                <input
+                  style={{ ...inputStyle, paddingLeft: 32 }}
+                  value={categorySearch}
+                  onFocus={() => setShowCategoryList(true)}
+                  onChange={e => { setCategorySearch(e.target.value); setShowCategoryList(true); }}
+                  placeholder="Search or select category..."
+                />
+              </div>
+              {showCategoryList && (
+                <div style={{ position: 'absolute', top: 66, left: 0, right: 0, zIndex: 20, maxHeight: 180, overflowY: 'auto', border: `1.5px solid ${C.border}`, borderRadius: 8, background: C.surface, boxShadow: '0 12px 28px rgba(15,23,42,0.18)' }}>
+                  {visibleCategories.map(c => {
+                    const selected = form.category === c;
+                    return (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => { f('category', c); setCategorySearch(c); setShowCategoryList(false); }}
+                        style={{ width: '100%', minHeight: 34, padding: '8px 12px', border: 'none', borderBottom: `1px solid ${C.border}`, background: selected ? '#FFF0F0' : 'transparent', color: selected ? C.red : C.text, textAlign: 'left', fontSize: 13, fontWeight: selected ? 700 : 500, cursor: 'pointer' }}
+                      >
+                        {c}
+                      </button>
+                    );
+                  })}
+                  {visibleCategories.length === 0 && (
+                    <div style={{ padding: '12px', color: C.muted, fontSize: 13 }}>No categories found</div>
+                  )}
+                </div>
+              )}
             </div>
             <div><label style={labelStyle}>Badge</label><input style={inputStyle} value={form.badge ?? ''} onChange={e => f('badge', e.target.value)} placeholder="e.g. Popular, New, Hot" /></div>
             <div style={{ gridColumn: '1/-1' }}><label style={labelStyle}>Product Image *</label>
@@ -180,8 +224,8 @@ function EditModal({ product, onClose, onSave, onDelete, categories, role, canDe
                 </div>
               )}
             </div>
-            <div><label style={labelStyle}>Price *</label><input style={inputStyle} value={form.price ?? ''} onChange={e => f('price', e.target.value)} placeholder="₹89" /></div>
-            <div><label style={labelStyle}>MRP</label><input style={inputStyle} value={form.mrp ?? ''} onChange={e => f('mrp', e.target.value)} placeholder="₹99" /></div>
+            <div><label style={labelStyle}>Price *</label><input style={inputStyle} value={form.price ?? ''} onChange={e => f('price', e.target.value)} placeholder="Rs.89" /></div>
+            <div><label style={labelStyle}>MRP</label><input style={inputStyle} value={form.mrp ?? ''} onChange={e => f('mrp', e.target.value)} placeholder="Rs.99" /></div>
             <div><label style={labelStyle}>Points per Scan *</label><input style={inputStyle} type="number" value={form.points ?? ''} onChange={e => f('points', e.target.value === '' ? '' : +e.target.value)} /></div>
             <div><label style={labelStyle}>Stock</label><input style={inputStyle} type="number" value={form.stock ?? ''} onChange={e => f('stock', e.target.value === '' ? '' : +e.target.value)} /></div>
             <div><label style={labelStyle}>SKU</label><input style={inputStyle} value={form.sku ?? ''} onChange={e => f('sku', e.target.value)} placeholder="SRV-FB-3-001" /></div>
@@ -215,7 +259,7 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
   const [productStats, setProductStats] = useState({ total: 0, active: 0, totalScanned: 0, lowStock: 0 });
   const [dbCategories, setDbCategories] = useState<string[]>(CATEGORIES_FALLBACK);
   
-  // ── Server-side pagination state ──────────────────────────────────────────
+  // â”€â”€ Server-side pagination state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const PAGE_SIZE = 50;
@@ -229,8 +273,8 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
     image: normalizeImageUrl(String(p.image ?? p.imageUrl ?? '')),
     points: Number(p.points ?? p.pointsValue ?? 0),
     badge: String(p.badge ?? ''),
-    price: typeof p.price === 'number' ? `₹${p.price}` : String(p.price ?? ''),
-    mrp: typeof p.mrp === 'number' ? `₹${p.mrp}` : String(p.mrp ?? ''),
+    price: typeof p.price === 'number' ? `Rs.${p.price}` : String(p.price ?? ''),
+    mrp: typeof p.mrp === 'number' ? `Rs.${p.mrp}` : String(p.mrp ?? ''),
     stock: Number(p.stock ?? 0),
     totalScanned: Number(p.totalScanned ?? p.total_scanned ?? 0),
     sku: String(p.sku ?? ''),
@@ -263,12 +307,21 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
       const mappedProducts = products.map(mapApiProduct);
       setData(mappedProducts);
 
-      // Load ALL products to derive unique categories (only on first load)
+      // Load master categories so newly created categories appear before they have products.
       if (page === 1) {
-        const allRes = await productApi.getAll({ limit: '1000', page: '1' });
+        const [allRes, categoryRows] = await Promise.all([
+          productApi.getAll({ limit: '1000', page: '1' }),
+          productCategoryApi.getAll().catch(() => []),
+        ]);
         const allProducts = (Array.isArray(allRes) ? allRes : (allRes as { data?: Record<string, unknown>[] }).data ?? []) as Record<string, unknown>[];
-        const uniqueCats = Array.from(new Set(allProducts.map((p: any) => String(p.category ?? '').trim()).filter(Boolean))).sort();
-        if (uniqueCats.length > 0) setDbCategories(uniqueCats);
+        const productCats = allProducts.map((p: any) => String(p.category ?? '').trim()).filter(Boolean);
+        const masterCats = (Array.isArray(categoryRows) ? categoryRows : [])
+          .filter((c: any) => c?.isActive !== false)
+          .map((c: any) => String(c?.label ?? c?.name ?? '').trim())
+          .filter(Boolean);
+        const uniqueCats = Array.from(new Set([...masterCats, ...productCats, ...CATEGORIES_FALLBACK]))
+          .sort((a, b) => a.localeCompare(b));
+        setDbCategories(uniqueCats);
       }
 
       if (total > mappedProducts.length) {
@@ -367,13 +420,27 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { id: _id, totalScanned: _ts, subCategory: _sc, weight: _w, ...payload } = form as any;
 
-    // Convert price/mrp strings back to numbers (frontend displays as "₹100" but backend needs 100)
+
+    const normalizedSku = typeof payload.sku === 'string' ? payload.sku.trim() : '';
+    payload.sku = normalizedSku || null;
+
+    if (normalizedSku) {
+      const duplicateSku = data.some((product) =>
+        product.sku?.trim().toLowerCase() === normalizedSku.toLowerCase() &&
+        product.id !== editing?.id
+      );
+      if (duplicateSku) {
+        setAlertDialog({ show: true, title: 'Duplicate SKU', message: 'This SKU is already used by another product. Please enter a unique SKU or leave it blank.', type: 'error' });
+        return;
+      }
+    }
+    // Convert price/mrp strings back to numbers (frontend displays as "Rs.100" but backend needs 100)
     if (payload.price) {
-      const priceStr = String(payload.price).replace(/[₹,\s]/g, '');
+      const priceStr = String(payload.price).replace(/[Rs.,\s]/g, '');
       payload.price = priceStr ? parseFloat(priceStr) : 0;
     }
     if (payload.mrp) {
-      const mrpStr = String(payload.mrp).replace(/[₹,\s]/g, '');
+      const mrpStr = String(payload.mrp).replace(/[Rs.,\s]/g, '');
       payload.mrp = mrpStr ? parseFloat(mrpStr) : undefined;
     }
 
@@ -518,7 +585,7 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
                       <div style={{ fontSize: 12, color: C.muted }}>Narrow down results by category</div>
                     </div>
                   </div>
-                  <button onClick={() => setShowFilterPopup(false)} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontSize: 16, color: C.muted, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+                  <button onClick={() => setShowFilterPopup(false)} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontSize: 16, color: C.muted, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={16} /></button>
                 </div>
                 <div style={{ padding: '20px 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                   {[
@@ -583,7 +650,7 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
                     </div>
                   </div>
                 </td>
-                <td style={{ padding: '12px 16px', fontSize: 12, color: C.muted, fontFamily: 'monospace', whiteSpace: 'nowrap' }}>{p.sku ? p.sku.replace(/^SRV-/, '') : '—'}</td>
+                <td style={{ padding: '12px 16px', fontSize: 12, color: C.muted, fontFamily: 'monospace', whiteSpace: 'nowrap' }}>{p.sku ? p.sku.replace(/^SRV-/, '') : '-'}</td>
                 <td style={{ padding: '12px 16px', fontSize: 12.5, color: C.muted }}>{p.category}</td>
                 <td style={{ padding: '12px 16px' }}>
                   <div style={{ fontSize: 14, fontWeight: 800, color: C.text }}>{p.price}</div>
@@ -620,18 +687,18 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
         </table>
       </div>
 
-      {/* ── Pagination ─────────────────────────────────────────────────────── */}
+      {/* â”€â”€ Pagination â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {totalCount > PAGE_SIZE && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, padding: '12px 20px', background: C.card, borderRadius: 12, border: `1px solid ${C.border}` }}>
           <div style={{ fontSize: 13, color: C.muted }}>
-            Showing <strong style={{ color: C.text }}>{(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, totalCount)}</strong> of <strong style={{ color: C.text }}>{totalCount.toLocaleString('en-IN')}</strong> products
+            Showing <strong style={{ color: C.text }}>{(currentPage - 1) * PAGE_SIZE + 1}-{Math.min(currentPage * PAGE_SIZE, totalCount)}</strong> of <strong style={{ color: C.text }}>{totalCount.toLocaleString('en-IN')}</strong> products
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <button
               onClick={() => { const p = Math.max(1, currentPage - 1); setCurrentPage(p); loadProducts(p); }}
               disabled={currentPage === 1}
               style={{ padding: '6px 14px', borderRadius: 8, border: `1px solid ${C.border}`, background: currentPage === 1 ? C.bg : C.card, color: currentPage === 1 ? C.muted : C.text, cursor: currentPage === 1 ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 600 }}
-            >← Prev</button>
+            >â† Prev</button>
 
             {/* Page number buttons */}
             {Array.from({ length: Math.min(7, Math.ceil(totalCount / PAGE_SIZE)) }, (_, i) => {
@@ -659,7 +726,7 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
               onClick={() => { const p = Math.min(Math.ceil(totalCount / PAGE_SIZE), currentPage + 1); setCurrentPage(p); loadProducts(p); }}
               disabled={currentPage >= Math.ceil(totalCount / PAGE_SIZE)}
               style={{ padding: '6px 14px', borderRadius: 8, border: `1px solid ${C.border}`, background: currentPage >= Math.ceil(totalCount / PAGE_SIZE) ? C.bg : C.card, color: currentPage >= Math.ceil(totalCount / PAGE_SIZE) ? C.muted : C.text, cursor: currentPage >= Math.ceil(totalCount / PAGE_SIZE) ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 600 }}
-            >Next →</button>
+            >Next â†’</button>
           </div>
         </div>
       )}

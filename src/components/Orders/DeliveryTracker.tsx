@@ -1,7 +1,7 @@
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Clock3, CreditCard, MapPin, PackageCheck, RefreshCw, Search, Truck, XCircle } from 'lucide-react';
-import { productOrderApi } from '@/lib/api';
+import { giftApi, productOrderApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
 import { formatISTDate, formatISTDateTime } from '@/lib/dateIST';
 
@@ -10,6 +10,7 @@ type DeliveryFilter = 'all' | 'pending_queue' | 'payment_paid' | OrderStatus;
 
 type DeliveryOrder = {
   id: string;
+  source?: 'product' | 'gift';
   userName: string;
   userPhone?: string;
   userRole: string;
@@ -17,6 +18,7 @@ type DeliveryOrder = {
   productImage?: string;
   quantity: number;
   total: number;
+  pointsUsed?: number;
   status: OrderStatus;
   shippingAddress?: string;
   trackingNumber?: string;
@@ -75,8 +77,38 @@ export default function DeliveryTracker({ role }: { role?: import('@/lib/types')
   const loadData = async () => {
     setLoading(true);
     try {
-      const res = await productOrderApi.getAll({ limit: '500' });
-      setOrders(((res as any).data ?? []) as DeliveryOrder[]);
+      const [productRes, giftRes] = await Promise.all([
+        productOrderApi.getAll({ limit: '500' }),
+        giftApi.getOrders({ limit: '500' }),
+      ]);
+      const productOrders = (((productRes as any).data ?? []) as DeliveryOrder[]).map(order => ({
+        ...order,
+        source: 'product' as const,
+      }));
+      const giftOrders = (((giftRes as any).data ?? []) as any[]).map(order => ({
+        id: order.id,
+        source: 'gift' as const,
+        userName: order.userName,
+        userPhone: order.userPhone,
+        userRole: order.type || order.role || 'gift',
+        productName: order.giftName,
+        productImage: order.giftImage,
+        quantity: 1,
+        total: Number(order.pointsUsed ?? 0),
+        pointsUsed: Number(order.pointsUsed ?? 0),
+        status: order.status,
+        shippingAddress: order.shippingAddress,
+        trackingNumber: order.trackingNumber,
+        courierName: order.courierName,
+        paymentStatus: 'paid',
+        paidAt: order.orderedAt,
+        orderedAt: order.orderedAt,
+        dispatchedAt: order.dispatchedAt,
+        deliveredAt: order.deliveredAt,
+        rejectionReason: order.rejectionReason,
+        deliveryNotes: order.deliveryNotes,
+      }));
+      setOrders([...productOrders, ...giftOrders].sort((a, b) => new Date(b.orderedAt).getTime() - new Date(a.orderedAt).getTime()));
     } finally {
       setLoading(false);
     }
@@ -117,12 +149,21 @@ export default function DeliveryTracker({ role }: { role?: import('@/lib/types')
   const updateStatus = async (order: DeliveryOrder, nextStatus: OrderStatus, shipping?: { courierName: string; trackingNumber: string }) => {
     if (!canEdit) return;
     try {
-      await productOrderApi.updateStatus(order.id, {
+      const payload = {
         status: nextStatus,
         trackingNumber: shipping?.trackingNumber || order.trackingNumber,
         courierName: shipping?.courierName || order.courierName,
         rejectionReason: nextStatus === 'rejected' ? rejectReason || 'Rejected by admin' : undefined,
-      });
+      };
+      if (order.source === 'gift') {
+        await giftApi.updateOrderStatus(order.id, nextStatus, {
+          trackingNumber: payload.trackingNumber,
+          courierName: payload.courierName,
+          rejectionReason: payload.rejectionReason,
+        });
+      } else {
+        await productOrderApi.updateStatus(order.id, payload);
+      }
       setFeedback(nextStatus === 'rejected' ? 'Order rejected. Customer will see refund within 2 business days.' : 'Delivery status updated and customer tracking is refreshed.');
       setSelected(null);
       setDispatchOrder(null);
@@ -212,7 +253,7 @@ export default function DeliveryTracker({ role }: { role?: import('@/lib/types')
                 {order.productImage ? <img src={order.productImage} alt={order.productName} style={{ width: 54, height: 54, borderRadius: 12, objectFit: 'cover', border: `1px solid ${C.border}` }} /> : <PackageCheck size={38} color={C.muted} />}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 15, fontWeight: 900, color: C.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{order.productName}</div>
-                  <div style={{ fontSize: 12, color: C.muted }}>{order.userName} • Qty {order.quantity} • ₹{order.total}</div>
+                  <div style={{ fontSize: 12, color: C.muted }}>{order.userName} • Qty {order.quantity} • {order.source === 'gift' ? `${Number(order.pointsUsed ?? order.total).toLocaleString('en-IN')} pts` : `₹${order.total}`}</div>
                 </div>
                 <span style={{ background: statusStyle.bg, color: statusStyle.color, borderRadius: 999, padding: '5px 10px', fontSize: 11, fontWeight: 900 }}>{statusStyle.label}</span>
               </div>
@@ -268,7 +309,7 @@ export default function DeliveryTracker({ role }: { role?: import('@/lib/types')
         <div style={{ position: 'fixed', inset: 0, zIndex: 1200, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={() => setSelected(null)}>
           <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, width: 520, maxWidth: '95vw', padding: 24 }} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: 18, fontWeight: 900, color: C.text, marginBottom: 6 }}>Manage Delivery #{selected.id.slice(0, 8)}</div>
-            <div style={{ color: C.muted, fontSize: 13, marginBottom: 18 }}>{selected.productName} • {formatISTDateTime(selected.orderedAt)}</div>
+            <div style={{ color: C.muted, fontSize: 13, marginBottom: 18 }}>{selected.productName} • {selected.source === 'gift' ? 'Gift redemption' : 'Product order'} • {formatISTDateTime(selected.orderedAt)}</div>
             {(selected.courierName || selected.trackingNumber) && (
               <div style={{ background: C.bg, borderRadius: 12, padding: 12, marginBottom: 12, color: C.text, fontSize: 13 }}>
                 <div><strong>Courier:</strong> {selected.courierName || 'Not assigned'}</div>

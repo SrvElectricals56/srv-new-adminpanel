@@ -7,6 +7,16 @@ import { getToken } from '@/lib/api';
 import { I } from '@/lib/iconMap';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL!;
+const API_ORIGIN = BASE_URL.replace(/\/api\/v1\/?$/, '');
+
+function resolveMediaUrl(value?: string | null) {
+  const raw = value?.trim();
+  if (!raw) return '';
+  if (/^https?:\/\//i.test(raw)) return raw;
+  if (raw.startsWith('//')) return `https:${raw}`;
+  if (raw.startsWith('/')) return `${API_ORIGIN}${raw}`;
+  return `${API_ORIGIN}/${raw.replace(/^\.?\//, '')}`;
+}
 
 async function req<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
@@ -237,6 +247,72 @@ function VideoUploader({ onUploaded, lbl }: { onUploaded: (url: string) => void;
         </div>
       )}
 
+      {error && <div style={{ marginTop: 8, fontSize: 12, color: '#DC2626' }}>{error}</div>}
+      {success && <div style={{ marginTop: 8, fontSize: 12, color: '#059669' }}>{success}</div>}
+    </div>
+  );
+}
+
+function ThumbnailUploader({ onUploaded, lbl }: { onUploaded: (url: string) => void; lbl: React.CSSProperties }) {
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowed.includes(file.type)) {
+      setError('Only image files allowed (jpg, png, gif, webp)');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError('File too large (max 10MB)');
+      return;
+    }
+
+    setUploading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('srv_token') : null;
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch(`${BASE_URL}/upload/play-thumbnail`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(text || `Upload failed: ${res.status}`);
+      }
+
+      const data = await res.json() as { url: string };
+      onUploaded(data.url);
+      setSuccess(`Uploaded: ${file.name}`);
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  return (
+    <div style={{ padding: '14px', background: '#F8FAFC', borderRadius: 10, border: '2px dashed #CBD5E1' }}>
+      <label style={lbl}>Upload Thumbnail</label>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <label style={{ cursor: uploading ? 'not-allowed' : 'pointer', background: '#0F766E', color: '#fff', borderRadius: 8, padding: '9px 18px', fontSize: 13, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 6, opacity: uploading ? 0.6 : 1 }}>
+          {uploading ? 'Uploading...' : 'Choose Thumbnail'}
+          <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" style={{ display: 'none' }} onChange={handleFile} disabled={uploading} />
+        </label>
+        <span style={{ fontSize: 12, color: '#64748B' }}>Max 10MB - jpg, png, gif, webp</span>
+      </div>
       {error && <div style={{ marginTop: 8, fontSize: 12, color: '#DC2626' }}>{error}</div>}
       {success && <div style={{ marginTop: 8, fontSize: 12, color: '#059669' }}>{success}</div>}
     </div>
@@ -559,7 +635,7 @@ export default function UploadPlays({ role }: { role?: string }) {
               {/* Thumbnail */}
               <div style={{ width: 120, height: 72, borderRadius: 10, background: '#1E293B', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {play.thumbnailUrl ? (
-                  <img src={play.thumbnailUrl} alt={play.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={resolveMediaUrl(play.thumbnailUrl)} alt={play.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (
                   <Play size={28} color="#64748B" />
                 )}
@@ -590,7 +666,7 @@ export default function UploadPlays({ role }: { role?: string }) {
                   <span><I name='Eye' size={14} /> {play.viewCount} views</span>
                   <span><I name='Calendar' size={14} /> {formatISTDate(play.createdAt)}</span>
                   <span><I name='Hash' size={14} /> Order: {play.displayOrder}</span>
-                  <a href={play.videoUrl} target="_blank" rel="noreferrer" style={{ color: '#1D4ED8', textDecoration: 'none', fontWeight: 600 }}><I name='Link' size={14} /> Open Video</a>
+                  <a href={resolveMediaUrl(play.videoUrl)} target="_blank" rel="noreferrer" style={{ color: '#1D4ED8', textDecoration: 'none', fontWeight: 600 }}><I name='Link' size={14} /> Open Video</a>
                 </div>
               </div>
 
@@ -670,15 +746,23 @@ export default function UploadPlays({ role }: { role?: string }) {
                     />
                     {form.videoUrl && form.videoUrl.includes('/uploads/videos/') && (
                       <div style={{ marginTop: 8, padding: '8px 12px', background: '#D1FAE5', borderRadius: 8, fontSize: 12, color: '#059669', display: 'flex', alignItems: 'center', gap: 6 }}>
-                        Video uploaded — <a href={form.videoUrl} target="_blank" rel="noreferrer" style={{ color: '#059669', fontWeight: 700 }}>Preview</a>
+                        Video uploaded — <a href={resolveMediaUrl(form.videoUrl)} target="_blank" rel="noreferrer" style={{ color: '#059669', fontWeight: 700 }}>Preview</a>
                       </div>
                     )}
                   </div>
                 )}
               </div>
               <div>
-                <label style={lbl}>Thumbnail URL (optional)</label>
-                <input style={inp} value={form.thumbnailUrl} onChange={e => f('thumbnailUrl', e.target.value)} placeholder="https://... (leave blank to use video thumbnail)" />
+                <label style={lbl}>Thumbnail</label>
+                <ThumbnailUploader onUploaded={(url) => f('thumbnailUrl', url)} lbl={{ ...lbl, display: 'none' }} />
+                <div style={{ marginTop: 10 }}>
+                  <input style={inp} value={form.thumbnailUrl} onChange={e => f('thumbnailUrl', e.target.value)} placeholder="Paste thumbnail URL or upload an image" />
+                </div>
+                {form.thumbnailUrl ? (
+                  <div style={{ marginTop: 10, width: 180, height: 102, borderRadius: 10, overflow: 'hidden', background: '#0F172A', border: `1px solid ${C.border}` }}>
+                    <img src={resolveMediaUrl(form.thumbnailUrl)} alt="Thumbnail preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
+                ) : null}
               </div>
               <div>
                 <label style={lbl}>Category</label>
