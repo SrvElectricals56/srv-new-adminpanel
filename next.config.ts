@@ -1,10 +1,10 @@
-import type { NextConfig } from "next";
+﻿import type { NextConfig } from "next";
 import path from "path";
 
 const apiUrl =
   process.env.SERVER_API_URL ||
   process.env.NEXT_PUBLIC_API_URL ||
-  "http://localhost:3001/api/v1";
+  "http://127.0.0.1:3001/api/v1";
 const apiOrigin = apiUrl.replace(/\/api\/v\d+\/?$/i, "").replace(/\/$/, "");
 
 const nextConfig: NextConfig = {
@@ -37,7 +37,7 @@ const nextConfig: NextConfig = {
     ];
   },
 
-  // ── Chunk splitting: each lazy-loaded page gets its own small bundle ──────
+  // â”€â”€ Chunk splitting: each lazy-loaded page gets its own small bundle â”€â”€â”€â”€â”€â”€
   webpack(config, { isServer }) {
     if (!isServer) {
       config.optimization = {

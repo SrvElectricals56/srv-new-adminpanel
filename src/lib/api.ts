@@ -1,9 +1,10 @@
-// Central API client for SRV Admin Backend
-// Backend runs at http://localhost:3001/api/v1
+﻿// Central API client for SRV Admin Backend
+// Local backend runs at http://127.0.0.1:3001/api/v1
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL!;
+const rawBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:3001/api/v1';
+const BASE_URL = rawBaseUrl.replace(/^http:\/\/localhost:3001/i, 'http://127.0.0.1:3001');
 
-// ─── Token helpers ────────────────────────────────────────────────────────────
+// â”€â”€â”€ Token helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const getToken = (): string | null =>
   typeof window !== 'undefined' ? localStorage.getItem('srv_token') : null;
 
@@ -44,7 +45,7 @@ type CacheEntry = {
   value: unknown;
 };
 
-const GET_CACHE_TTL_MS = 45_000;
+const GET_CACHE_TTL_MS = 0;
 const responseCache = new Map<string, CacheEntry>();
 const inflightRequests = new Map<string, Promise<unknown>>();
 
@@ -67,8 +68,8 @@ function getRequestCacheKey(path: string, token: string | null) {
   return `GET ${path} ${token ? token.slice(0, 24) : 'public'}`;
 }
 
-function shouldCacheGet(path: string) {
-  return path !== '/auth/profile';
+function shouldCacheGet(_path: string) {
+  return false;
 }
 
 async function refreshAccessToken(): Promise<string | null> {
@@ -111,7 +112,6 @@ async function refreshAccessToken(): Promise<string | null> {
   return refreshPromise;
 }
 
-// ─── Core fetch wrapper ───────────────────────────────────────────────────────
 async function request<T>(
   path: string,
   options: RequestInit = {},
@@ -140,7 +140,7 @@ async function request<T>(
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
   const run = (async () => {
-    const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+    const res = await fetch(`${BASE_URL}${path}`, { cache: 'no-store', ...options, headers });
 
     if (res.status === 401 && !retried && path !== '/auth/login' && path !== '/auth/refresh') {
       const nextToken = await refreshAccessToken();
@@ -185,7 +185,7 @@ async function request<T>(
   return run;
 }
 
-// ─── Auth ─────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Auth â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const authApi = {
   login: (email: string, password: string) =>
     request<{ accessToken: string; refreshToken: string; admin: { id: string; email: string; name: string; role: string } }>(
@@ -196,7 +196,7 @@ export const authApi = {
   profile: () => request<{ id: string; email: string; name: string; role: string }>('/auth/profile'),
 };
 
-// ─── Admins ───────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Admins â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const adminApi = {
   getAll: (params?: Record<string, string>) => {
     const q = params ? '?' + new URLSearchParams(params).toString() : '';
@@ -215,7 +215,7 @@ export const adminApi = {
     request<any>(`/admins/${id}/permissions`, { method: 'PUT', body: JSON.stringify(body) }),
 };
 
-// ─── Electricians ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Electricians â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const electricianApi = {
   getAll: (params?: Record<string, string>) => {
     const q = params ? '?' + new URLSearchParams(params).toString() : '';
@@ -254,7 +254,7 @@ export const electricianApi = {
     ),
 };
 
-// ─── Dealers ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Dealers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const dealerApi = {
   getAll: (params?: Record<string, string>) => {
     const q = params ? '?' + new URLSearchParams(params).toString() : '';
@@ -296,7 +296,7 @@ export const dealerApi = {
     ),
 };
 
-// ─── Products ─────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Products â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const productApi = {
   getAll: (params?: Record<string, string>) => {
     const q = params ? '?' + new URLSearchParams(params).toString() : '';
@@ -321,7 +321,7 @@ export const productApi = {
   },
 };
 
-// ─── Product Categories ───────────────────────────────────────────────────────
+// â”€â”€â”€ Product Categories â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const productCategoryApi = {
   getAll: () => request<any[]>('/product-categories'),
   getOne: (id: string) => request<any>(`/product-categories/${id}`),
@@ -330,7 +330,7 @@ export const productCategoryApi = {
   delete: (id: string) => request<void>(`/product-categories/${id}`, { method: 'DELETE' }),
 };
 
-// ─── QR Codes ─────────────────────────────────────────────────────────────────
+// â”€â”€â”€ QR Codes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const qrCodeApi = {
   getAll: (params?: Record<string, string>) => {
     const q = params ? '?' + new URLSearchParams(params).toString() : '';
@@ -354,7 +354,7 @@ export const qrCodeApi = {
   },
 };
 
-// ─── Scans ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Scans â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const scanApi = {
   getAll: (params?: Record<string, string>) => {
     const q = params ? '?' + new URLSearchParams(params).toString() : '';
@@ -363,7 +363,7 @@ export const scanApi = {
   getStats: () => request<any>('/scans/stats'),
 };
 
-// ─── Wallet ───────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Wallet â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const walletApi = {
   getTransactions: (params?: Record<string, string>) => {
     const q = params ? '?' + new URLSearchParams(params).toString() : '';
@@ -374,7 +374,7 @@ export const walletApi = {
   debit: (body: object) => request<any>('/wallet/debit', { method: 'POST', body: JSON.stringify(body) }),
 };
 
-// ─── Redemptions ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ Redemptions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const redemptionApi = {
   getAll: (params?: Record<string, string>) => {
     const q = params ? '?' + new URLSearchParams(params).toString() : '';
@@ -391,7 +391,7 @@ export const redemptionApi = {
   delete: (id: string) => request<void>(`/redemptions/${id}`, { method: 'DELETE' }),
 };
 
-// ─── Notifications ────────────────────────────────────────────────────────────
+// â”€â”€â”€ Notifications â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const notificationApi = {
   getAll: (params?: Record<string, string>) => {
     const q = params ? '?' + new URLSearchParams(params).toString() : '';
@@ -403,7 +403,7 @@ export const notificationApi = {
   delete: (id: string) => request<void>(`/notifications/${id}`, { method: 'DELETE' }),
 };
 
-// ─── Banners ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Banners â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const bannerApi = {
   getAll: () => request<any[]>('/banners'),
   create: (body: object) => request<any>('/banners', { method: 'POST', body: JSON.stringify(body) }),
@@ -425,7 +425,7 @@ export const bannerApi = {
   },
 };
 
-// ─── Offers ───────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Offers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const offerApi = {
   getAll: (params?: Record<string, string>) => {
     const q = params ? '?' + new URLSearchParams(params).toString() : '';
@@ -436,7 +436,7 @@ export const offerApi = {
   delete: (id: string) => request<void>(`/offers/${id}`, { method: 'DELETE' }),
 };
 
-// ─── Testimonials ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Testimonials â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const testimonialApi = {
   getAll: () => request<any[]>('/testimonials'),
   create: (body: object) => request<any>('/testimonials', { method: 'POST', body: JSON.stringify(body) }),
@@ -444,7 +444,7 @@ export const testimonialApi = {
   delete: (id: string) => request<void>(`/testimonials/${id}`, { method: 'DELETE' }),
 };
 
-// ─── Gift Products ────────────────────────────────────────────────────────────
+// â”€â”€â”€ Gift Products â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const giftApi = {
   getAll: (params?: Record<string, string>) => {
     const q = params ? '?' + new URLSearchParams(params).toString() : '';
@@ -461,7 +461,7 @@ export const giftApi = {
     request<any>(`/gifts/orders/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status, ...(extra ?? {}) }) }),
 };
 
-// ─── Product Orders ────────────────────────────────────────────────────────────
+// â”€â”€â”€ Product Orders â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const productOrderApi = {
   getAll: (params?: Record<string, string>) => {
     const q = params ? '?' + new URLSearchParams(params).toString() : '';
@@ -474,7 +474,7 @@ export const productOrderApi = {
   delete: (id: string) => request<void>(`/product-orders/${id}`, { method: 'DELETE' }),
 };
 
-// ─── Finance ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Finance â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const financeApi = {
   getSummary: () => request<any>('/finance/summary'),
   getTransactions: (params?: Record<string, string>) => {
@@ -502,7 +502,7 @@ export const financeApi = {
     request<void>(`/finance/transfer-points/${id}`, { method: 'DELETE' }),
 };
 
-// ─── Analytics / Dashboard ────────────────────────────────────────────────────
+// â”€â”€â”€ Analytics / Dashboard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const analyticsApi = {
   getDashboard: () => request<any>('/analytics/dashboard'),
   getScanStats: () => request<any>('/analytics/scans'),
@@ -510,7 +510,7 @@ export const analyticsApi = {
   getRevenueStats: () => request<any>('/analytics/revenue'),
 };
 
-// ─── Support Tickets ──────────────────────────────────────────────────────────
+// â”€â”€â”€ Support Tickets â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const supportApi = {
   getAll: (params?: Record<string, string>) => {
     const q = params ? '?' + new URLSearchParams(params).toString() : '';
@@ -522,7 +522,7 @@ export const supportApi = {
     request<any>(`/support/tickets/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
 };
 
-// ─── Settings ─────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Settings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const settingsApi = {
   getAll: () => request<any[]>('/settings'),
   getRatingHistory: () => request<any>('/settings/rate-us/history'),
@@ -532,7 +532,7 @@ export const settingsApi = {
     request<any>('/settings/points-config', { method: 'POST', body: JSON.stringify(body) }),
 };
 
-// ─── User Search (for notification targeting) ─────────────────────────────────
+// â”€â”€â”€ User Search (for notification targeting) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const userSearchApi = {
   search: (query: string) => {
     const params = new URLSearchParams({ search: query, limit: '10' });
@@ -542,15 +542,15 @@ export const userSearchApi = {
       request<{ data: any[] }>(`/app-users?${params}`).catch(() => ({ data: [] })),
       request<{ data: any[] }>(`/counterboys?${params}`).catch(() => ({ data: [] })),
     ]).then(([elec, dealer, users, counterboys]) => [
-      ...(elec.data ?? []).map((u: any) => ({ ...u, role: 'electrician', label: `${u.name} (${u.electricianCode ?? u.phone}) — Electrician` })),
-      ...(dealer.data ?? []).map((u: any) => ({ ...u, role: 'dealer', label: `${u.name} (${u.dealerCode ?? u.phone}) — Dealer` })),
-      ...(users.data ?? []).map((u: any) => ({ ...u, role: 'user', label: `${u.name} (${u.userCode ?? u.phone}) — User` })),
-      ...(counterboys.data ?? []).map((u: any) => ({ ...u, role: 'counterboy', label: `${u.name} (${u.counterboyCode ?? u.phone}) — Counter Boy` })),
+      ...(elec.data ?? []).map((u: any) => ({ ...u, role: 'electrician', label: `${u.name} (${u.electricianCode ?? u.phone}) - Electrician` })),
+      ...(dealer.data ?? []).map((u: any) => ({ ...u, role: 'dealer', label: `${u.name} (${u.dealerCode ?? u.phone}) - Dealer` })),
+      ...(users.data ?? []).map((u: any) => ({ ...u, role: 'user', label: `${u.name} (${u.userCode ?? u.phone}) - User` })),
+      ...(counterboys.data ?? []).map((u: any) => ({ ...u, role: 'counterboy', label: `${u.name} (${u.counterboyCode ?? u.phone}) - Counter Boy` })),
     ]);
   },
 };
 
-// ─── App Users (Customers) ────────────────────────────────────────────────────
+// â”€â”€â”€ App Users (Customers) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const appUserApi = {
   getAll: (params?: Record<string, string>) => {
     const q = params ? '?' + new URLSearchParams(params).toString() : '';
@@ -578,7 +578,7 @@ export const appUserApi = {
     ),
 };
 
-// ─── Counter Boys ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Counter Boys â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const counterboyApi = {
   getAll: (params?: Record<string, string>) => {
     const q = params ? '?' + new URLSearchParams(params).toString() : '';
@@ -606,7 +606,7 @@ export const counterboyApi = {
     ),
 };
 
-// ─── App Icons ─────────────────────────────────────────────────────────────────
+// â”€â”€â”€ App Icons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const appIconApi = {
   getAll: () => request<any[]>('/app-icons'),
   getActive: () => request<any>('/app-icons/active'),
