@@ -426,13 +426,43 @@ export const bannerApi = {
 };
 
 // â”€â”€â”€ Offers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const sanitizeOfferPayload = (body: object) => {
+  const source = body as Record<string, any>;
+  const allowedKeys = [
+    'title',
+    'description',
+    'discount',
+    'validFrom',
+    'validTo',
+    'targetRole',
+    'status',
+    'productCategory',
+    'bonusPoints',
+    'imageUrl',
+    'termsAndConditions',
+    'maxUsage',
+  ];
+  const payload: Record<string, any> = {};
+  for (const key of allowedKeys) {
+    const value = source[key];
+    if (value === undefined || value === null) continue;
+    if ((key === 'validFrom' || key === 'validTo') && String(value).trim() === '') continue;
+    if (key === 'bonusPoints' || key === 'maxUsage') {
+      payload[key] = Number(value) || 0;
+    } else {
+      payload[key] = value;
+    }
+  }
+  return payload;
+};
+
 export const offerApi = {
   getAll: (params?: Record<string, string>) => {
     const q = params ? '?' + new URLSearchParams(params).toString() : '';
     return request<{ data: any[]; total: number }>(`/offers${q}`);
   },
-  create: (body: object) => request<any>('/offers', { method: 'POST', body: JSON.stringify(body) }),
-  update: (id: string, body: object) => request<any>(`/offers/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  create: (body: object) => request<any>('/offers', { method: 'POST', body: JSON.stringify(sanitizeOfferPayload(body)) }),
+  update: (id: string, body: object) => request<any>(`/offers/${id}`, { method: 'PATCH', body: JSON.stringify(sanitizeOfferPayload(body)) }),
   delete: (id: string) => request<void>(`/offers/${id}`, { method: 'DELETE' }),
 };
 
