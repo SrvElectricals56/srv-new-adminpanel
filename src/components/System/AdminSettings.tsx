@@ -111,7 +111,6 @@ export default function AdminSettings() {
         // Try to load custom permissions from database
         try {
           const permsResponseData = await adminApi.getPermissions(a.id);
-          console.log(`Loaded permissions for ${a.name}:`, permsResponseData);
           // Convert module permissions to permission strings
           if (Array.isArray(permsResponseData)) {
             customPermissions = permsResponseData.flatMap((p: any) => {
@@ -136,10 +135,8 @@ export default function AdminSettings() {
               }
               return perms;
             });
-            console.log(`Converted to permission strings for ${a.name}:`, customPermissions);
           }
         } catch (err) {
-          console.log('Could not load permissions for', a.name, '- using defaults');
         }
         
         return {
@@ -155,7 +152,6 @@ export default function AdminSettings() {
         };
       }));
       
-      console.log('Final admins with permissions:', adminsWithPerms.map(a => ({ name: a.name, role: a.role, permissions: a.permissions })));
       setAdmins(adminsWithPerms);
     } catch (err) {
       console.error('Failed to load admins:', err);
@@ -274,7 +270,6 @@ export default function AdminSettings() {
         if (form.password && form.password.trim()) {
           updatePayload.password = form.password.trim();
         }
-        console.log('Updating admin with payload:', updatePayload);
         await adminApi.update(editingId, updatePayload);
         if (editingId === auth.adminId) {
           setAdminName(form.name);
@@ -291,7 +286,6 @@ export default function AdminSettings() {
         if (form.phone && form.phone.trim()) {
           createPayload.phone = form.phone.trim();
         }
-        console.log('Creating admin with payload:', createPayload);
         await adminApi.create(createPayload);
       }
       await loadAdmins();
@@ -620,7 +614,6 @@ export default function AdminSettings() {
                             
                             // Get current permissions for this role
                             const currentPerms = rolePerms[role];
-                            console.log('Saving permissions for role:', role, 'Permissions:', currentPerms);
                             
                             // Convert to module permissions format
                             const modulePermissions = Object.entries(moduleMap).map(([permName, moduleName]) => ({
@@ -632,18 +625,16 @@ export default function AdminSettings() {
                               canExport: currentPerms.includes(permName),
                             }));
                             
-                            console.log('Module permissions to save:', modulePermissions);
-                            console.log('Admins with this role:', roleAdmins);
                             
                             // Save for all users with this role
-                            const results = await Promise.all(roleAdmins.map(async admin => {
-                              console.log(`Saving permissions for admin: ${admin.name} (${admin.id})`);
-                              const result = await adminApi.updatePermissions(admin.id, { permissions: modulePermissions });
-                              console.log(`Successfully saved permissions for ${admin.name}:`, result);
-                              return result;
-                            }));
+                            await Promise.all(
+                              roleAdmins.map((admin) =>
+                                adminApi.updatePermissions(admin.id, {
+                                  permissions: modulePermissions,
+                                }),
+                              ),
+                            );
                             
-                            console.log('All permissions saved successfully:', results);
                             
                             setEditingRole(null);
                             setPermSaved(true);
