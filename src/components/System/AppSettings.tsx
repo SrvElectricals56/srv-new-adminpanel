@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { AppWindow, Save, ToggleLeft, ToggleRight, Bell, Gift, Info, Headphones, Award, Medal, SlidersHorizontal, Link2, ThumbsUp, FileText, Image as ImageIcon } from 'lucide-react';
+import { AppWindow, Save, ToggleLeft, ToggleRight, Bell, Gift, Info, Headphones, Award, Medal, SlidersHorizontal, Link2, ThumbsUp, FileText, Image as ImageIcon, ShoppingCart } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { settingsApi, notificationApi, userSearchApi } from '@/lib/api';
 import AppIcons from './AppIcons';
@@ -17,6 +17,8 @@ interface AppConfig {
   maxPointsPerDay: number; minRedemptionPoints: number; pointsExpiry: number;
   cashbackRate: number; referrerBonus: number; refereeBonus: number;
   minTransferPoints: number;
+  minimumOrderAmountElectrician: number; minimumOrderAmountDealer: number;
+  minimumOrderAmountUser: number; minimumOrderAmountCounterboy: number;
   // Tiers - Electrician
   silverMin: number; goldMin: number; platinumMin: number; diamondMin: number;
   // Tiers - Dealer
@@ -44,6 +46,8 @@ const INITIAL: AppConfig = {
   supportPhone: '+91 88376 84004', supportEmail: 'info@srvelectricals.com', whatsappNumber: '918837684004',
   maxPointsPerDay: 500, minRedemptionPoints: 500, pointsExpiry: 365, cashbackRate: 5, referrerBonus: 500, refereeBonus: 250,
   minTransferPoints: 100,
+  minimumOrderAmountElectrician: 5000, minimumOrderAmountDealer: 5000,
+  minimumOrderAmountUser: 5000, minimumOrderAmountCounterboy: 5000,
   silverMin: 0, goldMin: 1001, platinumMin: 5001, diamondMin: 10001,
   dealerSilverMin: 0, dealerGoldMin: 11, dealerPlatinumMin: 26, dealerDiamondMin: 51,
   dealerCommissionRate: 5,
@@ -291,6 +295,7 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
     { id: 'app', label: 'App Info', Icon: Info },
     { id: 'support', label: 'Support', Icon: Headphones },
     { id: 'points', label: 'Points', Icon: Award },
+    { id: 'orders', label: 'Order Rules', Icon: ShoppingCart },
     { id: 'tiers', label: 'Tiers', Icon: Medal },
     { id: 'features', label: 'Features', Icon: SlidersHorizontal },
     { id: 'links', label: 'Links', Icon: Link2 },
@@ -413,6 +418,35 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
                 <div><label style={lbl}>Referee Bonus Points</label><input type="number" style={inp} value={numberInputValue(config.refereeBonus)} onChange={e => f('refereeBonus', parseNumberInput(e.target.value))} /></div>
                 <div><label style={lbl}>Min Transfer Points</label><input type="number" style={inp} value={numberInputValue(config.minTransferPoints)} onChange={e => f('minTransferPoints', parseNumberInput(e.target.value))} /></div>
                 <div><label style={lbl}>Dealer Commission Rate (%)</label><input type="number" style={inp} value={numberInputValue(config.dealerCommissionRate)} onChange={e => f('dealerCommissionRate', parseNumberInput(e.target.value))} /></div>
+              </div>
+            </div>
+          )}
+
+          {activeSection === 'orders' && (
+            <div style={{ display: 'grid', gap: 16 }}>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: C.text }}>Minimum Order Amount</div>
+                <div style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>Orders below the configured amount are rejected by the backend for that profile type.</div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                {[
+                  ['Electrician', 'minimumOrderAmountElectrician'],
+                  ['Dealer', 'minimumOrderAmountDealer'],
+                  ['Customer', 'minimumOrderAmountUser'],
+                  ['Counter Boy', 'minimumOrderAmountCounterboy'],
+                ].map(([label, key]) => (
+                  <div key={key}>
+                    <label style={lbl}>{label} minimum (₹)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      step={100}
+                      style={inp}
+                      value={numberInputValue((config as any)[key])}
+                      onChange={e => f(key as keyof AppConfig, parseNumberInput(e.target.value))}
+                    />
+                  </div>
+                ))}
               </div>
             </div>
           )}

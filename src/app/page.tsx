@@ -117,6 +117,14 @@ type AdminPageState = {
   productCategoryFilter?: string;
 };
 
+type GlobalSearchResult = {
+  type: string;
+  id: string;
+  title: string;
+  subtitle: string;
+  page: string;
+};
+
 const readAdminPageState = (): AdminPageState => {
   if (typeof window === 'undefined') return {};
   try {
@@ -231,6 +239,9 @@ export default function Home() {
   const [globalSearch, setGlobalSearch] = useState('');
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [remoteSearchResults, setRemoteSearchResults] = useState<GlobalSearchResult[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState('');
   const [routeLoading, setRouteLoading] = useState(false);
   const routeLoadingTimeoutRef = useRef<number | null>(null);
   const applyingBrowserHistoryRef = useRef(false);
@@ -444,25 +455,42 @@ export default function Home() {
 
   const handleGlobalSearch = (query: string) => {
     setGlobalSearch(query);
-    if (query.length > 2) {
-      const q = query.toLowerCase().trim();
-      const productMatches = products.filter(p =>
-        p.name.toLowerCase().includes(q) ||
-        p.category.toLowerCase().includes(q) ||
-        p.sub.toLowerCase().includes(q)
-      );
-      const pointsMatches = pointsConfig.filter(pc =>
-        pc.productName.toLowerCase().includes(q)
-      );
-      let matchedPage = '';
-      for (const [page, keywords] of Object.entries(PAGE_SEARCH_KEYWORDS)) {
-        if (keywords.some(kw => kw.includes(q) || q.includes(kw))) { matchedPage = page; break; }
-      }
-      if (productMatches.length > 0) setActive('products');
-      else if (pointsMatches.length > 0) setActive('points-config');
-      else if (matchedPage) setActive(matchedPage);
-    }
+    setSearchQuery(query);
+    setShowSearchModal(true);
   };
+
+  useEffect(() => {
+    const query = searchQuery.trim();
+    if (query.length < 2) {
+      setRemoteSearchResults([]);
+      setSearchError('');
+      setSearchLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setSearchLoading(true);
+    setSearchError('');
+    const timeout = window.setTimeout(async () => {
+      try {
+        const { settingsApi } = await import('@/lib/api');
+        const response = await settingsApi.globalSearch(query, 20);
+        if (!cancelled) setRemoteSearchResults(response.results ?? []);
+      } catch (error: any) {
+        if (!cancelled) {
+          setRemoteSearchResults([]);
+          setSearchError(error?.message || 'Search is temporarily unavailable.');
+        }
+      } finally {
+        if (!cancelled) setSearchLoading(false);
+      }
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeout);
+    };
+  }, [searchQuery]);
 
   const getPageData = async () => {
     const dateTag = new Date().toISOString().slice(0, 10);
@@ -767,6 +795,21 @@ export default function Home() {
                 // Search logic
                 const results: Array<{ type: string; title: string; subtitle: string; icon: string; action: () => void }> = [];
 
+                remoteSearchResults.forEach(result => {
+                  results.push({
+                    type: result.type,
+                    title: result.title,
+                    subtitle: result.subtitle || result.id,
+                    icon: result.type.includes('Order') ? 'ClipboardList' : result.type === 'QR Code' ? 'QrCode' : result.type === 'Product' ? 'Package' : 'Users',
+                    action: () => {
+                      setShowSearchModal(false);
+                      setGlobalSearch('');
+                      setSearchQuery('');
+                      handleNavigate(result.page);
+                    },
+                  });
+                });
+
                 // Search pages
                 const pageMatches = Object.entries(PAGE_LABELS).filter(([key, val]) => 
                   val.title.toLowerCase().includes(query) || key.toLowerCase().includes(query)
@@ -812,12 +855,16 @@ export default function Home() {
                   });
                 });
 
+                if (searchLoading && results.length === 0) {
+                  return <div style={{ textAlign: 'center', padding: '40px 20px', color: P.modalMuted }}>Searching all records...</div>;
+                }
+
                 if (results.length === 0) {
                   return (
                     <div style={{ textAlign: 'center', padding: '40px 20px' }}>
                       <div style={{ fontSize: 48, marginBottom: 12 }}>?</div>
                       <div style={{ fontSize: 16, fontWeight: 700, color: P.text, marginBottom: 6 }}>No results found</div>
-                      <div style={{ fontSize: 13, color: P.modalMuted }}>Try searching for pages, users, products, or features</div>
+                      <div style={{ fontSize: 13, color: searchError ? P.red : P.modalMuted }}>{searchError || 'Try searching for pages, users, products, QR codes, or orders'}</div>
                     </div>
                   );
                 }
@@ -1183,6 +1230,8 @@ export default function Home() {
                   }
                   if (e.key === 'Escape') {
                     setGlobalSearch('');
+                    setSearchQuery('');
+                    setShowSearchModal(false);
                   }
                 }}
                 style={{

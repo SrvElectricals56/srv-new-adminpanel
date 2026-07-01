@@ -561,6 +561,10 @@ export const supportApi = {
 // â”€â”€â”€ Settings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const settingsApi = {
   getAll: () => request<any[]>('/settings'),
+  globalSearch: (query: string, limit = 20) => {
+    const params = new URLSearchParams({ q: query, limit: String(limit) });
+    return request<{ query: string; results: Array<{ type: string; id: string; title: string; subtitle: string; page: string }>; total: number }>(`/settings/global-search?${params}`);
+  },
   getRatingHistory: () => request<any>('/settings/rate-us/history'),
   update: (key: string, value: string) =>
     request<any>(`/settings/${key}`, { method: 'PUT', body: JSON.stringify({ value }) }),
