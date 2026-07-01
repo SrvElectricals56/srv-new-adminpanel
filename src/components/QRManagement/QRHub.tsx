@@ -46,6 +46,8 @@ interface EditState {
 }
 
 const PAGE_SIZE = 25;
+const BATCH_EXPORT_PAGE_SIZE = 500;
+const BATCH_EXPORT_MAX_ROWS = 5000;
 
 export default function QRHub({ role }: QRHubProps) {
   const C = useThemePalette();
@@ -150,9 +152,21 @@ export default function QRHub({ role }: QRHubProps) {
     }));
 
   const getBatchExportRows = async (batch: QRBatch) => {
-    const res = await qrCodeApi.getAll({ batchId: batch.batchId, limit: String(Math.max(batch.qty, 1)), page: '1' });
-    const rows = Array.isArray(res) ? res : (res as any).data ?? [];
-    return rows.map((qr: any, index: number) => ({
+    const targetRows = Math.min(Math.max(batch.qty, 1), BATCH_EXPORT_MAX_ROWS);
+    const pages = Math.ceil(targetRows / BATCH_EXPORT_PAGE_SIZE);
+    const allRows: any[] = [];
+    for (let page = 1; page <= pages; page += 1) {
+      const remaining = targetRows - allRows.length;
+      const res = await qrCodeApi.getAll({
+        batchId: batch.batchId,
+        limit: String(Math.min(BATCH_EXPORT_PAGE_SIZE, remaining)),
+        page: String(page),
+      });
+      const pageRows = Array.isArray(res) ? res : (res as any).data ?? [];
+      allRows.push(...pageRows);
+      if (pageRows.length < BATCH_EXPORT_PAGE_SIZE) break;
+    }
+    return allRows.map((qr: any, index: number) => ({
       Id: index + 1,
       'QR ID': qr.code ?? qr.qrId ?? qr.id,
       'Product Name': qr.productName ?? qr.product?.name ?? batch.productName,
@@ -175,6 +189,14 @@ export default function QRHub({ role }: QRHubProps) {
   const openBatchExport = async (batch: QRBatch) => {
     try {
       const rows = await getBatchExportRows(batch);
+      if (batch.qty > BATCH_EXPORT_MAX_ROWS) {
+        setAlertDialog({
+          show: true,
+          title: 'Large Batch Export Limited',
+          message: `This batch has ${batch.qty.toLocaleString('en-IN')} QR codes. The admin UI exports the first ${BATCH_EXPORT_MAX_ROWS.toLocaleString('en-IN')} rows to keep the browser responsive. Use a server-side export job for the full batch.`,
+          type: 'info',
+        });
+      }
       setExportTitle(`QR Batch ${getBatchLabel(batch)}`);
       setExportFileName(`qr-batch-${getBatchLabel(batch)}`);
       setExportRows(rows);

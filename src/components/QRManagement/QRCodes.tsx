@@ -203,11 +203,20 @@ export default function QRCodes({ role }: QRCodesProps) {
     }
   };
 
-  // Re-fetch when search/filter changes
+  // Re-fetch when status changes immediately; debounce text search to avoid
+  // hammering the multi-million-row QR table on every keystroke.
   useEffect(() => {
     setCurrentPage(1);
     loadQRCodes(1);
-  }, [searchTerm, filterStatus]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [filterStatus]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setCurrentPage(1);
+      loadQRCodes(1);
+    }, 350);
+    return () => window.clearTimeout(timeout);
+  }, [searchTerm]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { loadStats(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -374,7 +383,7 @@ export default function QRCodes({ role }: QRCodesProps) {
               {loading && (
                 <tr>
                   <td colSpan={8} style={{ padding: '60px 20px', textAlign: 'center', color: C.muted }}>
-                    <div style={{ fontSize: 14, fontWeight: 600 }}>Generating real QR codes...</div>
+                    <div style={{ fontSize: 14, fontWeight: 600 }}>Loading QR codes...</div>
                     <div style={{ fontSize: 12, marginTop: 4 }}>Please wait</div>
                   </td>
                 </tr>
