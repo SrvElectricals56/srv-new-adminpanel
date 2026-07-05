@@ -805,7 +805,7 @@ export default function Home() {
                       setShowSearchModal(false);
                       setGlobalSearch('');
                       setSearchQuery('');
-                      handleNavigate(result.page);
+                      setActive(result.page);
                     },
                   });
                 });
