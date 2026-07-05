@@ -1,5 +1,5 @@
 ﻿'use client';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { FileSpreadsheet, Plus, Users, Star, ScanLine, Wallet, Trash2, SlidersHorizontal, Calendar, Medal, Award, Trophy, Gem } from 'lucide-react';
 import { electricianApi, dealerApi } from '@/lib/api';
 import type { Electrician, MemberTier, UserStatus, AdminRole } from '@/lib/types';
@@ -312,6 +312,7 @@ function EditModal({ el, onClose, onSave, dealers = [] }: { el: Electrician | nu
   });
   const f = (k: keyof Electrician, v: unknown) => setForm(p => ({ ...p, [k]: v }));
   const selectedDealer = dealers.find(d => d.id === form.dealerId);
+  const dealerOptions = useMemo(() => dealers.map(d => ({ value: d.id, label: `${d.name} (${d.dealerCode})` })), [dealers]);
   const autoCodePreview = selectedDealer ? `${selectedDealer.dealerCode}-001` : 'Auto-assigned by server';
   const handleImageFile = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -432,17 +433,22 @@ function EditModal({ el, onClose, onSave, dealers = [] }: { el: Electrician | nu
               <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 14, paddingBottom: 8, borderBottom: `1px solid ${C.border}` }}>Dealer & Account</div>
             </div>
             <div style={{ gridColumn: '1/-1' }}>
-              <label style={labelStyle}>Dealer</label>
-              <select style={inputStyle} value={form.dealerId ?? ''} onChange={e => {
-                const selected = dealers.find(d => d.id === e.target.value);
-                f('dealerId', e.target.value || null);
-                f('dealerName', selected?.name ?? '');
-              }}>
-                <option value="">— No Dealer —</option>
-                {dealers.map(d => (
-                  <option key={d.id} value={d.id}>{d.name} ({d.dealerCode})</option>
-                ))}
-              </select>
+              <label style={labelStyle}>Dealer *</label>
+              <SearchableSelect
+                value={form.dealerId ?? ''}
+                options={dealerOptions}
+                placeholder={dealers.length ? 'Select dealer' : 'No dealers available'}
+                searchPlaceholder="Search dealer by name or code..."
+                minWidth={560}
+                onChange={(value) => {
+                  const selected = dealers.find(d => d.id === value);
+                  f('dealerId', value);
+                  f('dealerName', selected?.name ?? '');
+                }}
+              />
+              {isAdd && !form.dealerId ? (
+                <div style={{ fontSize: 11, color: C.red, marginTop: 6 }}>Dealer is required before adding an electrician.</div>
+              ) : null}
             </div>
             <div>
               <label style={labelStyle}>Tier</label>
@@ -484,7 +490,11 @@ function EditModal({ el, onClose, onSave, dealers = [] }: { el: Electrician | nu
           </div>
 
           <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
-            <button onClick={() => onSave(form)} style={{ flex: 1, background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 10, padding: '13px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)' }}>
+            <button
+              onClick={() => onSave(form)}
+              disabled={isAdd && !form.dealerId}
+              style={{ flex: 1, background: isAdd && !form.dealerId ? C.muted : `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 10, padding: '13px', fontSize: 14, fontWeight: 700, cursor: isAdd && !form.dealerId ? 'not-allowed' : 'pointer', boxShadow: isAdd && !form.dealerId ? 'none' : '0 4px 14px rgba(29,78,216,0.3)', opacity: isAdd && !form.dealerId ? 0.75 : 1 }}
+            >
               {isAdd ? 'Add Electrician' : 'Save Changes'}
             </button>
             <button onClick={onClose} style={{ background: C.bg, color: C.muted, border: 'none', borderRadius: 10, padding: '13px 20px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
@@ -686,6 +696,10 @@ export default function Electricians({ role }: ElectriciansProps) {
     }
     if (form.phone && !/^\d{10}$/.test(form.phone)) {
       setAlertDialog({ show: true, title: 'Invalid Phone Number', message: 'Phone number must be exactly 10 digits', type: 'error' });
+      return;
+    }
+    if (showAdd && (!form.dealerId || form.dealerId.trim() === '')) {
+      setAlertDialog({ show: true, title: 'Dealer Required', message: 'Please select a dealer before adding a new electrician.', type: 'error' });
       return;
     }
     const electricianCode = form.electricianCode?.trim();

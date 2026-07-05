@@ -572,6 +572,14 @@ export const settingsApi = {
     request<any>('/settings/points-config', { method: 'POST', body: JSON.stringify(body) }),
 };
 
+export const playApi = {
+  getAll: () => request<{ data: any[]; total: number }>('/plays?all=true'),
+  getStats: () => request<any>('/plays/stats'),
+  getInteractions: (id: string) => request<any>(`/plays/${id}/interactions`),
+  deleteComment: (playId: string, commentId: string) =>
+    request<any>(`/plays/${playId}/comments/${commentId}`, { method: 'DELETE' }),
+};
+
 // â”€â”€â”€ User Search (for notification targeting) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const userSearchApi = {
   search: (query: string) => {

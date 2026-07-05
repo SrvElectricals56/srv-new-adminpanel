@@ -1,9 +1,10 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { AppWindow, Save, ToggleLeft, ToggleRight, Bell, Gift, Info, Headphones, Award, Medal, SlidersHorizontal, Link2, ThumbsUp, FileText, Image as ImageIcon, ShoppingCart } from 'lucide-react';
+import { AppWindow, Save, ToggleLeft, ToggleRight, Bell, Gift, Info, Headphones, Award, Medal, SlidersHorizontal, Link2, ThumbsUp, FileText, Image as ImageIcon, ShoppingCart, Play } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { settingsApi, notificationApi, userSearchApi } from '@/lib/api';
 import AppIcons from './AppIcons';
+import PlayEngagement from './PlayEngagement';
 import { I } from '@/lib/iconMap';
 
 interface AppConfig {
@@ -300,6 +301,7 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
     { id: 'features', label: 'Features', Icon: SlidersHorizontal },
     { id: 'links', label: 'Links', Icon: Link2 },
     { id: 'rateus', label: 'Rate Us', Icon: ThumbsUp },
+    { id: 'play-engagement', label: 'Play Engagement', Icon: Play },
     { id: 'catalog', label: 'Catalog PDF', Icon: FileText },
     { id: 'notifications', label: 'Push Notifications', Icon: Bell },
     { id: 'app-icons', label: 'App Icons', Icon: ImageIcon },
@@ -728,6 +730,10 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
                 <strong>How it works:</strong> Uploaded PDFs are saved automatically. Dealer users get the dealer catalog, while electrician, customer and counter boy users get the general catalog.
               </div>
             </div>
+          )}
+
+          {activeSection === 'play-engagement' && (
+            <PlayEngagement canEdit={canEdit} />
           )}
 
           {activeSection === 'notifications' && (

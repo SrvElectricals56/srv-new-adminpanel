@@ -173,6 +173,7 @@ export default function ProductCategories({ role, onNavigate }: { role?: import(
         label: form.name,
         imageUrl: normalizeCategoryImageUrl(form.image) || undefined,
         sortOrder: Number(form.sortOrder || 0),
+        productCount: Number(form.productCount || 0),
         isActive: form.isActive,
       };
       

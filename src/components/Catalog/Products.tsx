@@ -389,6 +389,22 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
     return matchSearch && matchCat && matchStatus && matchStock && matchBadge;
   });
 
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const paginationItems = (() => {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+    const pages = new Set<number>([1, totalPages, currentPage - 1, currentPage, currentPage + 1]);
+    if (currentPage <= 3) [2, 3, 4].forEach((p) => pages.add(p));
+    if (currentPage >= totalPages - 2) [totalPages - 3, totalPages - 2, totalPages - 1].forEach((p) => pages.add(p));
+
+    const sorted = [...pages].filter((p) => p >= 1 && p <= totalPages).sort((a, b) => a - b);
+    const result: Array<number | 'ellipsis'> = [];
+    sorted.forEach((page, index) => {
+      if (index > 0 && page - sorted[index - 1] > 1) result.push('ellipsis');
+      result.push(page);
+    });
+    return result;
+  })();
+
   const handleSave = async (form: Partial<Product>) => {
     // Validate required fields
     if (!form.name || !form.name.trim()) {
@@ -434,15 +450,18 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
         return;
       }
     }
-    // Convert price/mrp strings back to numbers (frontend displays as "Rs.100" but backend needs 100)
-    if (payload.price) {
-      const priceStr = String(payload.price).replace(/[Rs.,\s]/g, '');
-      payload.price = priceStr ? parseFloat(priceStr) : 0;
-    }
-    if (payload.mrp) {
-      const mrpStr = String(payload.mrp).replace(/[Rs.,\s]/g, '');
-      payload.mrp = mrpStr ? parseFloat(mrpStr) : undefined;
-    }
+    const parseCurrencyInput = (value: unknown) => {
+      const cleaned = String(value ?? '')
+        .replace(/,/g, '')
+        .replace(/[^0-9.-]/g, '')
+        .trim();
+      const parsed = Number.parseFloat(cleaned);
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
+
+    // Convert price/mrp strings back to numbers without removing decimal points.
+    payload.price = parseCurrencyInput(payload.price);
+    payload.mrp = String(payload.mrp ?? '').trim() ? parseCurrencyInput(payload.mrp) : undefined;
 
     try {
       if (showAdd) {
@@ -687,7 +706,6 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
         </table>
       </div>
 
-      {/* â”€â”€ Pagination â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {totalCount > PAGE_SIZE && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, padding: '12px 20px', background: C.card, borderRadius: 12, border: `1px solid ${C.border}` }}>
           <div style={{ fontSize: 13, color: C.muted }}>
@@ -698,35 +716,27 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
               onClick={() => { const p = Math.max(1, currentPage - 1); setCurrentPage(p); loadProducts(p); }}
               disabled={currentPage === 1}
               style={{ padding: '6px 14px', borderRadius: 8, border: `1px solid ${C.border}`, background: currentPage === 1 ? C.bg : C.card, color: currentPage === 1 ? C.muted : C.text, cursor: currentPage === 1 ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 600 }}
-            >â† Prev</button>
+            >Previous</button>
 
-            {/* Page number buttons */}
-            {Array.from({ length: Math.min(7, Math.ceil(totalCount / PAGE_SIZE)) }, (_, i) => {
-              const totalPages = Math.ceil(totalCount / PAGE_SIZE);
-              let pageNum: number;
-              if (totalPages <= 7) {
-                pageNum = i + 1;
-              } else if (currentPage <= 4) {
-                pageNum = i + 1;
-              } else if (currentPage >= totalPages - 3) {
-                pageNum = totalPages - 6 + i;
-              } else {
-                pageNum = currentPage - 3 + i;
+            {paginationItems.map((item, index) => {
+              if (item === 'ellipsis') {
+                return <span key={`ellipsis-${index}`} style={{ width: 24, textAlign: 'center', color: C.muted, fontWeight: 700 }}>...</span>;
               }
+
               return (
                 <button
-                  key={pageNum}
-                  onClick={() => { setCurrentPage(pageNum); loadProducts(pageNum); }}
-                  style={{ width: 34, height: 34, borderRadius: 8, border: `1px solid ${currentPage === pageNum ? C.red : C.border}`, background: currentPage === pageNum ? C.red : C.card, color: currentPage === pageNum ? 'white' : C.text, cursor: 'pointer', fontSize: 13, fontWeight: currentPage === pageNum ? 700 : 500 }}
-                >{pageNum}</button>
+                  key={item}
+                  onClick={() => { setCurrentPage(item); loadProducts(item); }}
+                  style={{ width: 34, height: 34, borderRadius: 8, border: `1px solid ${currentPage === item ? C.red : C.border}`, background: currentPage === item ? C.red : C.card, color: currentPage === item ? 'white' : C.text, cursor: 'pointer', fontSize: 13, fontWeight: currentPage === item ? 700 : 500 }}
+                >{item}</button>
               );
             })}
 
             <button
-              onClick={() => { const p = Math.min(Math.ceil(totalCount / PAGE_SIZE), currentPage + 1); setCurrentPage(p); loadProducts(p); }}
-              disabled={currentPage >= Math.ceil(totalCount / PAGE_SIZE)}
-              style={{ padding: '6px 14px', borderRadius: 8, border: `1px solid ${C.border}`, background: currentPage >= Math.ceil(totalCount / PAGE_SIZE) ? C.bg : C.card, color: currentPage >= Math.ceil(totalCount / PAGE_SIZE) ? C.muted : C.text, cursor: currentPage >= Math.ceil(totalCount / PAGE_SIZE) ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 600 }}
-            >Next â†’</button>
+              onClick={() => { const p = Math.min(totalPages, currentPage + 1); setCurrentPage(p); loadProducts(p); }}
+              disabled={currentPage >= totalPages}
+              style={{ padding: '6px 14px', borderRadius: 8, border: `1px solid ${C.border}`, background: currentPage >= totalPages ? C.bg : C.card, color: currentPage >= totalPages ? C.muted : C.text, cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 600 }}
+            >Next</button>
           </div>
         </div>
       )}
