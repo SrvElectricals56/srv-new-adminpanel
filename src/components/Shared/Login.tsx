@@ -1,7 +1,7 @@
 'use client';
 import { FormEvent, useRef, useState } from 'react';
 import Image from 'next/image';
-import { ShieldCheck, Users, UserCheck, Eye, EyeOff, LogIn, Bolt, Lock, Mail, ChevronRight, Sun, Moon } from 'lucide-react';
+import { ShieldCheck, Users, UserCheck, Eye, EyeOff, LogIn, Bolt, Lock, UserRound, ChevronRight, Sun, Moon } from 'lucide-react';
 import { useTheme } from '@/lib/theme';
 import { useAppContext } from '@/lib/appContext';
 import type { AdminRole } from '@/lib/types';
@@ -55,39 +55,39 @@ export default function Login({ onLogin }: LoginProps) {
   const { login } = useAppContext();
   const isDark = mode === 'dark';
   const [selectedRole, setSelectedRole] = useState<AdminRole>('super_admin');
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [shake, setShake] = useState(false);
-  const emailRef = useRef<HTMLInputElement>(null);
+  const identifierRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
 
   // Clear fields when role changes
   const handleRoleSelect = (role: AdminRole) => {
     setSelectedRole(role);
-    setEmail('');
+    setIdentifier('');
     setPassword('');
     setError('');
   };
 
   const handleLogin = async (event?: FormEvent) => {
     event?.preventDefault();
-    const nextEmail = (emailRef.current?.value || email).trim();
+    const nextIdentifier = (identifierRef.current?.value || identifier).trim();
     const nextPassword = passwordRef.current?.value || password;
 
-    if (!nextEmail || !nextPassword) {
-      setError('Please enter email and password');
+    if (!nextIdentifier || !nextPassword) {
+      setError('Please enter username or email and password');
       triggerShake();
       return;
     }
-    setEmail(nextEmail);
+    setIdentifier(nextIdentifier);
     setPassword(nextPassword);
     setLoading(true);
     setError('');
     try {
-      const { role, name } = await login(nextEmail, nextPassword);
+      const { role, name } = await login(nextIdentifier, nextPassword);
       onLogin(role, name);
     } catch (err: any) {
       setError(err.message || 'Invalid credentials. Please try again.');
@@ -309,18 +309,18 @@ export default function Login({ onLogin }: LoginProps) {
             animation: shake ? 'shake 0.4s ease' : 'none',
             }}
           >
-            {/* Email */}
+            {/* Username / Email */}
             <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 11, fontWeight: 700, color: theme.labelColor, letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>Email Address</label>
+              <label style={{ fontSize: 11, fontWeight: 700, color: theme.labelColor, letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>Username or Email</label>
               <div style={{ position: 'relative' }}>
-                <Mail size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: theme.iconColor, pointerEvents: 'none' }} />
+                <UserRound size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: theme.iconColor, pointerEvents: 'none' }} />
                 <input
-                  ref={emailRef}
-                  type="email"
-                  value={email}
-                  onChange={e => { setEmail(e.target.value.trim()); setError(''); }}
-                  placeholder="Enter your email"
-                  autoComplete="email"
+                  ref={identifierRef}
+                  type="text"
+                  value={identifier}
+                  onChange={e => { setIdentifier(e.target.value); setError(''); }}
+                  placeholder="Enter your username or email"
+                  autoComplete="username"
                   style={{
                     width: '100%', padding: '12px 14px 12px 42px',
                     background: theme.inputBg,

@@ -101,11 +101,13 @@ interface SidebarProps {
   onCollapseChange?: (collapsed: boolean) => void;
   role?: string;
   adminName?: string;
+  lockedCollapsed?: boolean;
 }
 
-export default function Sidebar({ active, onNavigate, onPreload, onCollapseChange, role, adminName }: SidebarProps) {
+export default function Sidebar({ active, onNavigate, onPreload, onCollapseChange, role, adminName, lockedCollapsed = false }: SidebarProps) {
   const P = useThemePalette();
   const [collapsed, setCollapsed] = useState(false);
+  const effectiveCollapsed = collapsed || lockedCollapsed;
 
   const handleCollapse = (newCollapsed: boolean) => {
     setCollapsed(newCollapsed);
@@ -114,7 +116,7 @@ export default function Sidebar({ active, onNavigate, onPreload, onCollapseChang
 
   return (
     <aside style={{
-      width: collapsed ? 72 : 260,
+      width: effectiveCollapsed ? 72 : 260,
       minHeight: '100vh',
       background: P.sidebar,
       display: 'flex',
@@ -129,11 +131,11 @@ export default function Sidebar({ active, onNavigate, onPreload, onCollapseChang
     }}>
       {/* Logo area */}
       <div style={{
-        padding: collapsed ? '20px 0' : '20px 20px',
+        padding: effectiveCollapsed ? '20px 0' : '20px 20px',
         borderBottom: '1px solid rgba(255,255,255,0.08)',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: collapsed ? 'center' : 'space-between',
+        justifyContent: effectiveCollapsed ? 'center' : 'space-between',
         gap: 12,
         minHeight: 74,
         flexShrink: 0,
@@ -153,14 +155,14 @@ export default function Sidebar({ active, onNavigate, onPreload, onCollapseChang
           }}>
             <Image src="/srv-logo.jpeg" alt="SRV Logo" width={46} height={46} style={{ objectFit: 'cover' }} loading="eager" priority />
           </div>
-          {!collapsed && (
+          {!effectiveCollapsed && (
             <div style={{ overflow: 'hidden' }}>
               <div style={{ fontWeight: 800, fontSize: 15, color: '#FFFFFF', lineHeight: 1.2, whiteSpace: 'nowrap' }}>SRV Electricals</div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', whiteSpace: 'nowrap' }}>Admin Portal</div>
             </div>
           )}
         </div>
-        {!collapsed && (
+        {!effectiveCollapsed && !lockedCollapsed && (
           <button onClick={() => handleCollapse(true)} style={{ 
             background: 'rgba(255,255,255,0.1)', 
             border: '1px solid rgba(255,255,255,0.2)', 
@@ -181,7 +183,7 @@ export default function Sidebar({ active, onNavigate, onPreload, onCollapseChang
       </div>
 
       {/* Expand button for collapsed state - positioned below logo */}
-      {collapsed && (
+      {effectiveCollapsed && !lockedCollapsed && (
         <div style={{ 
           padding: '16px 0', 
           display: 'flex', 
@@ -225,7 +227,7 @@ export default function Sidebar({ active, onNavigate, onPreload, onCollapseChang
       }}>
         {NAV_GROUPS.map((group) => (
           <div key={group.label}>
-            {!collapsed && (
+            {!effectiveCollapsed && (
               <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.25)', letterSpacing: '0.1em', padding: '12px 10px 6px', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
                 {group.label}
               </div>
@@ -244,18 +246,18 @@ export default function Sidebar({ active, onNavigate, onPreload, onCollapseChang
                   key={item.id}
                   onClick={() => onNavigate(item.id)}
                   onFocus={() => onPreload?.(item.id)}
-                  title={collapsed ? item.label : undefined}
+                  title={effectiveCollapsed ? item.label : undefined}
                   style={{
                     width: '100%',
                     display: 'flex',
                     alignItems: 'center',
                     gap: 10,
-                    padding: collapsed ? '10px' : '10px 12px',
+                    padding: effectiveCollapsed ? '10px' : '10px 12px',
                     borderRadius: 10,
                     border: 'none',
                     cursor: 'pointer',
                     marginBottom: 2,
-                    justifyContent: collapsed ? 'center' : 'flex-start',
+                    justifyContent: effectiveCollapsed ? 'center' : 'flex-start',
                     background: isActive ? `linear-gradient(135deg, ${P.red}, ${P.redDark})` : 'transparent',
                     color: isActive ? 'white' : 'rgba(255,255,255,0.55)',
                     fontWeight: isActive ? 600 : 400,
@@ -268,11 +270,11 @@ onMouseEnter={e => { onPreload?.(item.id); if (!isActive) (e.currentTarget as HT
 onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
                 >
                   <Icon size={18} style={{ flexShrink: 0 }} />
-                  {!collapsed && <span>{item.label}</span>}
+                  {!effectiveCollapsed && <span>{item.label}</span>}
                 </button>
               );
             })}
-            {!collapsed && <div style={{ height: 4 }} />}
+            {!effectiveCollapsed && <div style={{ height: 4 }} />}
           </div>
         ))}
         {/* Extra padding at bottom to ensure user section is always visible */}
@@ -281,19 +283,19 @@ onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLButtonElement).style
 
       {/* Bottom user */}
       <div style={{
-        padding: collapsed ? '14px 10px' : '14px 20px',
+        padding: effectiveCollapsed ? '14px 10px' : '14px 20px',
         borderTop: '1px solid rgba(255,255,255,0.08)',
         display: 'flex',
         alignItems: 'center',
         gap: 10,
-        justifyContent: collapsed ? 'center' : 'flex-start',
+        justifyContent: effectiveCollapsed ? 'center' : 'flex-start',
         flexShrink: 0,
         background: P.sidebar, // Ensure it stays on top
         position: 'relative',
         zIndex: 10,
       }}>
         <div style={{ width: 34, height: 34, borderRadius: '50%', background: `linear-gradient(135deg, ${P.red}, ${P.redDark})`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 800, fontSize: 13, flexShrink: 0 }}>A</div>
-        {!collapsed && (
+        {!effectiveCollapsed && (
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 600, fontSize: 13, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{adminName || 'Admin User'}</div>
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>{role === 'super_admin' ? 'Super Admin' : role === 'admin' ? 'Admin' : 'Staff'}</div>

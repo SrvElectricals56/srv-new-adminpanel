@@ -13,7 +13,7 @@ interface AuthState {
 interface AppContextType {
   // Auth
   auth: AuthState;
-  login: (email: string, password: string) => Promise<{ role: AdminRole; name: string }>;
+  login: (identifier: string, password: string) => Promise<{ role: AdminRole; name: string }>;
   logout: () => void;
   setAdminName: (name: string) => void;
 
@@ -154,8 +154,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   }, [auth.isLoggedIn]);
 
-  const login = async (email: string, password: string) => {
-    const res = await authApi.login(email, password);
+  const login = async (identifier: string, password: string) => {
+    const res = await authApi.login(identifier, password);
     setToken(res.accessToken);
     setRefreshToken(res.refreshToken);
     setStoredAdmin(res.admin);

@@ -249,19 +249,20 @@ export default function AdminSettings() {
   };
 
   const handleSave = async () => {
-    if (!form.name.trim() || !form.email.trim()) return;
+    if (!form.name.trim()) return;
     if (!editingId && form.password !== form.confirmPassword) return;
     if (!editingId && !form.password.trim()) return;
 
     setSaving(true);
     setSaveError('');
     try {
+      const normalizedEmail = form.email.trim();
       if (editingId) {
         const updatePayload: any = { 
           name: form.name.trim(), 
-          email: form.email.trim(), 
           role: form.role
         };
+        updatePayload.email = normalizedEmail || null;
         // Only add phone if it's not empty
         if (form.phone && form.phone.trim()) {
           updatePayload.phone = form.phone.trim();
@@ -277,11 +278,13 @@ export default function AdminSettings() {
       } else {
         const createPayload: any = {
           name: form.name.trim(),
-          email: form.email.trim(),
           role: form.role,
           password: form.password.trim(),
           isActive: true,
         };
+        if (normalizedEmail) {
+          createPayload.email = normalizedEmail;
+        }
         // Only add phone if it's not empty
         if (form.phone && form.phone.trim()) {
           createPayload.phone = form.phone.trim();
@@ -294,7 +297,9 @@ export default function AdminSettings() {
       console.error('Failed to save admin:', err);
       // Extract readable error message
       const msg = err?.message || '';
-      if (msg.includes('already exists') || msg.includes('409')) {
+      if (msg.includes('username already exists')) {
+        setSaveError('An admin with this username already exists.');
+      } else if (msg.includes('already exists') || msg.includes('409')) {
         setSaveError('An admin with this email already exists.');
       } else if (msg.includes('400')) {
         setSaveError('Invalid data. Please check all fields.');
@@ -904,7 +909,7 @@ export default function AdminSettings() {
                   <input style={inp} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Admin name" />
                 </div>
                 <div>
-                  <label style={lbl}>Email *</label>
+                  <label style={lbl}>Email (Optional)</label>
                   <input type="email" style={inp} value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="admin@srvelectricals.com" />
                 </div>
               </div>
@@ -950,7 +955,7 @@ export default function AdminSettings() {
               </div>
             </div>
             <div style={{ padding: '0 24px 20px', display: 'flex', gap: 10 }}>
-              <button onClick={handleSave} disabled={saving || !form.name || !form.email || (!editingId && (form.password !== form.confirmPassword || !form.password))}
+              <button onClick={handleSave} disabled={saving || !form.name || (!editingId && (form.password !== form.confirmPassword || !form.password))}
                 style={{ flex: 1, background: saving ? C.muted : `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 12, padding: '12px', fontSize: 14, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}>
                 {saving ? 'Saving...' : editingId ? 'Save Changes' : 'Create Admin'}
               </button>

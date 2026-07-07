@@ -233,6 +233,7 @@ export default function Home() {
   const [counterBoySubPage, setCounterBoySubPage] = useState<string | undefined>(initialPageState.counterBoySubPage);
   const [productCategoryFilter, setProductCategoryFilter] = useState<string | undefined>(initialPageState.productCategoryFilter);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [viewportWidth, setViewportWidth] = useState<number>(1440);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [exporting, setExporting] = useState<string | null>(null);
@@ -249,6 +250,18 @@ export default function Home() {
   const loggedIn = auth.isLoggedIn;
   const role = auth.role;
   const adminName = auth.adminName;
+  const autoCollapsedSidebar = viewportWidth < 1360;
+  const effectiveSidebarCollapsed = sidebarCollapsed || autoCollapsedSidebar;
+  const compactTopbar = viewportWidth < 1180;
+  const narrowTopbar = viewportWidth < 960;
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const updateViewport = () => setViewportWidth(window.innerWidth);
+    updateViewport();
+    window.addEventListener('resize', updateViewport);
+    return () => window.removeEventListener('resize', updateViewport);
+  }, []);
 
   useEffect(() => {
     if (!loggedIn) return;
@@ -1138,10 +1151,10 @@ export default function Home() {
         </div>
       )}
 
-      <Sidebar active={active} onNavigate={handleNavigate} onPreload={(id) => { void preloadPageChunk(id); }} onCollapseChange={setSidebarCollapsed} role={role} adminName={adminName} />
+      <Sidebar active={active} onNavigate={handleNavigate} onPreload={(id) => { void preloadPageChunk(id); }} onCollapseChange={setSidebarCollapsed} role={role} adminName={adminName} lockedCollapsed={autoCollapsedSidebar} />
       {(isPending || routeLoading) && <SrvLogoLoader overlay label={`Opening ${PAGE_LABELS[active]?.title ?? 'section'}...`} />}
       <div style={{ 
-        marginLeft: sidebarCollapsed ? 72 : 260, 
+        marginLeft: effectiveSidebarCollapsed ? 72 : 260, 
         flex: 1, 
         minHeight: '100vh', 
         background: P.bg, 
@@ -1153,19 +1166,21 @@ export default function Home() {
       }}>
         {/* Topbar */}
         <div style={{
-          height: 64,
+          minHeight: 64,
           background: P.topbar,
           borderBottom: `1px solid ${P.topbarBorder}`,
           display: 'flex',
-          alignItems: 'center',
+          alignItems: compactTopbar ? 'stretch' : 'center',
           justifyContent: 'space-between',
-          padding: '0 28px',
+          flexWrap: compactTopbar ? 'wrap' : 'nowrap',
+          gap: compactTopbar ? 12 : 0,
+          padding: compactTopbar ? '12px 18px' : '0 28px',
           position: 'sticky',
           top: 0,
           zIndex: 50,
           boxShadow: P.shadow,
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: P.crumb }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: P.crumb, minWidth: 0, flex: compactTopbar ? '1 1 100%' : '0 1 auto' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <div style={{ width: 28, height: 28, borderRadius: 7, overflow: 'hidden', border: `1px solid ${P.border}` }}>
                 <Image src="/srv-logo.jpeg" alt="SRV" width={28} height={28} style={{ objectFit: 'cover' }} loading="eager" />
@@ -1194,7 +1209,7 @@ export default function Home() {
             )}
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: narrowTopbar ? 'space-between' : 'flex-end', flexWrap: 'wrap', gap: 12, width: compactTopbar ? '100%' : 'auto' }}>
             {active !== 'dashboard' && ['products', 'points-config', 'reports'].includes(active) && (
               <button
                 onClick={() => setShowExportModal(true)}
@@ -1218,7 +1233,7 @@ export default function Home() {
               </button>
             )}
             {/* Universal Search */}
-            <div style={{ position: 'relative' }}>
+            <div style={{ position: 'relative', flex: compactTopbar ? '1 1 280px' : '0 1 auto', minWidth: narrowTopbar ? '100%' : 220 }}>
               <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: P.muted, pointerEvents: 'none' }} />
               <input 
                 placeholder="Search anything... (users, products, pages)" 
@@ -1237,7 +1252,7 @@ export default function Home() {
                 style={{
                   paddingLeft: 32, paddingRight: globalSearch ? 32 : 14, paddingTop: 8, paddingBottom: 8,
                   border: `1.5px solid ${globalSearch ? P.red : P.border}`, borderRadius: 10, fontSize: 13,
-                  outline: 'none', width: 280, background: P.surface, color: P.text,
+                  outline: 'none', width: '100%', background: P.surface, color: P.text,
                   transition: 'all 0.2s ease'
                 }}
                 onFocus={e => (e.target as HTMLInputElement).style.borderColor = P.red}
@@ -1295,12 +1310,12 @@ export default function Home() {
             </button>
 
             {/* Admin avatar + logout */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer', padding: '6px 12px', borderRadius: 10, border: `1.5px solid ${P.border}`, background: P.surface }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer', padding: '6px 12px', borderRadius: 10, border: `1.5px solid ${P.border}`, background: P.surface, minWidth: 0 }}>
               <div style={{ width: 28, height: 28, borderRadius: '50%', background: `linear-gradient(135deg, ${roleInfo.color}, ${roleInfo.color}cc)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 800, fontSize: 12 }}>
                 <roleInfo.Icon size={14} />
               </div>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: P.text, lineHeight: 1.2 }}>{adminName || 'Admin'}</div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: P.text, lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: narrowTopbar ? 120 : 180 }}>{adminName || 'Admin'}</div>
                 <div style={{ fontSize: 10, color: P.crumb }}>{roleInfo.label}</div>
               </div>
             </div>

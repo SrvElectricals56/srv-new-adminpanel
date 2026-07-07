@@ -195,13 +195,13 @@ async function request<T>(
 
 // â”€â”€â”€ Auth â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const authApi = {
-  login: (email: string, password: string) =>
-    request<{ accessToken: string; refreshToken: string; admin: { id: string; email: string; name: string; role: string } }>(
+  login: (identifier: string, password: string) =>
+    request<{ accessToken: string; refreshToken: string; admin: { id: string; email: string | null; name: string; role: string } }>(
       '/auth/login',
-      { method: 'POST', body: JSON.stringify({ email, password }) }
+      { method: 'POST', body: JSON.stringify({ identifier, password }) }
     ),
   logout: () => request('/auth/logout', { method: 'POST' }),
-  profile: () => request<{ id: string; email: string; name: string; role: string }>('/auth/profile'),
+  profile: () => request<{ id: string; email: string | null; name: string; role: string }>('/auth/profile'),
 };
 
 // â”€â”€â”€ Admins â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
