@@ -45,6 +45,7 @@ const NAV_GROUPS = [
       { id: 'qr-hub', label: 'QR Hub', Icon: QrCode },
       { id: 'qr-codes', label: 'QR Codes', Icon: QrCode },
       { id: 'qr-generator', label: 'QR Generator', Icon: QrCode },
+      { id: 'qr-activity-history', label: 'QR Activity History', Icon: Activity },
     ]
   },
   {
@@ -93,6 +94,17 @@ const NAV_GROUPS = [
     ]
   },
 ];
+
+const STAFF_NAV_IDS = new Set([
+  'dashboard',
+  'products',
+  'product-categories',
+  'points-config',
+  'qr-hub',
+  'qr-codes',
+  'qr-generator',
+  'qr-activity-history',
+]);
 
 interface SidebarProps {
   active: string;
@@ -223,20 +235,25 @@ export default function Sidebar({ active, onNavigate, onPreload, onCollapseChang
         msOverflowStyle: 'none', /* IE and Edge */
         maxHeight: 'calc(100vh - 148px)', /* Logo height (74px) + User section height (74px) */
       }}>
-        {NAV_GROUPS.map((group) => (
+        {NAV_GROUPS.map((group) => {
+          const visibleItems = group.items.filter(item => {
+            if (role === 'staff') return STAFF_NAV_IDS.has(item.id);
+            if (['admin-settings', 'app-settings', 'app-page-controls'].includes(item.id)) {
+              return role === 'super_admin';
+            }
+            return true;
+          });
+
+          if (visibleItems.length === 0) return null;
+
+          return (
           <div key={group.label}>
             {!collapsed && (
               <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.25)', letterSpacing: '0.1em', padding: '12px 10px 6px', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
                 {group.label}
               </div>
             )}
-            {group.items.filter(item => {
-              // These items only visible to super_admin
-              if (['admin-settings', 'app-settings', 'app-page-controls'].includes(item.id)) {
-                return role === 'super_admin';
-              }
-              return true;
-            }).map((item) => {
+            {visibleItems.map((item) => {
               const isActive = active === item.id;
               const { Icon } = item;
               return (
@@ -274,7 +291,7 @@ onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLButtonElement).style
             })}
             {!collapsed && <div style={{ height: 4 }} />}
           </div>
-        ))}
+        );})}
         {/* Extra padding at bottom to ensure user section is always visible */}
         <div style={{ height: 20 }} />
       </nav>

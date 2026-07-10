@@ -358,6 +358,18 @@ export const qrCodeApi = {
     const q = productId ? `?productId=${productId}` : '';
     return request<void>(`/qr-codes/delete-all${q}`, { method: 'DELETE' });
   },
+  recordDownloadHistory: (body: {
+    productId?: string;
+    productName: string;
+    batchId?: string;
+    batchNo?: number | string | null;
+    quantity: number;
+    downloadType?: string;
+  }) => request<any>('/qr-codes/download-history', { method: 'POST', body: JSON.stringify(body) }),
+  getDownloadHistory: (params?: Record<string, string>) => {
+    const q = params ? '?' + new URLSearchParams(params).toString() : '';
+    return request<{ data: any[]; total: number; page: number; limit: number; totalPages: number }>(`/qr-codes/download-history${q}`);
+  },
 };
 
 // â”€â”€â”€ Scans â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

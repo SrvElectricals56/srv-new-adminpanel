@@ -4,7 +4,6 @@ import { QrCode, Download, RefreshCw, Bolt, Package, Gift, Copy, Check, FileText
 import { useThemePalette } from '@/lib/theme';
 import { formatISTDateTime, formatISTDate, formatISTDateTimeFull } from '@/lib/dateIST';
 import type { AdminRole } from '@/lib/types';
-import { getPermissions } from '@/lib/permissions';
 import { productApi, qrCodeApi } from '@/lib/api';
 import AlertDialog from '@/components/Shared/AlertDialog';
 
@@ -46,7 +45,7 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
   const [downloading, setDownloading] = useState<string | null>(null);
   const [qrStats, setQrStats] = useState({ total: 0, scanned: 0, active: 0 });
   const [alertDialog, setAlertDialog] = useState<{ show: boolean; title: string; message: string; type: 'error' | 'success' | 'warning' | 'info' }>({ show: false, title: '', message: '', type: 'error' });
-  const permissions = getPermissions(role);
+  const canGenerateQr = role === 'super_admin' || role === 'admin' || role === 'staff';
 
   useEffect(() => {
     let mounted = true;
@@ -108,7 +107,7 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
   const count = typeof qrCount === 'string' ? parseInt(qrCount) || 1 : qrCount;
 
   const generateQRCode = async () => {
-    if (!selectedProduct || !permissions.canEdit) return;
+    if (!selectedProduct || !canGenerateQr) return;
     const product = products.find((p: any) => String(p.id) === selectedProduct || p.sku === selectedProduct);
     if (!product) return;
 
@@ -199,11 +198,27 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
     setProgress(0);
   };
 
-  const downloadSingle = (qr: GeneratedQR) => {
+  const recordQrDownload = async (qrs: GeneratedQR[], downloadType: string) => {
+    const first = qrs[0];
+    if (!first) return;
+    try {
+      await qrCodeApi.recordDownloadHistory({
+        productId: first.productId,
+        productName: first.productName,
+        quantity: qrs.length,
+        downloadType,
+      });
+    } catch (error) {
+      console.warn('Failed to record QR download history:', error);
+    }
+  };
+
+  const downloadSingle = async (qr: GeneratedQR) => {
     const link = document.createElement('a');
     link.href = qr.qrData;
     link.download = `${qr.id}.png`;
     link.click();
+    await recordQrDownload([qr], 'single_png');
   };
 
   const copyQRData = (qr: GeneratedQR) => {
@@ -298,6 +313,7 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      await recordQrDownload(generatedQRs, 'zip');
     } catch (err) {
       console.error('ZIP error:', err);
       setAlertDialog({ show: true, title: 'Download Failed', message: 'ZIP download failed. Try fewer QR codes.', type: 'error' });
@@ -324,6 +340,7 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    void recordQrDownload(generatedQRs, 'csv');
     setDownloading(null);
   };
 
@@ -357,6 +374,7 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'QR Codes');
       XLSX.writeFile(wb, `QR_Codes_${Date.now()}.xlsx`);
+      await recordQrDownload(generatedQRs, 'excel');
     } catch (err) {
       console.error('Excel error:', err);
     }
@@ -414,6 +432,7 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
       }
 
       doc.save(`QR_Codes_${Date.now()}.pdf`);
+      await recordQrDownload(generatedQRs, 'pdf');
     } catch (err) {
       console.error('PDF error:', err);
       setAlertDialog({ show: true, title: 'PDF Generation Failed', message: 'PDF generation failed. Please try again.', type: 'error' });
@@ -454,7 +473,7 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
             <Package size={20} style={{ color: C.red }} /> Generate New QR Codes
           </div>
 
-          {!permissions.canEdit && (
+          {!canGenerateQr && (
             <div style={{ background: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: 12, padding: 16, marginBottom: 20 }}>
               <div style={{ fontSize: 13, color: '#92400E', fontWeight: 600 }}>View Only Mode</div>
               <div style={{ fontSize: 12, color: '#92400E', marginTop: 4 }}>You don't have permission to generate QR codes</div>
@@ -473,14 +492,14 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
                   setSelectedProduct('');
                   setShowProductResults(true);
                 }}
-                disabled={!permissions.canEdit}
+                disabled={!canGenerateQr}
                 placeholder={productsLoading ? 'Loading all products...' : 'Search by product name, SKU or category'}
                 style={{ width: '100%', boxSizing: 'border-box', padding: '10px 38px 10px 38px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 13, outline: 'none', background: C.inputBg, color: C.text }}
               />
-              {!!productSearch && permissions.canEdit && (
+              {!!productSearch && canGenerateQr && (
                 <button type="button" aria-label="Clear selected product" onClick={() => { setProductSearch(''); setSelectedProduct(''); setShowProductResults(true); }} style={{ position: 'absolute', right: 8, top: 7, width: 28, height: 28, border: 'none', background: 'transparent', color: C.muted, cursor: 'pointer', display: 'grid', placeItems: 'center' }}><X size={15} /></button>
               )}
-              {showProductResults && permissions.canEdit && (
+              {showProductResults && canGenerateQr && (
                 <div style={{ position: 'absolute', zIndex: 30, top: 'calc(100% + 6px)', left: 0, right: 0, maxHeight: 280, overflowY: 'auto', background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, boxShadow: '0 14px 35px rgba(15,23,42,0.18)', padding: 6 }}>
                   {productsLoading ? (
                     <div style={{ padding: 16, textAlign: 'center', color: C.muted, fontSize: 12 }}>Loading all company products...</div>
@@ -539,7 +558,7 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
               }}
               onBlur={e => { if (!e.target.value || parseInt(e.target.value) < 1) setQrCount(1); }}
               placeholder="Enter number (1 - 20,000)"
-              disabled={!permissions.canEdit}
+              disabled={!canGenerateQr}
               style={{ width: '100%', padding: '10px 12px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 13, outline: 'none', background: C.inputBg, color: C.text }}
             />
             <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>Max 20,000 QR codes at once</div>
@@ -557,8 +576,8 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
             </div>
           )}
 
-          <button onClick={generateQRCode} disabled={!selectedProduct || !permissions.canEdit || generating}
-            style={{ width: '100%', background: selectedProduct && permissions.canEdit && !generating ? `linear-gradient(135deg, ${C.red}, ${C.redDark})` : C.border, color: 'white', border: 'none', borderRadius: 12, padding: '14px', fontSize: 14, fontWeight: 700, cursor: selectedProduct && permissions.canEdit && !generating ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 0.2s' }}>
+          <button onClick={generateQRCode} disabled={!selectedProduct || !canGenerateQr || generating}
+            style={{ width: '100%', background: selectedProduct && canGenerateQr && !generating ? `linear-gradient(135deg, ${C.red}, ${C.redDark})` : C.border, color: 'white', border: 'none', borderRadius: 12, padding: '14px', fontSize: 14, fontWeight: 700, cursor: selectedProduct && canGenerateQr && !generating ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 0.2s' }}>
             <RefreshCw size={16} style={{ animation: generating ? 'spin 1s linear infinite' : 'none' }} />
             {generating ? `Generating... ${progress}%` : 'Generate QR Codes'}
           </button>
