@@ -42,8 +42,13 @@ function getPerms(role: AdminRole, module: string): RolePerms {
 
     case 'staff':
     default:
-      // View only everywhere
-      return { visible: true, canView: true, canCreate: false, canEdit: false, canDelete: false, canExport: true, canGenerate: false };
+      if (module === 'qr_codes') {
+        return { visible: true, canView: true, canCreate: true, canEdit: false, canDelete: false, canExport: true, canGenerate: true };
+      }
+      if (['products', 'categories', 'points_config', 'dashboard'].includes(module)) {
+        return { visible: true, canView: true, canCreate: false, canEdit: false, canDelete: false, canExport: false, canGenerate: false };
+      }
+      return { visible: false, canView: false, canCreate: false, canEdit: false, canDelete: false, canExport: false, canGenerate: false };
   }
 }
 

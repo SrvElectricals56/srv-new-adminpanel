@@ -1,6 +1,6 @@
 ﻿'use client';
 import { useState, useEffect } from 'react';
-import { Bolt, Store, ScanLine, Star, Users, AlertTriangle, ChartColumn, Medal, CreditCard, Gift, MessageCircle, X, Check, Award, Trophy, Gem, FileText, IndianRupee, UserRound, UserCog, Smartphone } from 'lucide-react';
+import { Bolt, Store, Package, ScanLine, Star, Users, AlertTriangle, ChartColumn, Medal, CreditCard, Gift, MessageCircle, X, Check, Award, Trophy, Gem, FileText, IndianRupee, UserRound, UserCog, Smartphone } from 'lucide-react';
 import { analyticsApi, appUserApi, counterboyApi, dealerApi, electricianApi, redemptionApi, scanApi, supportApi } from '@/lib/api';
 import type { AdminRole } from '@/lib/types';
 import { getPermissions } from '@/lib/permissions';
@@ -20,6 +20,7 @@ const TIER_COLORS: Record<string, string> = {
 
 export default function Dashboard({ role, adminName = 'Admin', onNavigate }: DashboardProps) {
   const C = useThemePalette();
+  const isStaff = role === 'staff';
   const [hovered, setHovered] = useState<number | null>(null);
   const [showFinanceChoice, setShowFinanceChoice] = useState(false);
   const [showAppStatusChoice, setShowAppStatusChoice] = useState(false);
@@ -44,6 +45,11 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (isStaff) {
+      setLoading(false);
+      return;
+    }
+
     const load = async () => {
       try {
         const [
@@ -125,7 +131,7 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
       }
     };
     load();
-  }, []);
+  }, [isStaff]);
 
   const handleApproveRedemption = async (id: string) => {
     try {
@@ -172,6 +178,15 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
     { label: 'Top Electricians', value: null, Icon: Medal, change: 'View leaderboard', up: true, color: '#F59E0B', bg: '#FFFBEB', navigateTo: 'electricians', subPage: 'top', valueIcon: Trophy },
     { label: 'Top Dealers', value: null, Icon: Store, change: 'View leaderboard', up: true, color: '#3B82F6', bg: '#EFF6FF', navigateTo: 'dealers', subPage: 'top', valueIcon: Award },
   ];
+  const staffCards = [
+    { label: 'Products', Icon: Package, color: '#1D4ED8', bg: '#EFF6FF', navigateTo: 'products' },
+    { label: 'Product Categories', Icon: Star, color: '#7C3AED', bg: '#F5F3FF', navigateTo: 'product-categories' },
+    { label: 'Products Points', Icon: Star, color: '#F59E0B', bg: '#FFFBEB', navigateTo: 'points-config' },
+    { label: 'QR Hub', Icon: ScanLine, color: '#0369A1', bg: '#E0F2FE', navigateTo: 'qr-hub' },
+    { label: 'QR Codes', Icon: ScanLine, color: '#10B981', bg: '#D1FAE5', navigateTo: 'qr-codes' },
+    { label: 'QR Generator', Icon: ScanLine, color: '#DC2626', bg: '#FEE2E2', navigateTo: 'qr-generator' },
+  ];
+  const visibleStatCards: any[] = isStaff ? staffCards : statCards;
 
   // Real chart data — fallback to empty bars if not loaded yet
   const chartBars = scanChartData.length > 0
@@ -182,7 +197,7 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
       {/* App Status Role Choice Modal */}
-      {showAppStatusChoice && (
+      {!isStaff && showAppStatusChoice && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.42)', backdropFilter: 'blur(5px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={() => setShowAppStatusChoice(false)}>
           <div style={{ background: C.card, borderRadius: 20, width: 560, maxWidth: '95vw', boxShadow: '0 25px 70px rgba(0,0,0,0.22)', border: `1px solid ${C.border}` }} onClick={e => e.stopPropagation()}>
             <div style={{ padding: '20px 24px', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -219,7 +234,7 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
       )}
 
       {/* Finance Choice Modal */}
-      {showFinanceChoice && (
+      {!isStaff && showFinanceChoice && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={() => setShowFinanceChoice(false)}>
           <div style={{ background: C.card, borderRadius: 20, width: 520, maxWidth: '95vw', boxShadow: '0 25px 70px rgba(0,0,0,0.25)', border: `1px solid ${C.border}` }} onClick={e => e.stopPropagation()}>
             <div style={{ padding: '20px 24px', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -262,7 +277,7 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
           <div style={{ fontSize: 22, fontWeight: 900, color: 'white', marginBottom: 4 }}>Welcome back, {adminName}</div>
           <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)' }}>SRV Electricals Admin Portal — {formatISTDateTimeFull(new Date().toISOString()).split(',').slice(0,2).join(',')}</div>
         </div>
-        <div style={{ display: 'flex', gap: 12 }}>
+        {!isStaff && <div style={{ display: 'flex', gap: 12 }}>
           <div onClick={() => onNavigate && onNavigate('redemptions')} style={{ textAlign: 'center', padding: '10px 20px', background: 'rgba(29,78,216,0.25)', borderRadius: 12, border: '1px solid rgba(29,78,216,0.3)', cursor: 'pointer' }}>
             <div style={{ fontSize: 22, fontWeight: 900, color: '#FCA5A5', display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}><AlertTriangle size={20} /> {stats?.pendingRedemptions ?? 0}</div>
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>Pending Action</div>
@@ -271,12 +286,12 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
             <div style={{ fontSize: 22, fontWeight: 900, color: '#C4B5FD', display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}><MessageCircle size={20} /> {pendingEnquiries}</div>
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>Pending Enquiries</div>
           </div>
-        </div>
+        </div>}
       </div>
 
       {/* Stat Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 24 }}>
-        {statCards.map((s, i) => (
+        {visibleStatCards.map((s, i) => (
           <div key={i} style={{ background: C.card, borderRadius: 16, padding: '15px 16px', border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', transition: 'all 0.2s', cursor: 'pointer' }}
             onClick={() => { if (s.navigateTo === 'finance-choice') { setShowFinanceChoice(true); return; } if (s.navigateTo === 'app-status-choice') { setShowAppStatusChoice(true); return; } onNavigate && s.navigateTo && onNavigate(s.navigateTo, (s as any).subPage); }}
             onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 8px 24px rgba(0,0,0,0.10)'; }}
@@ -285,7 +300,7 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
               <div style={{ width: 38, height: 38, borderRadius: 11, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.color }}><s.Icon size={18} /></div>
               <span style={{ background: '#D1FAE5', color: '#065F46', fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 20 }}>↑</span>
             </div>
-            {'installed' in s ? (
+            {isStaff ? null : 'installed' in s ? (
               <div style={{ display: 'grid', gap: 6, marginBottom: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
                   <span style={{ fontSize: 12, fontWeight: 800, color: C.text }}>App Installed</span>
@@ -299,14 +314,14 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
             ) : (
               <div style={{ fontSize: 24, fontWeight: 900, color: C.text, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>{loading ? '...' : s.valueIcon ? <s.valueIcon size={24} style={{ color: s.color }} /> : s.value}</div>
             )}
-            <div style={{ fontSize: 12.5, fontWeight: 700, color: C.muted, marginBottom: 2 }}>{s.label}</div>
-            <div style={{ fontSize: 10.5, color: '#10B981', fontWeight: 600, lineHeight: 1.25 }}>{s.change}</div>
+            <div style={{ fontSize: isStaff ? 15 : 12.5, fontWeight: isStaff ? 900 : 700, color: isStaff ? C.text : C.muted, marginBottom: isStaff ? 0 : 2 }}>{s.label}</div>
+            {!isStaff && <div style={{ fontSize: 10.5, color: '#10B981', fontWeight: 600, lineHeight: 1.25 }}>{s.change}</div>}
           </div>
         ))}
       </div>
 
       {/* Charts Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20, marginBottom: 20 }}>
+      {!isStaff && <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20, marginBottom: 20 }}>
         {/* Scan Activity Chart */}
         <div onClick={() => onNavigate && onNavigate('electricians', 'scans')} style={{ background: C.card, borderRadius: 16, padding: 22, border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', cursor: 'pointer' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
@@ -356,10 +371,10 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
             })
           )}
         </div>
-      </div>
+      </div>}
 
       {/* Recent Scans + Pending Redemptions */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+      {!isStaff && <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
         {/* Recent Scans */}
         <div onClick={() => onNavigate && onNavigate('electricians', 'scans')} style={{ background: C.card, borderRadius: 16, padding: 22, border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', cursor: 'pointer' }}>
           <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 18, display: 'flex', alignItems: 'center', gap: 8 }}><Bolt size={18} style={{ color: C.red }} /> Recent Scans</div>
@@ -406,7 +421,7 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
             ))
           }
         </div>
-      </div>
+      </div>}
     </div>
   );
 }

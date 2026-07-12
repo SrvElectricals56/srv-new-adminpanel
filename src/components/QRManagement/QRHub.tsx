@@ -46,6 +46,7 @@ interface EditState {
 }
 
 const PAGE_SIZE = 25;
+const HISTORY_PAGE_SIZE = 20;
 const BATCH_EXPORT_PAGE_SIZE = 500;
 const BATCH_EXPORT_MAX_ROWS = 5000;
 
@@ -76,6 +77,18 @@ export default function QRHub({ role }: QRHubProps) {
   const [exportTitle, setExportTitle] = useState('QR Hub');
   const [exportFileName, setExportFileName] = useState('qr-hub');
   const [exportRows, setExportRows] = useState<object[]>([]);
+  const [historyRows, setHistoryRows] = useState<any[]>([]);
+  const [historySearch, setHistorySearch] = useState('');
+  const [historyFromDate, setHistoryFromDate] = useState('');
+  const [historyToDate, setHistoryToDate] = useState('');
+  const [showHistoryCalendar, setShowHistoryCalendar] = useState(false);
+  const [historyCalendarMonth, setHistoryCalendarMonth] = useState(() => {
+    const today = new Date();
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyTotal, setHistoryTotal] = useState(0);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [alertDialog, setAlertDialog] = useState<{ show: boolean; title: string; message: string; type: 'error' | 'success' | 'warning' | 'info' }>({
     show: false,
     title: '',
@@ -84,6 +97,36 @@ export default function QRHub({ role }: QRHubProps) {
   });
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const historyTotalPages = Math.max(1, Math.ceil(historyTotal / HISTORY_PAGE_SIZE));
+  const canViewHistory = role === 'super_admin' || role === 'admin' || role === 'staff';
+  const toDateInput = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  const todayIso = toDateInput(new Date());
+  const todayMonthIso = todayIso.slice(0, 7);
+  const [calendarYear, calendarMonth] = historyCalendarMonth.split('-').map(Number);
+  const currentMonthStart = new Date(calendarYear, calendarMonth - 1, 1);
+  const currentMonthLastDay = new Date(calendarYear, calendarMonth, 0).getDate();
+  const currentMonthOffset = currentMonthStart.getDay();
+  const canGoNextHistoryMonth = historyCalendarMonth < todayMonthIso;
+  const selectedSingleDate = historyFromDate && historyFromDate === historyToDate ? historyFromDate : '';
+  const calendarCells = [
+    ...Array.from({ length: currentMonthOffset }, () => null),
+    ...Array.from({ length: currentMonthLastDay }, (_, index) => {
+      const day = index + 1;
+      const date = new Date(currentMonthStart.getFullYear(), currentMonthStart.getMonth(), day);
+      const iso = toDateInput(date);
+      return { day, iso, future: iso > todayIso };
+    }),
+  ];
+  const shiftHistoryMonth = (delta: number) => {
+    const next = new Date(calendarYear, calendarMonth - 1 + delta, 1);
+    const nextIso = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`;
+    if (nextIso <= todayMonthIso) setHistoryCalendarMonth(nextIso);
+  };
 
   const mapBatch = (row: any): QRBatch => ({
     id: String(row.id ?? row.batchId ?? row.batchNo ?? ''),
@@ -102,6 +145,33 @@ export default function QRHub({ role }: QRHubProps) {
   const getRedeemerLabel = (qr: any) => {
     const details = [qr.lastScannedName, qr.lastScannedPhone, qr.lastScannedCode].filter(Boolean);
     return details.length ? details.join(' · ') : qr.lastScannedBy ?? '';
+  };
+  const getHistoryActionLabel = (type?: string) => {
+    const normalized = String(type ?? '').toLowerCase();
+    if (normalized === 'generated') return 'Generated';
+    if (normalized.includes('export') || normalized === 'csv' || normalized === 'excel' || normalized === 'pdf' || normalized === 'zip') return 'Downloaded';
+    if (normalized.includes('png')) return 'Downloaded';
+    return 'Downloaded';
+  };
+
+  const applyHistoryFilters = (fromDate = historyFromDate, toDate = historyToDate) => {
+    setHistoryPage(1);
+    void loadDownloadHistory(1, historySearch, fromDate, toDate);
+  };
+
+  const setHistorySingleDate = (dateIso: string) => {
+    if (dateIso > todayIso) return;
+    setHistoryFromDate(dateIso);
+    setHistoryToDate(dateIso);
+    setHistoryPage(1);
+    void loadDownloadHistory(1, historySearch, dateIso, dateIso);
+  };
+
+  const clearHistoryFilters = () => {
+    setHistoryFromDate('');
+    setHistoryToDate('');
+    setHistoryPage(1);
+    void loadDownloadHistory(1, historySearch, '', '');
   };
 
   const loadHub = async (page = currentPage, search = searchTerm) => {
@@ -123,6 +193,44 @@ export default function QRHub({ role }: QRHubProps) {
     }
   };
 
+  const loadDownloadHistory = async (page = historyPage, search = historySearch, fromDate = historyFromDate, toDate = historyToDate) => {
+    if (!canViewHistory) return;
+    setHistoryLoading(true);
+    try {
+      const params: Record<string, string> = {
+        page: String(page),
+        limit: String(HISTORY_PAGE_SIZE),
+      };
+      if (search.trim()) params.search = search.trim();
+      if (fromDate) params.fromDate = fromDate;
+      if (toDate) params.toDate = toDate;
+      const res = await qrCodeApi.getDownloadHistory(params);
+      const rows = Array.isArray(res) ? res : (res as any).data ?? [];
+      setHistoryRows(rows);
+      setHistoryTotal(Array.isArray(res) ? rows.length : (res as any).total ?? rows.length);
+    } catch (err: any) {
+      setAlertDialog({ show: true, title: 'Download History Failed', message: err.message || 'Unable to load QR download history.', type: 'error' });
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const recordBatchDownload = async (batch: QRBatch, downloadType: string, quantity = batch.qty) => {
+    try {
+      await qrCodeApi.recordDownloadHistory({
+        productId: batch.productId,
+        productName: batch.productName,
+        batchId: batch.batchId,
+        batchNo: batch.batchNo,
+        quantity,
+        downloadType,
+      });
+      if (canViewHistory) void loadDownloadHistory(1, historySearch, historyFromDate, historyToDate);
+    } catch (error) {
+      console.warn('Failed to record QR download history:', error);
+    }
+  };
+
   useEffect(() => {
     productApi.getAll({ limit: '500' }).then(res => {
       setProducts(Array.isArray(res) ? res : (res as any).data ?? []);
@@ -140,6 +248,10 @@ export default function QRHub({ role }: QRHubProps) {
   useEffect(() => {
     loadHub(1, '');
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (canViewHistory) void loadDownloadHistory(1, '', '', '');
+  }, [canViewHistory]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const getHubExportRows = (rows = batches) =>
     rows.map((batch, index) => ({
@@ -184,6 +296,15 @@ export default function QRHub({ role }: QRHubProps) {
     setExportFileName('qr-hub');
     setExportRows(getHubExportRows());
     setShowExport(true);
+    if (batches.length) {
+      void qrCodeApi.recordDownloadHistory({
+        productName: 'QR Hub Export',
+        quantity: batches.reduce((sum, batch) => sum + batch.qty, 0),
+        downloadType: 'hub_export',
+      }).then(() => {
+        if (canViewHistory) void loadDownloadHistory(1, historySearch, historyFromDate, historyToDate);
+      }).catch((error) => console.warn('Failed to record QR download history:', error));
+    }
   };
 
   const openBatchExport = async (batch: QRBatch) => {
@@ -201,6 +322,7 @@ export default function QRHub({ role }: QRHubProps) {
       setExportFileName(`qr-batch-${getBatchLabel(batch)}`);
       setExportRows(rows);
       setShowExport(true);
+      void recordBatchDownload(batch, 'batch_export', rows.length || batch.qty);
     } catch (err: any) {
       setAlertDialog({ show: true, title: 'Export Failed', message: err.message || 'Unable to prepare batch export.', type: 'error' });
     }
@@ -265,7 +387,7 @@ export default function QRHub({ role }: QRHubProps) {
   ];
 
   return (
-    <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
+    <div style={{ padding: '28px 32px', maxWidth: 1400, display: 'flex', flexDirection: 'column' }}>
       <AlertDialog show={alertDialog.show} title={alertDialog.title} message={alertDialog.message} type={alertDialog.type} onClose={() => setAlertDialog({ ...alertDialog, show: false })} />
 
       <div style={{ background: `linear-gradient(135deg, ${C.sidebar}, #1E293B)`, borderRadius: 20, padding: '24px 28px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 8px 30px rgba(0,0,0,0.2)', gap: 16 }}>
@@ -286,7 +408,7 @@ export default function QRHub({ role }: QRHubProps) {
         </div>
       </div>
 
-      <div style={{ background: C.card, borderRadius: 16, padding: '18px 22px', marginBottom: 20, border: `1px solid ${C.border}`, display: 'flex', gap: 14, alignItems: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+      <div style={{ order: 2, background: C.card, borderRadius: 16, padding: '18px 22px', marginBottom: 20, border: `1px solid ${C.border}`, display: 'flex', gap: 14, alignItems: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
         <div style={{ flex: 1, position: 'relative' }}>
           <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: C.muted }} />
           <input
@@ -304,7 +426,7 @@ export default function QRHub({ role }: QRHubProps) {
         )}
       </div>
 
-      <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
+      <div style={{ order: 3, background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 980 }}>
             <thead>
@@ -391,13 +513,205 @@ export default function QRHub({ role }: QRHubProps) {
       </div>
 
       {totalCount > PAGE_SIZE && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, padding: '12px 18px', background: C.card, borderRadius: 12, border: `1px solid ${C.border}` }}>
+        <div style={{ order: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, padding: '12px 18px', background: C.card, borderRadius: 12, border: `1px solid ${C.border}` }}>
           <div style={{ fontSize: 13, color: C.muted }}>Showing <strong style={{ color: C.text }}>{(currentPage - 1) * PAGE_SIZE + 1}-{Math.min(currentPage * PAGE_SIZE, totalCount)}</strong> of <strong style={{ color: C.text }}>{totalCount.toLocaleString('en-IN')}</strong> batches</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <button onClick={() => { const page = Math.max(1, currentPage - 1); setCurrentPage(page); loadHub(page, searchTerm); }} disabled={currentPage === 1} style={{ padding: '7px 14px', borderRadius: 8, border: `1px solid ${C.border}`, background: currentPage === 1 ? C.bg : C.card, color: currentPage === 1 ? C.muted : C.text, cursor: currentPage === 1 ? 'not-allowed' : 'pointer', fontWeight: 700 }}>Prev</button>
             <span style={{ fontSize: 13, color: C.muted }}>Page {currentPage} / {totalPages}</span>
             <button onClick={() => { const page = Math.min(totalPages, currentPage + 1); setCurrentPage(page); loadHub(page, searchTerm); }} disabled={currentPage >= totalPages} style={{ padding: '7px 14px', borderRadius: 8, border: `1px solid ${C.border}`, background: currentPage >= totalPages ? C.bg : C.card, color: currentPage >= totalPages ? C.muted : C.text, cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer', fontWeight: 700 }}>Next</button>
           </div>
+        </div>
+      )}
+
+      {false && canViewHistory && (
+        <div style={{ order: 1, marginTop: 0, marginBottom: 20, background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
+          <div style={{ padding: '18px 22px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontSize: 17, fontWeight: 900, color: C.text }}>QR Activity History</div>
+              <div style={{ fontSize: 12, color: C.muted, marginTop: 3 }}>
+                {role === 'super_admin' ? 'All staff/admin QR generation and download activity' : 'Your QR generation and download activity only'}
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ position: 'relative', width: 280 }}>
+                <Search size={15} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: C.muted }} />
+                <input
+                  value={historySearch}
+                  onChange={e => setHistorySearch(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      applyHistoryFilters();
+                    }
+                  }}
+                  placeholder={role === 'super_admin' ? 'Search staff, email, product...' : 'Search product or batch...'}
+                  style={{ width: '100%', padding: '9px 12px 9px 36px', borderRadius: 10, border: `1.5px solid ${C.border}`, background: C.bg, color: C.text, outline: 'none', fontSize: 13 }}
+                />
+              </div>
+              <button onClick={() => applyHistoryFilters()} style={{ padding: '9px 14px', borderRadius: 10, border: 'none', background: C.red, color: 'white', cursor: 'pointer', fontSize: 13, fontWeight: 800 }}>Search</button>
+            </div>
+          </div>
+          <div style={{ padding: '14px 22px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+            <button onClick={() => setShowHistoryCalendar(previous => !previous)} style={{ padding: '9px 13px', borderRadius: 10, border: `1px solid ${C.border}`, background: showHistoryCalendar ? '#FFF0F0' : C.bg, color: showHistoryCalendar ? C.red : C.text, cursor: 'pointer', fontSize: 12.5, fontWeight: 900, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <Calendar size={15} />
+              {showHistoryCalendar ? 'Hide Calendar Filter' : 'Open Calendar Filter'}
+            </button>
+            <div style={{ fontSize: 12, color: C.muted, fontWeight: 700 }}>
+              {historyFromDate || historyToDate ? `Selected: ${historyFromDate || 'Start'} to ${historyToDate || 'Today'}` : 'No date filter applied'}
+            </div>
+          </div>
+          {showHistoryCalendar && (
+          <div style={{ padding: '16px 22px', borderBottom: `1px solid ${C.border}`, display: 'grid', gridTemplateColumns: 'minmax(280px, 1fr) minmax(250px, 360px)', gap: 18, alignItems: 'start' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 11, color: C.text, fontSize: 13, fontWeight: 900 }}>
+                <Calendar size={16} />
+                Download date filter
+              </div>
+              <div style={{ display: 'flex', alignItems: 'end', gap: 10, flexWrap: 'wrap' }}>
+                <label style={{ display: 'grid', gap: 5, fontSize: 11, fontWeight: 800, color: C.muted, textTransform: 'uppercase' }}>
+                  From
+                  <input
+                    type="date"
+                    value={historyFromDate}
+                    max={todayIso}
+                    onChange={e => {
+                      const next = e.target.value > todayIso ? todayIso : e.target.value;
+                      setHistoryFromDate(next);
+                      if (historyToDate && next && historyToDate < next) setHistoryToDate(next);
+                    }}
+                    style={{ padding: '9px 10px', borderRadius: 9, border: `1.5px solid ${C.border}`, background: C.bg, color: C.text, outline: 'none', fontSize: 13 }}
+                  />
+                </label>
+                <label style={{ display: 'grid', gap: 5, fontSize: 11, fontWeight: 800, color: C.muted, textTransform: 'uppercase' }}>
+                  To
+                  <input
+                    type="date"
+                    value={historyToDate}
+                    min={historyFromDate || undefined}
+                    max={todayIso}
+                    onChange={e => {
+                      const next = e.target.value > todayIso ? todayIso : e.target.value;
+                      setHistoryToDate(next);
+                    }}
+                    style={{ padding: '9px 10px', borderRadius: 9, border: `1.5px solid ${C.border}`, background: C.bg, color: C.text, outline: 'none', fontSize: 13 }}
+                  />
+                </label>
+                <button onClick={() => applyHistoryFilters()} style={{ padding: '10px 14px', borderRadius: 9, border: 'none', background: C.red, color: 'white', cursor: 'pointer', fontSize: 12.5, fontWeight: 900 }}>Apply</button>
+                <button onClick={() => setHistorySingleDate(todayIso)} style={{ padding: '9px 13px', borderRadius: 9, border: `1px solid ${C.border}`, background: C.card, color: C.text, cursor: 'pointer', fontSize: 12.5, fontWeight: 800 }}>Today</button>
+                <button onClick={clearHistoryFilters} style={{ padding: '9px 13px', borderRadius: 9, border: `1px solid ${C.border}`, background: C.bg, color: C.muted, cursor: 'pointer', fontSize: 12.5, fontWeight: 800 }}>Clear</button>
+              </div>
+            </div>
+            <div style={{ border: `1px solid ${C.border}`, borderRadius: 12, overflow: 'hidden', background: C.bg }}>
+              <div style={{ padding: '10px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}` }}>
+                <button onClick={() => shiftHistoryMonth(-1)} style={{ width: 28, height: 28, borderRadius: 8, border: `1px solid ${C.border}`, background: C.card, color: C.text, cursor: 'pointer', fontSize: 16, fontWeight: 900 }}>{'<'}</button>
+                <div style={{ fontSize: 13, color: C.text, fontWeight: 900 }}>
+                  {currentMonthStart.toLocaleString('en-IN', { month: 'long', year: 'numeric' })}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input
+                    type="month"
+                    value={historyCalendarMonth}
+                    max={todayMonthIso}
+                    onChange={e => {
+                      if (e.target.value && e.target.value <= todayMonthIso) setHistoryCalendarMonth(e.target.value);
+                    }}
+                    style={{ width: 122, padding: '5px 7px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: 11.5, fontWeight: 700 }}
+                  />
+                  <button onClick={() => shiftHistoryMonth(1)} disabled={!canGoNextHistoryMonth} style={{ width: 28, height: 28, borderRadius: 8, border: `1px solid ${C.border}`, background: canGoNextHistoryMonth ? C.card : C.bg, color: canGoNextHistoryMonth ? C.text : C.muted, cursor: canGoNextHistoryMonth ? 'pointer' : 'not-allowed', fontSize: 16, fontWeight: 900 }}>{'>'}</button>
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1, padding: 8 }}>
+                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
+                  <div key={`${day}-${index}`} style={{ textAlign: 'center', padding: '4px 0', fontSize: 10.5, color: C.muted, fontWeight: 900 }}>{day}</div>
+                ))}
+                {calendarCells.map((cell, index) => cell ? (
+                  <button
+                    key={cell.iso}
+                    disabled={cell.future}
+                    onClick={() => setHistorySingleDate(cell.iso)}
+                    style={{
+                      height: 30,
+                      borderRadius: 8,
+                      border: selectedSingleDate === cell.iso ? `2px solid ${C.red}` : `1px solid ${C.border}`,
+                      background: cell.future ? '#F1F5F9' : selectedSingleDate === cell.iso ? '#FFF0F0' : C.card,
+                      color: cell.future ? C.muted : C.text,
+                      opacity: cell.future ? 0.55 : 1,
+                      cursor: cell.future ? 'not-allowed' : 'pointer',
+                      fontSize: 12,
+                      fontWeight: 800,
+                    }}
+                  >
+                    {cell.day}
+                  </button>
+                ) : (
+                  <div key={`empty-${index}`} style={{ height: 30 }} />
+                ))}
+              </div>
+            </div>
+          </div>
+          )}
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 940 }}>
+              <thead>
+                <tr style={{ background: C.bg, borderBottom: `1px solid ${C.border}` }}>
+                  {['User Name', 'Email ID', 'Role', 'Action', 'Product Name', 'Batch', 'Qty', 'Date', 'Time'].map((head, index) => (
+                    <th key={head} style={{ padding: '13px 16px', textAlign: index >= 5 ? 'center' : 'left', fontSize: 11, fontWeight: 900, color: C.muted, textTransform: 'uppercase' }}>{head}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {historyLoading && (
+                  <tr>
+                    <td colSpan={9} style={{ padding: 34, textAlign: 'center', color: C.muted }}>
+                      <RefreshCw size={20} style={{ animation: 'spin 1s linear infinite', marginBottom: 8 }} />
+                      <div style={{ fontSize: 13, fontWeight: 700 }}>Loading download history...</div>
+                    </td>
+                  </tr>
+                )}
+                {!historyLoading && historyRows.length === 0 && (
+                  <tr>
+                    <td colSpan={9} style={{ padding: 34, textAlign: 'center', color: C.muted }}>
+                      <Download size={34} style={{ opacity: 0.3, marginBottom: 8 }} />
+                      <div style={{ fontSize: 13, fontWeight: 700 }}>No QR download history found</div>
+                    </td>
+                  </tr>
+                )}
+                {!historyLoading && historyRows.map((item) => {
+                  const downloadedAt = item.downloadedAt ?? item.createdAt;
+                  return (
+                    <tr key={item.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                      <td style={{ padding: '13px 16px', fontSize: 13, color: C.text, fontWeight: 800 }}>{item.adminName || '-'}</td>
+                      <td style={{ padding: '13px 16px', fontSize: 12.5, color: C.muted }}>{item.adminEmail || '-'}</td>
+                      <td style={{ padding: '13px 16px' }}>
+                        <span style={{ display: 'inline-flex', padding: '4px 9px', borderRadius: 999, background: '#E0F2FE', color: '#0369A1', fontSize: 11, fontWeight: 800 }}>
+                          {item.adminRole === 'super_admin' ? 'Super Admin' : item.adminRole === 'admin' ? 'Admin' : 'Staff'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '13px 16px' }}>
+                        <span style={{ display: 'inline-flex', padding: '4px 9px', borderRadius: 999, background: item.downloadType === 'generated' ? '#D1FAE5' : '#FEF3C7', color: item.downloadType === 'generated' ? '#047857' : '#B45309', fontSize: 11, fontWeight: 900 }}>
+                          {getHistoryActionLabel(item.downloadType)}
+                        </span>
+                      </td>
+                      <td style={{ padding: '13px 16px', fontSize: 13, color: C.text, fontWeight: 700 }}>{item.productName || '-'}</td>
+                      <td style={{ padding: '13px 16px', fontSize: 12.5, color: C.text, fontFamily: 'monospace' }}>{item.batchNo ?? item.batchId ?? '-'}</td>
+                      <td style={{ padding: '13px 16px', textAlign: 'center', fontSize: 13, color: C.text, fontWeight: 900 }}>{Number(item.quantity ?? 0).toLocaleString('en-IN')}</td>
+                      <td style={{ padding: '13px 16px', textAlign: 'center', fontSize: 12.5, color: C.text }}>{formatISTDate(downloadedAt)}</td>
+                      <td style={{ padding: '13px 16px', textAlign: 'center', fontSize: 12.5, color: C.muted }}>{formatISTDateTime(downloadedAt).split(', ').pop()}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          {historyTotal > HISTORY_PAGE_SIZE && (
+            <div style={{ padding: '12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: `1px solid ${C.border}` }}>
+              <div style={{ fontSize: 12.5, color: C.muted }}>Showing <strong style={{ color: C.text }}>{(historyPage - 1) * HISTORY_PAGE_SIZE + 1}-{Math.min(historyPage * HISTORY_PAGE_SIZE, historyTotal)}</strong> of <strong style={{ color: C.text }}>{historyTotal.toLocaleString('en-IN')}</strong> downloads</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button onClick={() => { const page = Math.max(1, historyPage - 1); setHistoryPage(page); void loadDownloadHistory(page, historySearch, historyFromDate, historyToDate); }} disabled={historyPage === 1} style={{ padding: '7px 13px', borderRadius: 8, border: `1px solid ${C.border}`, background: historyPage === 1 ? C.bg : C.card, color: historyPage === 1 ? C.muted : C.text, cursor: historyPage === 1 ? 'not-allowed' : 'pointer', fontWeight: 700 }}>Prev</button>
+                <span style={{ fontSize: 12.5, color: C.muted }}>Page {historyPage} / {historyTotalPages}</span>
+                <button onClick={() => { const page = Math.min(historyTotalPages, historyPage + 1); setHistoryPage(page); void loadDownloadHistory(page, historySearch, historyFromDate, historyToDate); }} disabled={historyPage >= historyTotalPages} style={{ padding: '7px 13px', borderRadius: 8, border: `1px solid ${C.border}`, background: historyPage >= historyTotalPages ? C.bg : C.card, color: historyPage >= historyTotalPages ? C.muted : C.text, cursor: historyPage >= historyTotalPages ? 'not-allowed' : 'pointer', fontWeight: 700 }}>Next</button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

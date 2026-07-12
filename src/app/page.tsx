@@ -7,6 +7,7 @@ import { I } from '@/lib/iconMap';
 import Sidebar from '@/components/Shared/Sidebar';
 import Login from '@/components/Shared/Login';
 import SrvLogoLoader from '@/components/Shared/SrvLogoLoader';
+import AlertDialog from '@/components/Shared/AlertDialog';
 import { useAppContext } from '@/lib/appContext';
 import type { AdminRole } from '@/lib/types';
 
@@ -24,6 +25,8 @@ const ProductCategories  = lazy(() => import('@/components/Catalog/ProductCatego
 const QRHub              = lazy(() => import('@/components/QRManagement/QRHub'));
 const QRCodes            = lazy(() => import('@/components/QRManagement/QRCodes'));
 const QRCodeGenerator    = lazy(() => import('@/components/QRManagement/QRCodeGenerator'));
+const QRScanner          = lazy(() => import('@/components/QRManagement/QRScanner'));
+const QRActivityHistory  = lazy(() => import('@/components/QRManagement/QRActivityHistory'));
 const GiftProducts       = lazy(() => import('@/components/GiftManagement/GiftProducts'));
 const GiftOrders         = lazy(() => import('@/components/GiftManagement/GiftOrders'));
 const ProductOrders      = lazy(() => import('@/components/Orders/ProductOrders'));
@@ -60,6 +63,8 @@ const preloadPageChunk = (id: string) => {
     case 'qr-hub': return import('@/components/QRManagement/QRHub');
     case 'qr-codes': return import('@/components/QRManagement/QRCodes');
     case 'qr-generator': return import('@/components/QRManagement/QRCodeGenerator');
+    case 'qr-scanner': return import('@/components/QRManagement/QRScanner');
+    case 'qr-activity-history': return import('@/components/QRManagement/QRActivityHistory');
     case 'gift-products': return import('@/components/GiftManagement/GiftProducts');
     case 'gift-orders': return import('@/components/GiftManagement/GiftOrders');
     case 'product-orders': return import('@/components/Orders/ProductOrders');
@@ -95,6 +100,8 @@ const DEFAULT_PRELOAD_PAGES = [
   'qr-hub',
   'qr-codes',
   'qr-generator',
+  'qr-scanner',
+  'qr-activity-history',
   'gift-products',
   'gift-orders',
   'product-orders',
@@ -103,6 +110,32 @@ const DEFAULT_PRELOAD_PAGES = [
   'notifications',
   'reports',
 ];
+
+const STAFF_ALLOWED_PAGES = new Set([
+  'dashboard',
+  'products',
+  'product-categories',
+  'points-config',
+  'qr-hub',
+  'qr-codes',
+  'qr-generator',
+  'qr-scanner',
+  'qr-activity-history',
+]);
+
+const STAFF_PRELOAD_PAGES = [
+  'dashboard',
+  'products',
+  'product-categories',
+  'points-config',
+  'qr-hub',
+  'qr-codes',
+  'qr-generator',
+  'qr-activity-history',
+];
+
+const isPageAllowedForRole = (role: AdminRole, pageId?: string) =>
+  role !== 'staff' || STAFF_ALLOWED_PAGES.has(pageId || 'dashboard');
 
 const SESSION_TIMEOUT_MS = 20 * 60 * 1000;
 const SESSION_ACTIVITY_KEY = 'srv_admin_last_activity';
@@ -185,6 +218,8 @@ const PAGE_LABELS: Record<string, { title: string; Icon: React.ElementType }> = 
   'qr-hub': { title: 'QR Hub', Icon: QrCode },
   'qr-codes': { title: 'QR Codes', Icon: QrCode },
   'qr-generator': { title: 'QR Generator', Icon: QrCode },
+  'qr-scanner': { title: 'QR Scanner', Icon: ScanLine },
+  'qr-activity-history': { title: 'QR Activity History', Icon: Activity },
   'gift-products': { title: 'Gift Products', Icon: Gift },
   'gift-orders': { title: 'Gift Orders', Icon: Gift },
   'product-orders': { title: 'Product Orders', Icon: Package },
@@ -215,6 +250,7 @@ const PAGE_SEARCH_KEYWORDS: Record<string, string[]> = {
   'points-config': ['points', 'config', 'rewards'],
   'qr-hub': ['qr hub', 'batch qr', 'qr batch', 'batch', 'quantity'],
   'qr-codes': ['qr', 'qrcode', 'code', 'scan', 'barcode'],
+  'qr-activity-history': ['qr activity', 'qr history', 'download history', 'generated qr', 'staff qr'],
   scans: ['scan', 'history', 'activity'],
   redemptions: ['redemption', 'redeem', 'pending', 'approve'],
   reports: ['report', 'analytics', 'data', 'export'],
@@ -244,6 +280,12 @@ export default function Home() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState('');
   const [routeLoading, setRouteLoading] = useState(false);
+  const [crudAlert, setCrudAlert] = useState<{ show: boolean; title: string; message: string; type: 'success' | 'info' }>({
+    show: false,
+    title: '',
+    message: '',
+    type: 'success',
+  });
   const routeLoadingTimeoutRef = useRef<number | null>(null);
   const applyingBrowserHistoryRef = useRef(false);
 
@@ -264,12 +306,27 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    const onCrudSuccess = (event: Event) => {
+      const detail = (event as CustomEvent<{ title?: string; message?: string }>).detail;
+      setCrudAlert({
+        show: true,
+        title: detail?.title || 'Saved Successfully',
+        message: detail?.message || 'Your changes have been saved successfully.',
+        type: 'success',
+      });
+    };
+    window.addEventListener('srv-crud-success', onCrudSuccess);
+    return () => window.removeEventListener('srv-crud-success', onCrudSuccess);
+  }, []);
+
+  useEffect(() => {
     if (!loggedIn) return;
 
     let cancelled = false;
     const preload = () => {
       if (cancelled) return;
-      DEFAULT_PRELOAD_PAGES.forEach(pageId => {
+      const preloadPages = role === 'staff' ? STAFF_PRELOAD_PAGES : DEFAULT_PRELOAD_PAGES;
+      preloadPages.forEach(pageId => {
         void preloadPageChunk(pageId);
       });
     };
@@ -290,7 +347,17 @@ export default function Home() {
         window.clearTimeout(idleId);
       }
     };
-  }, [loggedIn]);
+  }, [loggedIn, role]);
+
+  useEffect(() => {
+    if (!loggedIn || isPageAllowedForRole(role, active)) return;
+    setActive('dashboard');
+    setElectricianSubPage(undefined);
+    setDealerSubPage(undefined);
+    setAppUserSubPage(undefined);
+    setCounterBoySubPage(undefined);
+    setProductCategoryFilter(undefined);
+  }, [active, loggedIn, role]);
 
   useEffect(() => {
     if (!loggedIn) return;
@@ -364,7 +431,8 @@ export default function Home() {
   });
 
   const applyPageState = (state: AdminPageState) => {
-    const nextActive = state.active && PAGE_LABELS[state.active] ? state.active : 'dashboard';
+    const requestedActive = state.active && PAGE_LABELS[state.active] ? state.active : 'dashboard';
+    const nextActive = isPageAllowedForRole(role, requestedActive) ? requestedActive : 'dashboard';
     void preloadPageChunk(nextActive);
     showRouteLoader();
     startTransition(() => {
@@ -432,6 +500,10 @@ export default function Home() {
   };
 
   const handleNavigate = (id: string, subPage?: string) => {
+    if (!isPageAllowedForRole(role, id)) {
+      id = 'dashboard';
+      subPage = undefined;
+    }
     void preloadPageChunk(id);
     if (id !== active || subPage) {
       showRouteLoader();
@@ -650,6 +722,8 @@ export default function Home() {
       case 'qr-hub': return <QRHub role={role} />;
       case 'qr-codes': return <QRCodes role={role} />;
       case 'qr-generator': return <QRCodeGenerator role={role} />;
+      case 'qr-scanner': return <QRScanner />;
+      case 'qr-activity-history': return <QRActivityHistory role={role} />;
       case 'gift-products': return <GiftProducts role={role} />;
       case 'gift-orders': return <GiftOrders role={role} />;
       case 'product-orders': return <ProductOrders role={role} />;
@@ -678,6 +752,13 @@ export default function Home() {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: P.bg }}>
+      <AlertDialog
+        show={crudAlert.show}
+        title={crudAlert.title}
+        message={crudAlert.message}
+        type={crudAlert.type}
+        onClose={() => setCrudAlert(current => ({ ...current, show: false }))}
+      />
       {/* Search Modal */}
       {showSearchModal && (
         <div style={{ position: 'fixed', inset: 0, background: mode === 'dark' ? 'rgba(0,0,0,0.75)' : 'rgba(15,23,42,0.6)', backdropFilter: 'blur(8px)', zIndex: 2000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '80px 20px 20px', overflowY: 'auto' }} onClick={() => setShowSearchModal(false)}>
@@ -750,6 +831,7 @@ export default function Home() {
 
             {/* Search Results */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px' }}>
+              {/* eslint-disable-next-line react-hooks/refs */}
               {(() => {
                 const query = searchQuery.toLowerCase().trim();
                 
@@ -764,14 +846,20 @@ export default function Home() {
                           { page: 'electricians', label: 'Electricians', icon: 'Bolt', desc: 'Manage electricians' },
                           { page: 'dealers', label: 'Dealers', icon: 'Store', desc: 'Manage dealers' },
                           { page: 'products', label: 'Products', icon: 'Package', desc: 'Product catalog' },
+                          { page: 'product-categories', label: 'Product Categories', icon: 'Tags', desc: 'Product category list' },
+                          { page: 'points-config', label: 'Products Points', icon: 'Star', desc: 'Product points view' },
+                          { page: 'qr-hub', label: 'QR Hub', icon: 'QrCode', desc: 'QR batch downloads' },
                           { page: 'qr-codes', label: 'QR Codes', icon: 'Smartphone', desc: 'QR management' },
+                          { page: 'qr-generator', label: 'QR Generator', icon: 'QrCode', desc: 'Generate QR codes' },
+                          { page: 'qr-scanner', label: 'QR Scanner', icon: 'ScanLine', desc: 'Upload QR image and view first scanner' },
+                          { page: 'qr-activity-history', label: 'QR Activity History', icon: 'Activity', desc: 'Generated and downloaded QR history' },
                           { page: 'reports', label: 'Reports', icon: 'ChartLine', desc: 'Analytics & reports' },
                           { page: 'enquiry-support', label: 'Enquiry Support', icon: 'MessageCircle', desc: 'Customer support' },
                           { page: 'notifications', label: 'Notifications', icon: 'Bell', desc: 'Send notifications' },
-                        ].map(item => (
+                        ].filter(item => isPageAllowedForRole(role, item.page)).map(item => (
                           <button
                             key={item.page}
-                            onClick={() => { setShowSearchModal(false); setActive(item.page); }}
+                            onClick={() => { setShowSearchModal(false); handleNavigate(item.page); }}
                             style={{
                               background: P.surface,
                               border: `1px solid ${P.border}`,
@@ -809,6 +897,7 @@ export default function Home() {
                 const results: Array<{ type: string; title: string; subtitle: string; icon: string; action: () => void }> = [];
 
                 remoteSearchResults.forEach(result => {
+                  if (!isPageAllowedForRole(role, result.page)) return;
                   results.push({
                     type: result.type,
                     title: result.title,
@@ -824,8 +913,9 @@ export default function Home() {
                 });
 
                 // Search pages
-                const pageMatches = Object.entries(PAGE_LABELS).filter(([key, val]) => 
-                  val.title.toLowerCase().includes(query) || key.toLowerCase().includes(query)
+                const pageMatches = Object.entries(PAGE_LABELS).filter(([key, val]) =>
+                  isPageAllowedForRole(role, key) &&
+                  (val.title.toLowerCase().includes(query) || key.toLowerCase().includes(query))
                 );
                 pageMatches.forEach(([key, val]) => {
                   results.push({
@@ -833,7 +923,7 @@ export default function Home() {
                     title: val.title,
                     subtitle: `Navigate to ${val.title}`,
                     icon: 'FileText',
-                    action: () => { setShowSearchModal(false); setActive(key); }
+                    action: () => { setShowSearchModal(false); handleNavigate(key); }
                   });
                 });
 
@@ -849,7 +939,7 @@ export default function Home() {
                     title: p.name,
                     subtitle: `${p.category} • ${p.sub}`,
                     icon: 'Package',
-                    action: () => { setShowSearchModal(false); setActive('products'); }
+                    action: () => { setShowSearchModal(false); handleNavigate('products'); }
                   });
                 });
 
@@ -864,7 +954,7 @@ export default function Home() {
                     title: pc.productName,
                     subtitle: `${pc.productId} • ${pc.basePoints + pc.bonusPoints} points`,
                     icon: 'Star',
-                    action: () => { setShowSearchModal(false); setActive('points-config'); }
+                    action: () => { setShowSearchModal(false); handleNavigate('points-config'); }
                   });
                 });
 
@@ -1210,7 +1300,7 @@ export default function Home() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: narrowTopbar ? 'space-between' : 'flex-end', flexWrap: 'wrap', gap: 12, width: compactTopbar ? '100%' : 'auto' }}>
-            {active !== 'dashboard' && ['products', 'points-config', 'reports'].includes(active) && (
+            {role !== 'staff' && active !== 'dashboard' && ['products', 'points-config', 'reports'].includes(active) && (
               <button
                 onClick={() => setShowExportModal(true)}
                 style={{

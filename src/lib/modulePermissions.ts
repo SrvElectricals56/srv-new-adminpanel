@@ -67,9 +67,9 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<AdminRole, Record<ModuleName, Modu
     support: { view: false, create: false, edit: false, delete: false, export: false },
   },
   staff: {
-    products: { view: false, create: false, edit: false, delete: false, export: false },
-    categories: { view: false, create: false, edit: false, delete: false, export: false },
-    qr_codes: { view: false, create: false, edit: false, delete: false, export: false },
+    products: { view: true, create: false, edit: false, delete: false, export: false },
+    categories: { view: true, create: false, edit: false, delete: false, export: false },
+    qr_codes: { view: true, create: true, edit: false, delete: false, export: true },
     gifts: { view: false, create: false, edit: false, delete: false, export: false },
     banners: { view: false, create: false, edit: false, delete: false, export: false },
     notifications: { view: false, create: false, edit: false, delete: false, export: false },

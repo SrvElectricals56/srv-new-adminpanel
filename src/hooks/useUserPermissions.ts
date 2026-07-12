@@ -42,6 +42,7 @@ const MODULE_MAP: Record<string, string> = {
 };
 
 const ALL_MODULES = Object.keys(MODULE_MAP);
+const STAFF_VISIBLE_MODULES = new Set(['dashboard', 'products', 'qr_codes']);
 
 function getRoleModulePermission(role: AdminRole, module: string): ModulePermission {
   if (role === 'super_admin') {
@@ -64,7 +65,15 @@ function getRoleModulePermission(role: AdminRole, module: string): ModulePermiss
     return { module, canView: true, canCreate: false, canEdit: true, canDelete: false, canExport: true };
   }
 
-  return { module, canView: true, canCreate: false, canEdit: false, canDelete: false, canExport: true };
+  if (module === 'qr_codes') {
+    return { module, canView: true, canCreate: true, canEdit: false, canDelete: false, canExport: true };
+  }
+
+  if (STAFF_VISIBLE_MODULES.has(module)) {
+    return { module, canView: true, canCreate: false, canEdit: false, canDelete: false, canExport: false };
+  }
+
+  return { module, canView: false, canCreate: false, canEdit: false, canDelete: false, canExport: false };
 }
 
 export function useUserPermissions(adminId: string | undefined, role: AdminRole): UserPermissions {

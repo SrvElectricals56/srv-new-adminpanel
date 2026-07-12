@@ -230,6 +230,20 @@ export default function QRCodes({ role }: QRCodesProps) {
     setDeleteConfirm({ show: true, qrId });
   };
 
+  const recordQrDownload = async (qr: QRCodeItem, downloadType = 'single_png') => {
+    try {
+      await qrCodeApi.recordDownloadHistory({
+        productId: qr.productId,
+        productName: qr.productName,
+        batchNo: qr.batchNo,
+        quantity: 1,
+        downloadType,
+      });
+    } catch (error) {
+      console.warn('Failed to record QR download history:', error);
+    }
+  };
+
   const confirmDelete = async () => {
     if (deleteConfirm.qrId) {
       try {
@@ -248,6 +262,7 @@ export default function QRCodes({ role }: QRCodesProps) {
     link.href = qrImage;
     link.download = `${qr.qrId}.png`;
     link.click();
+    await recordQrDownload(qr);
   };
 
   const handleShareQR = async (qr: QRCodeItem) => {

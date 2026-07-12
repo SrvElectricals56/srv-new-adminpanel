@@ -80,6 +80,43 @@ function shouldCacheGet(_path: string) {
   return false;
 }
 
+function getCrudFeedback(path: string, method: string) {
+  if (typeof window === 'undefined') return null;
+  if (!['POST', 'PATCH', 'PUT', 'DELETE'].includes(method)) return null;
+  if (path.startsWith('/auth/') || path.includes('/activity')) return null;
+
+  const cleanPath = path.split('?')[0];
+  const label = cleanPath
+    .split('/')
+    .filter(Boolean)
+    .filter(part => !/^[0-9a-f-]{12,}$/i.test(part))
+    .map(part => part.replace(/-/g, ' '))
+    .pop() || 'Record';
+
+  if (cleanPath.includes('/import')) {
+    return { title: 'Import Completed', message: 'Data import has been processed successfully.' };
+  }
+  if (cleanPath.includes('/status')) {
+    return { title: 'Status Updated', message: 'Status has been updated successfully.' };
+  }
+  if (cleanPath.includes('/permissions')) {
+    return { title: 'Permissions Updated', message: 'Role permissions have been saved successfully.' };
+  }
+  if (method === 'DELETE') {
+    return { title: 'Deleted Successfully', message: `${label} deleted successfully.` };
+  }
+  if (method === 'POST') {
+    return { title: 'Saved Successfully', message: `${label} created successfully.` };
+  }
+  return { title: 'Updated Successfully', message: `${label} updated successfully.` };
+}
+
+function emitCrudFeedback(path: string, method: string) {
+  const feedback = getCrudFeedback(path, method);
+  if (!feedback || typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent('srv-crud-success', { detail: feedback }));
+}
+
 async function refreshAccessToken(): Promise<string | null> {
   const refreshToken = getRefreshToken();
   if (!refreshToken) {
@@ -169,7 +206,10 @@ async function request<T>(
       throw new Error(`[${res.status}] ${message || 'Request failed'}`);
     }
 
-    if (res.status === 204) return undefined as T;
+    if (res.status === 204) {
+      if (method !== 'GET') emitCrudFeedback(path, method);
+      return undefined as T;
+    }
     const text = await res.text();
     const data = text ? JSON.parse(text) as T : undefined as T;
 
@@ -180,6 +220,7 @@ async function request<T>(
       });
     } else if (method !== 'GET') {
       clearApiCache();
+      emitCrudFeedback(path, method);
     }
 
     return data;
@@ -358,6 +399,20 @@ export const qrCodeApi = {
     const q = productId ? `?productId=${productId}` : '';
     return request<void>(`/qr-codes/delete-all${q}`, { method: 'DELETE' });
   },
+  recordDownloadHistory: (body: {
+    productId?: string;
+    productName: string;
+    batchId?: string;
+    batchNo?: number | string | null;
+    quantity: number;
+    downloadType?: string;
+  }) => request<any>('/qr-codes/download-history', { method: 'POST', body: JSON.stringify(body) }),
+  getDownloadHistory: (params?: Record<string, string>) => {
+    const q = params ? '?' + new URLSearchParams(params).toString() : '';
+    return request<{ data: any[]; total: number; page: number; limit: number; totalPages: number }>(`/qr-codes/download-history${q}`);
+  },
+  scanLookup: (qrCode: string) =>
+    request<any>('/qr-codes/scan-lookup', { method: 'POST', body: JSON.stringify({ qrCode }) }),
 };
 
 // â”€â”€â”€ Scans â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
