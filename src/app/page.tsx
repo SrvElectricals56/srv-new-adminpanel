@@ -25,6 +25,7 @@ const ProductCategories  = lazy(() => import('@/components/Catalog/ProductCatego
 const QRHub              = lazy(() => import('@/components/QRManagement/QRHub'));
 const QRCodes            = lazy(() => import('@/components/QRManagement/QRCodes'));
 const QRCodeGenerator    = lazy(() => import('@/components/QRManagement/QRCodeGenerator'));
+const QRScanner          = lazy(() => import('@/components/QRManagement/QRScanner'));
 const QRActivityHistory  = lazy(() => import('@/components/QRManagement/QRActivityHistory'));
 const GiftProducts       = lazy(() => import('@/components/GiftManagement/GiftProducts'));
 const GiftOrders         = lazy(() => import('@/components/GiftManagement/GiftOrders'));
@@ -62,6 +63,7 @@ const preloadPageChunk = (id: string) => {
     case 'qr-hub': return import('@/components/QRManagement/QRHub');
     case 'qr-codes': return import('@/components/QRManagement/QRCodes');
     case 'qr-generator': return import('@/components/QRManagement/QRCodeGenerator');
+    case 'qr-scanner': return import('@/components/QRManagement/QRScanner');
     case 'qr-activity-history': return import('@/components/QRManagement/QRActivityHistory');
     case 'gift-products': return import('@/components/GiftManagement/GiftProducts');
     case 'gift-orders': return import('@/components/GiftManagement/GiftOrders');
@@ -98,6 +100,7 @@ const DEFAULT_PRELOAD_PAGES = [
   'qr-hub',
   'qr-codes',
   'qr-generator',
+  'qr-scanner',
   'qr-activity-history',
   'gift-products',
   'gift-orders',
@@ -116,6 +119,7 @@ const STAFF_ALLOWED_PAGES = new Set([
   'qr-hub',
   'qr-codes',
   'qr-generator',
+  'qr-scanner',
   'qr-activity-history',
 ]);
 
@@ -214,6 +218,7 @@ const PAGE_LABELS: Record<string, { title: string; Icon: React.ElementType }> = 
   'qr-hub': { title: 'QR Hub', Icon: QrCode },
   'qr-codes': { title: 'QR Codes', Icon: QrCode },
   'qr-generator': { title: 'QR Generator', Icon: QrCode },
+  'qr-scanner': { title: 'QR Scanner', Icon: ScanLine },
   'qr-activity-history': { title: 'QR Activity History', Icon: Activity },
   'gift-products': { title: 'Gift Products', Icon: Gift },
   'gift-orders': { title: 'Gift Orders', Icon: Gift },
@@ -704,6 +709,7 @@ export default function Home() {
       case 'qr-hub': return <QRHub role={role} />;
       case 'qr-codes': return <QRCodes role={role} />;
       case 'qr-generator': return <QRCodeGenerator role={role} />;
+      case 'qr-scanner': return <QRScanner />;
       case 'qr-activity-history': return <QRActivityHistory role={role} />;
       case 'gift-products': return <GiftProducts role={role} />;
       case 'gift-orders': return <GiftOrders role={role} />;
@@ -832,6 +838,7 @@ export default function Home() {
                           { page: 'qr-hub', label: 'QR Hub', icon: 'QrCode', desc: 'QR batch downloads' },
                           { page: 'qr-codes', label: 'QR Codes', icon: 'Smartphone', desc: 'QR management' },
                           { page: 'qr-generator', label: 'QR Generator', icon: 'QrCode', desc: 'Generate QR codes' },
+                          { page: 'qr-scanner', label: 'QR Scanner', icon: 'ScanLine', desc: 'Upload QR image and view first scanner' },
                           { page: 'qr-activity-history', label: 'QR Activity History', icon: 'Activity', desc: 'Generated and downloaded QR history' },
                           { page: 'reports', label: 'Reports', icon: 'ChartLine', desc: 'Analytics & reports' },
                           { page: 'enquiry-support', label: 'Enquiry Support', icon: 'MessageCircle', desc: 'Customer support' },

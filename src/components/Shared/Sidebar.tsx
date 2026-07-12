@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { useThemePalette } from '@/lib/theme';
 import {
   LayoutDashboard, Bolt, Store, Package, Star, Tags,
-  ChartColumn, QrCode, Gift, Bell, Users,
+  ChartColumn, QrCode, ScanLine, Gift, Bell, Users,
   ChevronLeft, ChevronRight, ArrowLeftRight, Percent,
   Image as ImageIcon, MessageCircle, FileText,
   UserCheck, ShieldCheck, AppWindow, Play, Activity,
@@ -45,6 +45,7 @@ const NAV_GROUPS = [
       { id: 'qr-hub', label: 'QR Hub', Icon: QrCode },
       { id: 'qr-codes', label: 'QR Codes', Icon: QrCode },
       { id: 'qr-generator', label: 'QR Generator', Icon: QrCode },
+      { id: 'qr-scanner', label: 'QR Scanner', Icon: ScanLine },
       { id: 'qr-activity-history', label: 'QR Activity History', Icon: Activity },
     ]
   },
@@ -103,6 +104,7 @@ const STAFF_NAV_IDS = new Set([
   'qr-hub',
   'qr-codes',
   'qr-generator',
+  'qr-scanner',
   'qr-activity-history',
 ]);
 

@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { AppWindow, Save, ToggleLeft, ToggleRight, Bell, Gift, Info, Headphones, Award, Medal, SlidersHorizontal, Link2, ThumbsUp, FileText, Image as ImageIcon, ShoppingCart, Play } from 'lucide-react';
+import { AppWindow, Save, ToggleLeft, ToggleRight, Bell, Gift, Info, Headphones, Award, Medal, SlidersHorizontal, Link2, ThumbsUp, FileText, Image as ImageIcon, ShoppingCart, Play, ScanLine } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { settingsApi, notificationApi, userSearchApi } from '@/lib/api';
 import AppIcons from './AppIcons';
@@ -29,6 +29,9 @@ interface AppConfig {
   // App Features
   scanEnabled: boolean; giftsEnabled: boolean; referralEnabled: boolean; transferPointsEnabled: boolean;
   testimonialsEnabled: boolean; playEnabled: boolean; dealerCanAddElectrician: boolean;
+  qrFirstScannerShowScannerName: boolean; qrFirstScannerShowScannerPhone: boolean;
+  qrFirstScannerShowDealerName: boolean; qrFirstScannerShowDealerPhone: boolean;
+  qrFirstScannerShowProductName: boolean; qrFirstScannerShowScannedAt: boolean;
   upiOnlyMode: boolean;
   // Links
   privacyPolicyUrl: string; termsUrl: string; playStoreUrl: string; appStoreUrl: string;
@@ -54,6 +57,9 @@ const INITIAL: AppConfig = {
   dealerCommissionRate: 5,
   scanEnabled: true, giftsEnabled: true, referralEnabled: true, transferPointsEnabled: true,
   testimonialsEnabled: true, playEnabled: true, dealerCanAddElectrician: true, upiOnlyMode: false,
+  qrFirstScannerShowScannerName: true, qrFirstScannerShowScannerPhone: true,
+  qrFirstScannerShowDealerName: true, qrFirstScannerShowDealerPhone: true,
+  qrFirstScannerShowProductName: true, qrFirstScannerShowScannedAt: true,
   privacyPolicyUrl: 'https://srvelectricals.com/privacy', termsUrl: 'https://srvelectricals.com/terms',
   playStoreUrl: 'https://play.google.com/store/apps/details?id=com.srvelectricals', appStoreUrl: 'https://apps.apple.com/app/srv-electricals',
   rateUsEnabled: true, rateUsMinScans: 5, rateUsPromptDelay: 3, playStoreRatingUrl: 'market://details?id=com.srvelectricals', appStoreRatingUrl: 'https://apps.apple.com/app/srv-electricals',
@@ -299,6 +305,7 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
     { id: 'orders', label: 'Order Rules', Icon: ShoppingCart },
     { id: 'tiers', label: 'Tiers', Icon: Medal },
     { id: 'features', label: 'Features', Icon: SlidersHorizontal },
+    { id: 'qr-scanned-control', label: 'QR Scanned Control', Icon: ScanLine },
     { id: 'links', label: 'Links', Icon: Link2 },
     { id: 'rateus', label: 'Rate Us', Icon: ThumbsUp },
     { id: 'play-engagement', label: 'Play Engagement', Icon: Play },
@@ -503,6 +510,38 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
                   <Toggle value={(config as any)[item.key]} onChange={v => f(item.key as keyof AppConfig, v)} />
                 </div>
               ))}
+            </div>
+          )}
+
+          {activeSection === 'qr-scanned-control' && (
+            <div style={{ display: 'grid', gap: 14 }}>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: C.text }}>QR Scanned Control</div>
+                <div style={{ fontSize: 13, color: C.muted, marginTop: 4 }}>
+                  Control which first scanner details are visible in the mobile app when a QR has already been scanned.
+                </div>
+              </div>
+
+              {[
+                { key: 'qrFirstScannerShowScannerName', label: 'Scanner Name', desc: 'Show the name of the first user who scanned the QR.' },
+                { key: 'qrFirstScannerShowScannerPhone', label: 'Scanner Phone Number', desc: 'Show the phone number of the first scanner.' },
+                { key: 'qrFirstScannerShowDealerName', label: 'Dealer Name', desc: 'Show the linked dealer name in first scanner details.' },
+                { key: 'qrFirstScannerShowDealerPhone', label: 'Dealer Phone Number', desc: 'Show the linked dealer phone number in first scanner details.' },
+                { key: 'qrFirstScannerShowProductName', label: 'Product Name', desc: 'Show the product name attached to the QR code.' },
+                { key: 'qrFirstScannerShowScannedAt', label: 'Scan Date & Time', desc: 'Show when the QR was first scanned.' },
+              ].map(item => (
+                <div key={item.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: C.bg, borderRadius: 12, border: `1px solid ${C.border}`, gap: 16 }}>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: C.text }}>{item.label}</div>
+                    <div style={{ fontSize: 12, color: C.muted, marginTop: 3 }}>{item.desc}</div>
+                  </div>
+                  <Toggle value={(config as any)[item.key]} onChange={v => f(item.key as keyof AppConfig, v)} />
+                </div>
+              ))}
+
+              <div style={{ padding: '14px', background: '#DBEAFE', borderRadius: 10, border: '1px solid #93C5FD', fontSize: 12, color: '#1E40AF', lineHeight: 1.6 }}>
+                <strong>Note:</strong> These controls affect only the mobile app first scanner details screen. Admin QR Scanner will continue to show full internal records.
+              </div>
             </div>
           )}
 

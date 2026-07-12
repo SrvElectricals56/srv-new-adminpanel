@@ -411,6 +411,8 @@ export const qrCodeApi = {
     const q = params ? '?' + new URLSearchParams(params).toString() : '';
     return request<{ data: any[]; total: number; page: number; limit: number; totalPages: number }>(`/qr-codes/download-history${q}`);
   },
+  scanLookup: (qrCode: string) =>
+    request<any>('/qr-codes/scan-lookup', { method: 'POST', body: JSON.stringify({ qrCode }) }),
 };
 
 // â”€â”€â”€ Scans â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
