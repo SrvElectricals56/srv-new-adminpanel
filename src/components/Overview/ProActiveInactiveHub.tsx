@@ -3,7 +3,9 @@
 import { startTransition, useDeferredValue, useEffect, useEffectEvent, useState, type CSSProperties } from 'react';
 import {
   Activity,
+  Calendar,
   CalendarClock,
+  FileSpreadsheet,
   Info,
   RefreshCcw,
   Sparkles,
@@ -18,6 +20,7 @@ import { appUserApi, counterboyApi, dealerApi, electricianApi } from '@/lib/api'
 import { useThemePalette } from '@/lib/theme';
 import { I } from '@/lib/iconMap';
 import { formatISTDate } from '@/lib/dateIST';
+import ExportModal from '@/components/Shared/ExportModal';
 
 type RoleTab = 'electrician' | 'dealer' | 'counterboy' | 'customer';
 type ActivityTab = 'proactive' | 'active' | 'inactive';
@@ -32,6 +35,7 @@ interface ActivityCardData {
   location: string;
   status: string;
   lastSeen: string;
+  activityDateIso: string;
   reason: string;
   metrics: string[];
   score: number;
@@ -79,6 +83,13 @@ const ACTIVITY_TABS: Array<{
 ];
 
 const formatNumber = new Intl.NumberFormat('en-IN');
+
+function toDateInput(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 
 const emptyBuckets = (): ActivityBuckets => ({
   proactive: [],
@@ -333,6 +344,7 @@ function appendRowsToBuckets(
       location: getLocation(row, role),
       status: getString(row, 'status') || 'pending',
       lastSeen: formatLastSeen(row),
+      activityDateIso: getActivityDate(row) ? toDateInput(getActivityDate(row) as Date) : '',
       reason: classification.reason,
       metrics: getMetrics(row, role),
       score: classification.score,
@@ -429,6 +441,14 @@ export default function ProActiveInactiveHub() {
   const [activeBucket, setActiveBucket] = useState<ActivityTab>('proactive');
   const [visibleCount, setVisibleCount] = useState(CARD_RENDER_CHUNK);
   const [showCriteria, setShowCriteria] = useState(false);
+  const [showExport, setShowExport] = useState(false);
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const today = new Date();
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  });
   const [datasets, setDatasets] = useState<Record<RoleTab, ActivityBuckets>>({
     electrician: emptyBuckets(),
     dealer: emptyBuckets(),
@@ -518,7 +538,30 @@ export default function ProActiveInactiveHub() {
   const roleMeta = ROLE_TABS.find((tab) => tab.id === activeRole) ?? ROLE_TABS[0];
   const RoleMetaIcon = roleMeta.Icon;
   const activeData = datasets[activeRole];
-  const bucketRows = useDeferredValue(activeData[activeBucket]);
+  const unfilteredBucketRows = useDeferredValue(activeData[activeBucket]);
+  const todayIso = toDateInput(new Date());
+  const todayMonthIso = todayIso.slice(0, 7);
+  const [calendarYear, calendarMonthNumber] = calendarMonth.split('-').map(Number);
+  const monthStart = new Date(calendarYear, calendarMonthNumber - 1, 1);
+  const monthLastDay = new Date(calendarYear, calendarMonthNumber, 0).getDate();
+  const monthOffset = monthStart.getDay();
+  const selectedSingleDate = fromDate && fromDate === toDate ? fromDate : '';
+  const canGoNextMonth = calendarMonth < todayMonthIso;
+  const calendarCells = [
+    ...Array.from({ length: monthOffset }, () => null),
+    ...Array.from({ length: monthLastDay }, (_, index) => {
+      const day = index + 1;
+      const iso = toDateInput(new Date(calendarYear, calendarMonthNumber - 1, day));
+      return { day, iso, future: iso > todayIso };
+    }),
+  ];
+  const bucketRows = unfilteredBucketRows.filter((item) => {
+    if (!fromDate && !toDate) return true;
+    if (!item.activityDateIso) return false;
+    if (fromDate && item.activityDateIso < fromDate) return false;
+    if (toDate && item.activityDateIso > toDate) return false;
+    return true;
+  });
   const visibleRows = bucketRows.slice(0, visibleCount);
   const totalForRole = activeData.proactive.length + activeData.active.length + activeData.inactive.length;
   const loadedForRole = loadedCounts[activeRole];
@@ -529,9 +572,57 @@ export default function ProActiveInactiveHub() {
   const hasMoreRows = visibleCount < bucketRows.length;
   const showInitialLoader = totalForRole === 0 && (roleLoading || (!roleLoaded && !roleError));
   const showEmptyState = totalForRole === 0 && roleLoaded && !roleLoading && !roleError;
+  const activeBucketLabel = ACTIVITY_TABS.find((tab) => tab.id === activeBucket)?.label ?? activeBucket;
+  const dateFilterLabel = fromDate || toDate ? `${fromDate || 'Start'} to ${toDate || todayIso}` : 'No date filter applied';
+  const applyQuickFilter = (type: 'today' | 'weekly' | 'monthly') => {
+    const today = new Date();
+    let start = today;
+    if (type === 'weekly') start = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6);
+    if (type === 'monthly') start = new Date(today.getFullYear(), today.getMonth(), 1);
+    setFromDate(toDateInput(start));
+    setToDate(todayIso);
+    setVisibleCount(CARD_RENDER_CHUNK);
+  };
+  const selectSingleDate = (dateIso: string) => {
+    if (dateIso > todayIso) return;
+    setFromDate(dateIso);
+    setToDate(dateIso);
+    setVisibleCount(CARD_RENDER_CHUNK);
+  };
+  const clearDateFilters = () => {
+    setFromDate('');
+    setToDate('');
+    setVisibleCount(CARD_RENDER_CHUNK);
+  };
+  const shiftMonth = (delta: number) => {
+    const next = new Date(calendarYear, calendarMonthNumber - 1 + delta, 1);
+    const nextIso = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`;
+    if (nextIso <= todayMonthIso) setCalendarMonth(nextIso);
+  };
+  const getExportRows = () =>
+    bucketRows.map((item) => ({
+      Role: roleMeta.label,
+      ActivityBucket: activeBucketLabel,
+      Name: item.name,
+      Code: item.code,
+      Phone: item.phone,
+      Location: item.location,
+      AccountStatus: item.status,
+      LastSignal: item.lastSeen,
+      Metrics: item.metrics.join(' | '),
+      ActivityScore: item.score,
+      Reason: item.reason,
+    }));
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg, overflowX: 'hidden' }}>
+      <ExportModal
+        show={showExport}
+        onClose={() => setShowExport(false)}
+        title={`${roleMeta.label} ${activeBucketLabel} Activity`}
+        fileName={`${activeRole}-${activeBucket}-activity`}
+        getData={getExportRows}
+      />
       <div style={{ padding: '28px 32px 18px' }}>
         <div
           style={{
@@ -721,6 +812,88 @@ export default function ProActiveInactiveHub() {
           })}
         </div>
 
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 18, boxShadow: C.shadow, overflow: 'hidden', marginBottom: 20 }}>
+          <div style={{ padding: '16px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', borderBottom: showCalendar ? `1px solid ${C.border}` : 'none' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Calendar size={18} style={{ color: roleMeta.accent }} />
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 900, color: C.text }}>Date Filters</div>
+                <div style={{ fontSize: 12, color: C.muted }}>{dateFilterLabel}</div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              {[
+                { label: 'Today', type: 'today' as const },
+                { label: 'Last Weekly', type: 'weekly' as const },
+                { label: 'Last Monthly', type: 'monthly' as const },
+              ].map(item => (
+                <button
+                  key={item.type}
+                  onClick={() => applyQuickFilter(item.type)}
+                  style={{ padding: '10px 13px', borderRadius: 10, border: `1px solid ${C.border}`, background: C.bg, color: C.text, cursor: 'pointer', fontSize: 12.5, fontWeight: 900 }}
+                >
+                  {item.label}
+                </button>
+              ))}
+              <label style={{ display: 'grid', gap: 4, fontSize: 10.5, fontWeight: 900, color: C.muted, textTransform: 'uppercase' }}>
+                From
+                <input
+                  type="date"
+                  value={fromDate}
+                  max={todayIso}
+                  onChange={e => {
+                    const next = e.target.value > todayIso ? todayIso : e.target.value;
+                    setFromDate(next);
+                    if (toDate && next && toDate < next) setToDate(next);
+                    setVisibleCount(CARD_RENDER_CHUNK);
+                  }}
+                  style={{ padding: '8px 9px', borderRadius: 9, border: `1.5px solid ${C.border}`, background: C.bg, color: C.text, outline: 'none', fontSize: 12.5 }}
+                />
+              </label>
+              <label style={{ display: 'grid', gap: 4, fontSize: 10.5, fontWeight: 900, color: C.muted, textTransform: 'uppercase' }}>
+                To
+                <input
+                  type="date"
+                  value={toDate}
+                  min={fromDate || undefined}
+                  max={todayIso}
+                  onChange={e => {
+                    setToDate(e.target.value > todayIso ? todayIso : e.target.value);
+                    setVisibleCount(CARD_RENDER_CHUNK);
+                  }}
+                  style={{ padding: '8px 9px', borderRadius: 9, border: `1.5px solid ${C.border}`, background: C.bg, color: C.text, outline: 'none', fontSize: 12.5 }}
+                />
+              </label>
+              <button onClick={() => setShowCalendar(previous => !previous)} style={{ padding: '10px 14px', borderRadius: 10, border: `1px solid ${showCalendar ? roleMeta.accent : C.border}`, background: showCalendar ? `${roleMeta.accent}12` : C.bg, color: showCalendar ? roleMeta.accent : C.text, cursor: 'pointer', fontSize: 13, fontWeight: 900, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                <Calendar size={15} />
+                {showCalendar ? 'Hide Date Picker' : (selectedSingleDate || 'Date Wise')}
+              </button>
+              <button onClick={clearDateFilters} style={{ padding: '10px 13px', borderRadius: 10, border: `1px solid ${C.border}`, background: C.bg, color: C.muted, cursor: 'pointer', fontSize: 12.5, fontWeight: 900 }}>Clear</button>
+            </div>
+          </div>
+
+          {showCalendar && (
+            <div style={{ padding: '16px 18px', display: 'flex', justifyContent: 'flex-end' }}>
+              <div style={{ width: 380, maxWidth: '100%', border: `1px solid ${C.border}`, borderRadius: 12, overflow: 'hidden', background: C.bg }}>
+                <div style={{ padding: '10px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}` }}>
+                  <button onClick={() => shiftMonth(-1)} style={{ width: 28, height: 28, borderRadius: 8, border: `1px solid ${C.border}`, background: C.card, color: C.text, cursor: 'pointer', fontSize: 16, fontWeight: 900 }}>{'<'}</button>
+                  <div style={{ fontSize: 13, color: C.text, fontWeight: 900 }}>{monthStart.toLocaleString('en-IN', { month: 'long', year: 'numeric' })}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <input type="month" value={calendarMonth} max={todayMonthIso} onChange={e => { if (e.target.value && e.target.value <= todayMonthIso) setCalendarMonth(e.target.value); }} style={{ width: 122, padding: '5px 7px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: 11.5, fontWeight: 700 }} />
+                    <button onClick={() => shiftMonth(1)} disabled={!canGoNextMonth} style={{ width: 28, height: 28, borderRadius: 8, border: `1px solid ${C.border}`, background: canGoNextMonth ? C.card : C.bg, color: canGoNextMonth ? C.text : C.muted, cursor: canGoNextMonth ? 'pointer' : 'not-allowed', fontSize: 16, fontWeight: 900 }}>{'>'}</button>
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1, padding: 8 }}>
+                  {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => <div key={`${day}-${index}`} style={{ textAlign: 'center', padding: '4px 0', fontSize: 10.5, color: C.muted, fontWeight: 900 }}>{day}</div>)}
+                  {calendarCells.map((cell, index) => cell ? (
+                    <button key={cell.iso} disabled={cell.future} onClick={() => selectSingleDate(cell.iso)} style={{ height: 30, borderRadius: 8, border: selectedSingleDate === cell.iso ? `2px solid ${roleMeta.accent}` : `1px solid ${C.border}`, background: cell.future ? '#F1F5F9' : selectedSingleDate === cell.iso ? `${roleMeta.accent}12` : C.card, color: cell.future ? C.muted : C.text, opacity: cell.future ? 0.55 : 1, cursor: cell.future ? 'not-allowed' : 'pointer', fontSize: 12, fontWeight: 800 }}>{cell.day}</button>
+                  ) : <div key={`empty-${index}`} style={{ height: 30 }} />)}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
         {roleError && totalForRole > 0 ? (
           <div
             style={{
@@ -810,9 +983,31 @@ export default function ProActiveInactiveHub() {
                 Showing <strong style={{ color: C.text }}>{formatNumber.format(visibleRows.length)}</strong> of{' '}
                 <strong style={{ color: C.text }}>{formatNumber.format(bucketRows.length)}</strong> cards in this bucket.
               </div>
-              {roleLoading ? (
-                <div style={{ fontSize: 12, color: roleMeta.accent, fontWeight: 700 }}>More rows are still loading in the background.</div>
-              ) : null}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                {roleLoading ? (
+                  <div style={{ fontSize: 12, color: roleMeta.accent, fontWeight: 700 }}>More rows are still loading in the background.</div>
+                ) : null}
+                <button
+                  onClick={() => setShowExport(true)}
+                  disabled={bucketRows.length === 0}
+                  style={{
+                    background: bucketRows.length === 0 ? C.bg : `${roleMeta.accent}12`,
+                    color: bucketRows.length === 0 ? C.muted : roleMeta.accent,
+                    border: `1px solid ${bucketRows.length === 0 ? C.border : `${roleMeta.accent}35`}`,
+                    borderRadius: 12,
+                    padding: '10px 14px',
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: bucketRows.length === 0 ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 7,
+                    boxShadow: C.shadow,
+                  }}
+                >
+                  <FileSpreadsheet size={15} /> Export {activeBucketLabel}
+                </button>
+              </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 18 }}>

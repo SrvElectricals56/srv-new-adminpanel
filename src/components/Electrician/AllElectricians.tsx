@@ -827,6 +827,7 @@ export default function Electricians({ role }: ElectriciansProps) {
         show={showImport}
         onClose={() => setShowImport(false)}
         title="Electricians"
+        sampleHeaders={['Electrician','Mobile Number','Location','Tier','Points','Scans','Wallet','Status','App Installed','EMAIL','CITY','DISTRICT','STATE','PINCODE','ADDRESS','ELECTRICIAN CODE','DEALER CODE','DEALER NAME','SUB CATEGORY','BANK LINKED','UPI ID']}
         onImport={async (records) => {
           const res = await electricianApi.importMany(records);
           await loadData(currentPage);

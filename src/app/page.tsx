@@ -7,6 +7,7 @@ import { I } from '@/lib/iconMap';
 import Sidebar from '@/components/Shared/Sidebar';
 import Login from '@/components/Shared/Login';
 import SrvLogoLoader from '@/components/Shared/SrvLogoLoader';
+import AlertDialog from '@/components/Shared/AlertDialog';
 import { useAppContext } from '@/lib/appContext';
 import type { AdminRole } from '@/lib/types';
 
@@ -273,12 +274,32 @@ export default function Home() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState('');
   const [routeLoading, setRouteLoading] = useState(false);
+  const [crudAlert, setCrudAlert] = useState<{ show: boolean; title: string; message: string; type: 'success' | 'info' }>({
+    show: false,
+    title: '',
+    message: '',
+    type: 'success',
+  });
   const routeLoadingTimeoutRef = useRef<number | null>(null);
   const applyingBrowserHistoryRef = useRef(false);
 
   const loggedIn = auth.isLoggedIn;
   const role = auth.role;
   const adminName = auth.adminName;
+
+  useEffect(() => {
+    const onCrudSuccess = (event: Event) => {
+      const detail = (event as CustomEvent<{ title?: string; message?: string }>).detail;
+      setCrudAlert({
+        show: true,
+        title: detail?.title || 'Saved Successfully',
+        message: detail?.message || 'Your changes have been saved successfully.',
+        type: 'success',
+      });
+    };
+    window.addEventListener('srv-crud-success', onCrudSuccess);
+    return () => window.removeEventListener('srv-crud-success', onCrudSuccess);
+  }, []);
 
   useEffect(() => {
     if (!loggedIn) return;
@@ -712,6 +733,13 @@ export default function Home() {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: P.bg }}>
+      <AlertDialog
+        show={crudAlert.show}
+        title={crudAlert.title}
+        message={crudAlert.message}
+        type={crudAlert.type}
+        onClose={() => setCrudAlert(current => ({ ...current, show: false }))}
+      />
       {/* Search Modal */}
       {showSearchModal && (
         <div style={{ position: 'fixed', inset: 0, background: mode === 'dark' ? 'rgba(0,0,0,0.75)' : 'rgba(15,23,42,0.6)', backdropFilter: 'blur(8px)', zIndex: 2000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '80px 20px 20px', overflowY: 'auto' }} onClick={() => setShowSearchModal(false)}>
@@ -784,6 +812,7 @@ export default function Home() {
 
             {/* Search Results */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px' }}>
+              {/* eslint-disable-next-line react-hooks/refs */}
               {(() => {
                 const query = searchQuery.toLowerCase().trim();
                 

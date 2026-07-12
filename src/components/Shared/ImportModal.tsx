@@ -32,6 +32,18 @@ export default function ImportModal({ show, onClose, title, onImport, sampleHead
 
   if (!show) return null;
 
+  const readWorkbookRows = async (file: File) => {
+    const XLSX = await import('xlsx');
+    const buffer = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    return XLSX.utils.sheet_to_json(sheet, {
+      defval: '',
+      raw: false,
+      dateNF: 'yyyy-mm-dd',
+    }) as any[];
+  };
+
   const reset = () => {
     setStep('upload');
     setPreview([]);
@@ -52,11 +64,7 @@ export default function ImportModal({ show, onClose, title, onImport, sampleHead
     setError(null);
 
     try {
-      const XLSX = await import('xlsx');
-      const buffer = await file.arrayBuffer();
-      const workbook = XLSX.read(buffer, { type: 'array' });
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const json = XLSX.utils.sheet_to_json(sheet, { defval: '' }) as any[];
+      const json = await readWorkbookRows(file);
 
       if (!json.length) {
         setError('File is empty. Please select a file with data.');
@@ -83,11 +91,7 @@ export default function ImportModal({ show, onClose, title, onImport, sampleHead
     setError(null);
 
     try {
-      const XLSX = await import('xlsx');
-      const buffer = await file.arrayBuffer();
-      const workbook = XLSX.read(buffer, { type: 'array' });
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const allRows = XLSX.utils.sheet_to_json(sheet, { defval: '' }) as any[];
+      const allRows = await readWorkbookRows(file);
 
       const res = await onImport(allRows);
       setResult(res);
