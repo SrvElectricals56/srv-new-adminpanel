@@ -1,6 +1,6 @@
 ﻿'use client';
 import { useState, useEffect } from 'react';
-import { FileSpreadsheet, Gift, Plus, Edit, Trash2, Eye, X } from 'lucide-react';
+import { FileSpreadsheet, Gift, Plus, Edit, Trash2, Eye, Upload } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { offerApi } from '@/lib/api';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
@@ -21,6 +21,7 @@ interface Offer {
   status: 'active' | 'scheduled' | 'expired' | 'inactive';
   targetRole: string;
   bonusPoints: number;
+  imageUrl?: string;
 }
 
 export default function ElectricianOffers() {
@@ -42,6 +43,7 @@ export default function ElectricianOffers() {
         status: o.status ?? 'active',
         targetRole: o.targetRole ?? o.target_role ?? 'all',
         bonusPoints: o.bonusPoints ?? o.bonus_points ?? 0,
+        imageUrl: o.imageUrl ?? o.image_url ?? '',
       })));
     } catch (err) {
       console.error('Failed to load offers:', err);
@@ -57,6 +59,7 @@ export default function ElectricianOffers() {
   const [showForm, setShowForm] = useState(false);
   const [editingOffer, setEditingOffer] = useState<Offer | null>(null);
   const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null);
+  const [imageUploading, setImageUploading] = useState(false);
   const [confirmState, setConfirmState] = useState<{show: boolean; title: string; message: string; onConfirm: () => void; type: 'success' | 'danger'}>({show: false, title: '', message: '', onConfirm: () => {}, type: 'success'});
   const [alertDialog, setAlertDialog] = useState<{ show: boolean; title: string; message: string; type: 'error' | 'success' | 'warning' | 'info' }>({ show: false, title: '', message: '', type: 'error' });
 
@@ -69,6 +72,7 @@ export default function ElectricianOffers() {
     status: 'active',
     targetRole: 'all',
     bonusPoints: 10,
+    imageUrl: '',
   });
 
   const filtered = offers.filter(o => {
@@ -103,6 +107,7 @@ export default function ElectricianOffers() {
       status: 'active',
       targetRole: 'all',
       bonusPoints: 10,
+      imageUrl: '',
     });
     setShowForm(true);
   };
@@ -129,6 +134,19 @@ export default function ElectricianOffers() {
       setEditingOffer(null);
     } catch (err: any) {
       setAlertDialog({ show: true, title: 'Error', message: err.message || 'Failed to save offer', type: 'error' });
+    }
+  };
+
+  const handleImageUpload = async (file?: File) => {
+    if (!file) return;
+    setImageUploading(true);
+    try {
+      const imageUrl = await offerApi.uploadImage(file);
+      setForm(f => ({ ...f, imageUrl }));
+    } catch (err: any) {
+      setAlertDialog({ show: true, title: 'Upload Failed', message: err.message || 'Failed to upload offer image', type: 'error' });
+    } finally {
+      setImageUploading(false);
     }
   };
 
@@ -262,6 +280,19 @@ export default function ElectricianOffers() {
                 <label style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 4, display: 'block' }}>Description</label>
                 <input value={form.description || ''} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="e.g. 50% bonus points" style={inputStyle} />
               </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 4, display: 'block' }}>Offer Image</label>
+                <label style={{ minHeight: 118, border: `1.5px dashed ${C.border}`, borderRadius: 12, background: C.bg, cursor: imageUploading ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                  {form.imageUrl ? (
+                    <img src={form.imageUrl} alt="Offer preview" style={{ width: '100%', height: 118, objectFit: 'cover' }} />
+                  ) : (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.muted, fontSize: 13, fontWeight: 700 }}>
+                      <Upload size={16} /> {imageUploading ? 'Uploading...' : 'Click to upload offer image'}
+                    </span>
+                  )}
+                  <input type="file" accept="image/*" disabled={imageUploading} style={{ display: 'none' }} onChange={e => void handleImageUpload(e.target.files?.[0])} />
+                </label>
+              </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
                   <label style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 4, display: 'block' }}>Discount *</label>
@@ -318,6 +349,7 @@ export default function ElectricianOffers() {
             <div style={{ padding: 22, display: 'grid', gap: 10 }}>
               <div style={{ background: C.bg, borderRadius: 10, padding: 12, fontSize: 13 }}><strong>Title:</strong> {selectedOffer.title}</div>
               <div style={{ background: C.bg, borderRadius: 10, padding: 12, fontSize: 13 }}><strong>Description:</strong> {selectedOffer.description}</div>
+              {selectedOffer.imageUrl ? <div style={{ background: C.bg, borderRadius: 10, padding: 12, fontSize: 13 }}><img src={selectedOffer.imageUrl} alt={selectedOffer.title} style={{ width: '100%', maxHeight: 180, objectFit: 'cover', borderRadius: 8 }} /></div> : null}
               <div style={{ background: C.bg, borderRadius: 10, padding: 12, fontSize: 13 }}><strong>Discount:</strong> {selectedOffer.discount}</div>
               <div style={{ background: C.bg, borderRadius: 10, padding: 12, fontSize: 13 }}><strong>Bonus Points:</strong> {selectedOffer.bonusPoints}</div>
               <div style={{ background: C.bg, borderRadius: 10, padding: 12, fontSize: 13 }}><strong>Valid From:</strong> {formatISTDate(selectedOffer.validFrom)}</div>

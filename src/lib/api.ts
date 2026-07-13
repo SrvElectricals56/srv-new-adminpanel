@@ -525,6 +525,19 @@ export const offerApi = {
   create: (body: object) => request<any>('/offers', { method: 'POST', body: JSON.stringify(sanitizeOfferPayload(body)) }),
   update: (id: string, body: object) => request<any>(`/offers/${id}`, { method: 'PATCH', body: JSON.stringify(sanitizeOfferPayload(body)) }),
   delete: (id: string) => request<void>(`/offers/${id}`, { method: 'DELETE' }),
+  uploadImage: async (file: File): Promise<string> => {
+    const token = getToken();
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(`${BASE_URL}/upload/image`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+    if (!res.ok) throw new Error('Image upload failed');
+    const data = await res.json();
+    return data.url as string;
+  },
 };
 
 // â”€â”€â”€ Testimonials â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
