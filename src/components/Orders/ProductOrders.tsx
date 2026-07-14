@@ -6,7 +6,7 @@ import { formatISTDateTime, formatISTDate, formatISTDateTimeFull } from '@/lib/d
 import { productOrderApi } from '@/lib/api';
 import ExportModal from '@/components/Shared/ExportModal';
 
-type OrderStatus = 'pending' | 'approved' | 'shipped' | 'delivered' | 'rejected';
+type OrderStatus = 'pending' | 'approved' | 'out_for_delivery' | 'shipped' | 'delivered' | 'rejected' | 'cancelled' | 'returned' | 'refunded';
 
 interface ProductOrder {
   id: string;
@@ -24,16 +24,31 @@ interface ProductOrder {
   status: OrderStatus;
   shippingAddress: string;
   trackingNumber: string;
+  courierName?: string;
   rejectionReason: string;
+  paymentStatus?: string;
+  paymentMethod?: string;
+  paidAt?: string;
+  estimatedDeliveryAt?: string;
+  dispatchedAt?: string;
+  deliveredAt?: string;
+  refundStatus?: string;
+  refundMessage?: string;
+  deliveryNotes?: string;
+  updatedAt?: string;
   orderedAt: string;
 }
 
 const STATUS_CONFIG: Record<OrderStatus, { bg: string; color: string; label: string }> = {
   pending:   { bg: '#FEF3C7', color: '#92400E', label: 'Pending' },
-  approved:  { bg: '#D1FAE5', color: '#065F46', label: 'Approved' },
+  approved:  { bg: '#D1FAE5', color: '#065F46', label: 'Confirmed' },
+  out_for_delivery: { bg: '#E0F2FE', color: '#0369A1', label: 'Out For Delivery' },
   shipped:   { bg: '#EFF6FF', color: '#1D4ED8', label: 'Shipped' },
   delivered: { bg: '#F0FDF4', color: '#166534', label: 'Delivered' },
   rejected:  { bg: '#FEE2E2', color: '#991B1B', label: 'Rejected' },
+  cancelled: { bg: '#FFE4E6', color: '#BE123C', label: 'Cancelled' },
+  returned: { bg: '#F3E8FF', color: '#7E22CE', label: 'Returned' },
+  refunded: { bg: '#CCFBF1', color: '#0F766E', label: 'Refunded' },
 };
 
 function OrderDetailModal({ order, onClose, C }: { order: ProductOrder; onClose: () => void; C: any }) {
@@ -72,8 +87,15 @@ function OrderDetailModal({ order, onClose, C }: { order: ProductOrder; onClose:
               { label: 'Phone', value: order.userPhone || '—' },
               { label: 'Code', value: order.userCode || '—' },
               { label: 'Ordered On', value: formatISTDate(order.orderedAt) },
+              { label: 'Payment', value: order.paymentStatus ? `${order.paymentStatus}${order.paidAt ? ` (${formatISTDate(order.paidAt)})` : ''}` : '—' },
+              { label: 'Expected Delivery', value: order.estimatedDeliveryAt ? formatISTDate(order.estimatedDeliveryAt) : '—' },
+              { label: 'Shipped Date', value: order.dispatchedAt ? formatISTDate(order.dispatchedAt) : '—' },
+              { label: 'Status Updated', value: order.updatedAt ? formatISTDate(order.updatedAt) : '—' },
               { label: 'Shipping Address', value: order.shippingAddress || '—' },
               { label: 'Tracking', value: order.trackingNumber || '—' },
+              { label: 'Courier', value: order.courierName || '—' },
+              { label: 'Refund', value: order.refundStatus || order.refundMessage || '—' },
+              { label: 'Reason', value: order.rejectionReason || '—' },
             ].map(item => (
               <div key={item.label} style={{ background: C.bg, borderRadius: 10, padding: '12px 14px' }}>
                 <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>{item.label}</div>
@@ -105,20 +127,31 @@ export default function ProductOrders({ role }: { role?: import('@/lib/types').A
   const [editStatus, setEditStatus] = useState<OrderStatus>('pending');
   const [editTracking, setEditTracking] = useState('');
   const [editRejectReason, setEditRejectReason] = useState('');
+  const [editRefundMessage, setEditRefundMessage] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; order: ProductOrder | null }>({ show: false, order: null });
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
 
+  const buildStats = (rows: ProductOrder[]) => ({
+    total: rows.length,
+    pending: rows.filter(o => o.status === 'pending').length,
+    approved: rows.filter(o => o.status === 'approved').length,
+    outForDelivery: rows.filter(o => o.status === 'out_for_delivery').length,
+    shipped: rows.filter(o => o.status === 'shipped').length,
+    delivered: rows.filter(o => o.status === 'delivered').length,
+    rejected: rows.filter(o => o.status === 'rejected').length,
+    cancelled: rows.filter(o => o.status === 'cancelled').length,
+    returned: rows.filter(o => o.status === 'returned').length,
+    refunded: rows.filter(o => o.status === 'refunded').length,
+  });
+
   const loadData = async () => {
     try {
       setLoading(true);
-      const [ordersRes, statsRes] = await Promise.all([
-        productOrderApi.getAll({ limit: '500' }),
-        productOrderApi.getStats(),
-      ]);
+      const ordersRes = await productOrderApi.getAll({ limit: '500' });
       const data = Array.isArray(ordersRes) ? ordersRes : (ordersRes as any).data ?? [];
       setOrders(data);
-      if (statsRes) setStats(statsRes);
+      setStats(buildStats(data));
     } catch (err) {
       console.error('Failed to load product orders:', err);
     } finally {
@@ -138,6 +171,7 @@ export default function ProductOrders({ role }: { role?: import('@/lib/types').A
     setEditStatus(order.status);
     setEditTracking(order.trackingNumber || '');
     setEditRejectReason(order.rejectionReason || '');
+    setEditRefundMessage(order.refundMessage || '');
     setEditModal({ open: true, order });
   };
 
@@ -145,6 +179,7 @@ export default function ProductOrders({ role }: { role?: import('@/lib/types').A
     setEditModal({ open: false, order: null });
     setEditTracking('');
     setEditRejectReason('');
+    setEditRefundMessage('');
   };
 
   const handleEditSave = async () => {
@@ -156,6 +191,7 @@ export default function ProductOrders({ role }: { role?: import('@/lib/types').A
         status: editStatus,
         trackingNumber: editTracking,
         rejectionReason: editStatus === 'rejected' ? editRejectReason : undefined,
+        refundMessage: editStatus === 'rejected' ? editRefundMessage : undefined,
       });
       setFeedback({ type: 'success', message: 'Order updated successfully.' });
       closeEditModal();
@@ -189,7 +225,7 @@ export default function ProductOrders({ role }: { role?: import('@/lib/types').A
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
       {selectedOrder && <OrderDetailModal order={selectedOrder} onClose={() => setSelectedOrder(null)} C={C} />}
-      <ExportModal show={showExport} onClose={() => setShowExport(false)} title={`Product Orders${tab !== 'all' ? ` - ${tab}` : ''}`} fileName={`product-orders-${tab}`} getData={() => filtered.map(o => ({ ID: o.id, Role: o.userRole, Name: o.userName, Phone: o.userPhone, Code: o.userCode, Product: o.productName, Qty: o.quantity, Price: o.price, Total: o.total, Date: o.orderedAt, Status: o.status }))} />
+      <ExportModal show={showExport} onClose={() => setShowExport(false)} title={`Product Orders${tab !== 'all' ? ` - ${tab}` : ''}`} fileName={`product-orders-${tab}`} getData={() => filtered.map(o => ({ ID: o.id, Role: o.userRole, Name: o.userName, Phone: o.userPhone, Code: o.userCode, Product: o.productName, Qty: o.quantity, Price: o.price, Total: o.total, Date: o.orderedAt, Status: o.status, Payment: o.paymentStatus, ShippedDate: o.dispatchedAt, RefundStatus: o.refundStatus, RefundMessage: o.refundMessage }))} />
 
       {/* Header */}
       <div style={{ background: 'linear-gradient(135deg, #059669, #047857)', borderRadius: 18, padding: '22px 28px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 8px 24px rgba(5,150,105,0.25)' }}>
@@ -201,6 +237,7 @@ export default function ProductOrders({ role }: { role?: import('@/lib/types').A
           {[
             { label: 'Total', value: stats.total, color: 'white' },
             { label: 'Pending', value: stats.pending, color: '#FCD34D' },
+            { label: 'Out Delivery', value: stats.outForDelivery, color: '#BAE6FD' },
             { label: 'Shipped', value: stats.shipped, color: '#93C5FD' },
             { label: 'Delivered', value: stats.delivered, color: '#6EE7B7' },
           ].map(s => (
@@ -254,8 +291,9 @@ export default function ProductOrders({ role }: { role?: import('@/lib/types').A
                   <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as any)} style={{ width: '100%', padding: '9px 12px', border: `1.5px solid ${filterStatus !== 'all' ? C.red : C.border}`, borderRadius: 10, fontSize: 13, outline: 'none', background: C.inputBg, color: C.text }}>
                     <option value="all">All Status</option>
                     <option value="pending">Pending</option>
-                    <option value="approved">Approved</option>
+                    <option value="approved">Confirmed</option>
                     <option value="shipped">Shipped</option>
+                    <option value="out_for_delivery">Out For Delivery</option>
                     <option value="delivered">Delivered</option>
                     <option value="rejected">Rejected</option>
                   </select>
@@ -361,8 +399,8 @@ export default function ProductOrders({ role }: { role?: import('@/lib/types').A
               <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', marginBottom: 6 }}>Order Status</div>
               <select value={editStatus} onChange={e => setEditStatus(e.target.value as OrderStatus)} style={{ width: '100%', padding: '9px 12px', border: `1.5px solid ${C.border}`, borderRadius: 10, fontSize: 13, outline: 'none', background: C.inputBg, color: C.text, marginBottom: 16 }}>
                 <option value="pending">Pending</option>
-                <option value="approved">Processed</option>
-                <option value="shipped">Dispatched</option>
+                <option value="shipped">Shipped</option>
+                <option value="out_for_delivery">Out For Delivery</option>
                 <option value="delivered">Delivered</option>
                 <option value="rejected">Rejected</option>
               </select>
@@ -372,6 +410,12 @@ export default function ProductOrders({ role }: { role?: import('@/lib/types').A
                 <>
                   <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', marginBottom: 6 }}>Rejection Reason</div>
                   <textarea value={editRejectReason} onChange={e => setEditRejectReason(e.target.value)} placeholder="Reason for rejection..." style={{ ...inputStyle, width: '100%', boxSizing: 'border-box', minHeight: 80, resize: 'vertical', marginBottom: 16 }} />
+                </>
+              )}
+              {editStatus === 'rejected' && (
+                <>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', marginBottom: 6 }}>Refund / Customer Message</div>
+                  <textarea value={editRefundMessage} onChange={e => setEditRefundMessage(e.target.value)} placeholder="Message customer will see about refund, return, or cancellation..." style={{ ...inputStyle, width: '100%', boxSizing: 'border-box', minHeight: 72, resize: 'vertical', marginBottom: 16 }} />
                 </>
               )}
             </div>

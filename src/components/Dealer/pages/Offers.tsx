@@ -1,6 +1,6 @@
 ﻿'use client';
 import { useState, useEffect } from 'react';
-import { FileSpreadsheet, Gift, Plus, Edit2, Trash2, Calendar, Target } from 'lucide-react';
+import { FileSpreadsheet, Gift, Plus, Edit2, Trash2, Calendar, Target, Upload } from 'lucide-react';
 import { offerApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
 import ExportModal from '@/components/Shared/ExportModal';
@@ -20,6 +20,7 @@ interface DealerOffer {
   status: 'active' | 'expired' | 'scheduled';
   targetRole: string;
   bonusPoints: number;
+  imageUrl?: string;
 }
 
 export default function DealerOffers() {
@@ -30,9 +31,10 @@ export default function DealerOffers() {
   const [showForm, setShowForm] = useState(false);
   const [editingOffer, setEditingOffer] = useState<DealerOffer | null>(null);
   const [showExport, setShowExport] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
   const [alertDialog, setAlertDialog] = useState<{ show: boolean; title: string; message: string; type: 'error' | 'success' | 'warning' | 'info' }>({ show: false, title: '', message: '', type: 'error' });
   const [confirmState, setConfirmState] = useState<{ show: boolean; title: string; message: string; onConfirm: () => void; type: 'success' | 'danger' }>({ show: false, title: '', message: '', onConfirm: () => {}, type: 'danger' });
-  const [form, setForm] = useState<Partial<DealerOffer>>({ title: '', description: '', discount: '', validFrom: '', validTo: '', status: 'scheduled', targetRole: 'dealer', bonusPoints: 0 });
+  const [form, setForm] = useState<Partial<DealerOffer>>({ title: '', description: '', discount: '', validFrom: '', validTo: '', status: 'scheduled', targetRole: 'dealer', bonusPoints: 0, imageUrl: '' });
 
   const loadOffers = async () => {
     try {
@@ -48,6 +50,7 @@ export default function DealerOffers() {
         status: o.status ?? 'active',
         targetRole: o.targetRole ?? o.target_role ?? 'all',
         bonusPoints: o.bonusPoints ?? o.bonus_points ?? 0,
+        imageUrl: o.imageUrl ?? o.image_url ?? '',
       })));
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
@@ -65,7 +68,7 @@ export default function DealerOffers() {
 
   const openCreate = () => {
     setEditingOffer(null);
-    setForm({ title: '', description: '', discount: '', validFrom: '', validTo: '', status: 'scheduled', targetRole: 'dealer', bonusPoints: 0 });
+    setForm({ title: '', description: '', discount: '', validFrom: '', validTo: '', status: 'scheduled', targetRole: 'dealer', bonusPoints: 0, imageUrl: '' });
     setShowForm(true);
   };
 
@@ -91,6 +94,19 @@ export default function DealerOffers() {
       setShowForm(false);
     } catch (err: any) {
       setAlertDialog({ show: true, title: 'Error', message: err.message || 'Failed to save offer', type: 'error' });
+    }
+  };
+
+  const handleImageUpload = async (file?: File) => {
+    if (!file) return;
+    setImageUploading(true);
+    try {
+      const imageUrl = await offerApi.uploadImage(file);
+      setForm(p => ({ ...p, imageUrl }));
+    } catch (err: any) {
+      setAlertDialog({ show: true, title: 'Upload Failed', message: err.message || 'Failed to upload offer image', type: 'error' });
+    } finally {
+      setImageUploading(false);
     }
   };
 
@@ -131,6 +147,19 @@ export default function DealerOffers() {
             <div style={{ padding: 22, display: 'grid', gap: 10 }}>
               <input placeholder="Offer Title *" value={form.title ?? ''} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} style={{ padding: '10px 12px', border: `1px solid ${C.border}`, borderRadius: 8, background: C.surface, color: C.text, outline: 'none' }} />
               <input placeholder="Description" value={form.description ?? ''} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} style={{ padding: '10px 12px', border: `1px solid ${C.border}`, borderRadius: 8, background: C.surface, color: C.text, outline: 'none' }} />
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 4, display: 'block' }}>Offer Image</label>
+                <label style={{ minHeight: 118, border: `1.5px dashed ${C.border}`, borderRadius: 12, background: C.bg, cursor: imageUploading ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                  {form.imageUrl ? (
+                    <img src={form.imageUrl} alt="Offer preview" style={{ width: '100%', height: 118, objectFit: 'cover' }} />
+                  ) : (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.muted, fontSize: 13, fontWeight: 700 }}>
+                      <Upload size={16} /> {imageUploading ? 'Uploading...' : 'Click to upload offer image'}
+                    </span>
+                  )}
+                  <input type="file" accept="image/*" disabled={imageUploading} style={{ display: 'none' }} onChange={e => void handleImageUpload(e.target.files?.[0])} />
+                </label>
+              </div>
               <input placeholder="Discount (e.g. 20% / ₹5000) *" value={form.discount ?? ''} onChange={e => setForm(p => ({ ...p, discount: e.target.value }))} style={{ padding: '10px 12px', border: `1px solid ${C.border}`, borderRadius: 8, background: C.surface, color: C.text, outline: 'none' }} />
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <input type="date" value={form.validFrom ?? ''} onChange={e => setForm(p => ({ ...p, validFrom: e.target.value }))} style={{ padding: '10px 12px', border: `1px solid ${C.border}`, borderRadius: 8, background: C.surface, color: C.text, outline: 'none' }} />

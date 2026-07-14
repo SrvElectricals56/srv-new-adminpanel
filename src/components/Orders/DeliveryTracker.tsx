@@ -5,7 +5,7 @@ import { giftApi, productOrderApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
 import { formatISTDate, formatISTDateTime } from '@/lib/dateIST';
 
-type OrderStatus = 'pending' | 'approved' | 'shipped' | 'delivered' | 'rejected';
+type OrderStatus = 'pending' | 'approved' | 'out_for_delivery' | 'shipped' | 'delivered' | 'rejected' | 'cancelled' | 'returned' | 'refunded';
 type DeliveryFilter = 'all' | 'pending_queue' | 'payment_paid' | OrderStatus;
 
 type DeliveryOrder = {
@@ -39,9 +39,13 @@ type DeliveryOrder = {
 const STATUS_STYLE: Record<OrderStatus, { label: string; bg: string; color: string }> = {
   pending: { label: 'Pending Dispatch', bg: '#FEF3C7', color: '#92400E' },
   approved: { label: 'Order Confirmed', bg: '#DBEAFE', color: '#1D4ED8' },
+  out_for_delivery: { label: 'Out For Delivery', bg: '#E0F2FE', color: '#0369A1' },
   shipped: { label: 'Dispatched', bg: '#E0E7FF', color: '#4338CA' },
   delivered: { label: 'Delivered', bg: '#DCFCE7', color: '#166534' },
   rejected: { label: 'Rejected / Refund', bg: '#FEE2E2', color: '#991B1B' },
+  cancelled: { label: 'Cancelled', bg: '#FFE4E6', color: '#BE123C' },
+  returned: { label: 'Returned', bg: '#F3E8FF', color: '#7E22CE' },
+  refunded: { label: 'Refunded', bg: '#CCFBF1', color: '#0F766E' },
 };
 
 function safeDate(value?: string | null) {
@@ -49,13 +53,13 @@ function safeDate(value?: string | null) {
 }
 
 function timeline(order: DeliveryOrder) {
-  const rejected = order.status === 'rejected';
+  const stopped = ['rejected', 'cancelled', 'returned', 'refunded'].includes(order.status);
   return [
     { label: 'Order Placed', value: safeDate(order.orderedAt), done: true },
     { label: 'Payment Done', value: order.paidAt ? safeDate(order.paidAt) : (order.paymentStatus || 'pending'), done: order.paymentStatus === 'paid' },
-    { label: 'Confirmed', value: rejected ? 'Rejected by admin' : 'Ready for packing', done: !rejected && ['pending', 'approved', 'shipped', 'delivered'].includes(order.status) },
-    { label: 'Dispatched', value: order.dispatchedAt ? safeDate(order.dispatchedAt) : (order.trackingNumber || 'Awaiting courier'), done: ['shipped', 'delivered'].includes(order.status) },
-    { label: rejected ? 'Refund' : 'Delivery', value: rejected ? (order.refundMessage || 'Refund within 2 business days') : (order.deliveredAt ? safeDate(order.deliveredAt) : `Expected ${safeDate(order.estimatedDeliveryAt)}`), done: rejected || order.status === 'delivered' },
+    { label: 'Confirmed', value: stopped ? (order.rejectionReason || order.deliveryNotes || 'Stopped by admin') : 'Ready for packing', done: !stopped && ['pending', 'approved', 'out_for_delivery', 'shipped', 'delivered'].includes(order.status) },
+    { label: 'Dispatched', value: order.dispatchedAt ? safeDate(order.dispatchedAt) : (order.trackingNumber || 'Awaiting courier'), done: ['out_for_delivery', 'shipped', 'delivered'].includes(order.status) },
+    { label: stopped ? 'Refund / Return' : 'Delivery', value: stopped ? (order.refundMessage || order.deliveryNotes || 'Customer notified') : (order.deliveredAt ? safeDate(order.deliveredAt) : `Expected ${safeDate(order.estimatedDeliveryAt)}`), done: stopped || order.status === 'delivered' },
   ];
 }
 
@@ -235,6 +239,7 @@ export default function DeliveryTracker({ role }: { role?: import('@/lib/types')
           <option value="payment_paid">Payment Done</option>
           <option value="pending">Pending Dispatch</option>
           <option value="approved">Order Confirmed</option>
+          <option value="out_for_delivery">Out For Delivery</option>
           <option value="shipped">Dispatched</option>
           <option value="delivered">Delivered</option>
           <option value="rejected">Rejected / Refund</option>
@@ -276,7 +281,7 @@ export default function DeliveryTracker({ role }: { role?: import('@/lib/types')
               <div style={{ background: C.bg, borderRadius: 12, padding: 12, color: C.muted, fontSize: 12, lineHeight: 1.5 }}>
                 <div style={{ color: C.text, fontWeight: 900, marginBottom: 7 }}>Shipping Details</div>
                 <div><MapPin size={13} style={{ verticalAlign: 'middle', marginRight: 5 }} /> {order.shippingAddress || 'No shipping address saved'}</div>
-                {(order.status === 'shipped' || order.status === 'delivered') && (
+                {(['out_for_delivery', 'shipped', 'delivered'].includes(order.status)) && (
                   <div style={{ marginTop: 9, display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
                     <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 9, padding: 9 }}>
                       <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: C.muted }}>Courier Partner</div>
@@ -293,7 +298,7 @@ export default function DeliveryTracker({ role }: { role?: import('@/lib/types')
 
               <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
                 <button onClick={() => setSelected(order)} style={{ padding: '8px 12px', borderRadius: 9, border: `1px solid ${C.border}`, background: C.bg, color: C.text, cursor: 'pointer', fontWeight: 800 }}>Manage</button>
-                {canEdit && order.status !== 'rejected' && order.status !== 'delivered' && (
+                {canEdit && !['rejected', 'cancelled', 'returned', 'refunded', 'delivered'].includes(order.status) && (
                   <>
                     <button onClick={() => openDispatch(order)} style={{ padding: '8px 12px', borderRadius: 9, border: 'none', background: '#4F46E5', color: 'white', cursor: 'pointer', fontWeight: 800 }}>Dispatch</button>
                     <button onClick={() => void updateStatus(order, 'delivered')} style={{ padding: '8px 12px', borderRadius: 9, border: 'none', background: '#16A34A', color: 'white', cursor: 'pointer', fontWeight: 800 }}>Delivered</button>
@@ -325,8 +330,8 @@ export default function DeliveryTracker({ role }: { role?: import('@/lib/types')
             )}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 18 }}>
               <button onClick={() => setSelected(null)} style={{ padding: '10px 15px', borderRadius: 10, border: `1px solid ${C.border}`, background: C.bg, color: C.muted, cursor: 'pointer', fontWeight: 800 }}>Cancel</button>
-              {canEdit && selected.status !== 'delivered' && selected.status !== 'rejected' && <button onClick={() => openDispatch(selected)} style={{ padding: '10px 15px', borderRadius: 10, border: 'none', background: '#4F46E5', color: 'white', cursor: 'pointer', fontWeight: 900 }}>Dispatch</button>}
-              {canEdit && selected.status !== 'delivered' && selected.status !== 'rejected' && <button onClick={() => void updateStatus(selected, 'delivered')} style={{ padding: '10px 15px', borderRadius: 10, border: 'none', background: '#16A34A', color: 'white', cursor: 'pointer', fontWeight: 900 }}>Delivered</button>}
+              {canEdit && !['delivered', 'rejected', 'cancelled', 'returned', 'refunded'].includes(selected.status) && <button onClick={() => openDispatch(selected)} style={{ padding: '10px 15px', borderRadius: 10, border: 'none', background: '#4F46E5', color: 'white', cursor: 'pointer', fontWeight: 900 }}>Dispatch</button>}
+              {canEdit && !['delivered', 'rejected', 'cancelled', 'returned', 'refunded'].includes(selected.status) && <button onClick={() => void updateStatus(selected, 'delivered')} style={{ padding: '10px 15px', borderRadius: 10, border: 'none', background: '#16A34A', color: 'white', cursor: 'pointer', fontWeight: 900 }}>Delivered</button>}
               {canEdit && <button onClick={() => void updateStatus(selected, 'rejected')} style={{ padding: '10px 15px', borderRadius: 10, border: 'none', background: '#DC2626', color: 'white', cursor: 'pointer', fontWeight: 900 }}>Reject Order</button>}
             </div>
           </div>
