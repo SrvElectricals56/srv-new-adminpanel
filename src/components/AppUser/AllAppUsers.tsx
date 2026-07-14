@@ -738,6 +738,7 @@ export default function AllAppUsers({ role }: AllAppUsersProps) {
                     <span style={{ background: status.bg, color: status.color, fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20 }}>{status.label}</span>
                   </div>
                 </div>
+                <div style={{ fontSize: 12, color: C.muted, marginBottom: 4 }}>{user.email || 'No email added'}</div>
                 <div style={{ fontSize: 12, color: C.muted, marginBottom: 12 }}>{[user.city, user.state].filter(Boolean).join(', ') || '—'}</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
                   <div style={{ background: C.bg, borderRadius: 10, padding: '10px 12px' }}>
@@ -767,14 +768,14 @@ export default function AllAppUsers({ role }: AllAppUsersProps) {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: C.bg, borderBottom: `1px solid ${C.border}` }}>
-                {['Customer', 'Code', 'Location', 'Tier', 'Points', 'Wallet', 'App Status', 'Status', 'Joined', 'Actions'].map(header => (
+                {['Customer', 'Email', 'Code', 'Location', 'Tier', 'Points', 'Wallet', 'App Status', 'Status', 'Joined', 'Actions'].map(header => (
                   <th key={header} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: 0.5, whiteSpace: 'nowrap' }}>{header}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {!loading && users.length === 0 ? (
-                <tr><td colSpan={10} style={{ padding: 40, textAlign: 'center', color: C.muted }}>No customers found</td></tr>
+                <tr><td colSpan={11} style={{ padding: 40, textAlign: 'center', color: C.muted }}>No customers found</td></tr>
               ) : users.map((user, index) => {
                 const status = STATUS_CONFIG[user.status] ?? STATUS_CONFIG.pending;
                 const tier = TIER_CONFIG[user.tier] ?? TIER_CONFIG.Silver;
@@ -791,6 +792,7 @@ export default function AllAppUsers({ role }: AllAppUsersProps) {
                         </div>
                       </div>
                     </td>
+                    <td style={{ padding: '14px 16px', fontSize: 12, color: C.muted, whiteSpace: 'nowrap' }}>{user.email || '-'}</td>
                     <td style={{ padding: '14px 16px', fontSize: 12, color: C.muted, fontFamily: 'monospace' }}>{user.userCode}</td>
                     <td style={{ padding: '14px 16px', fontSize: 12, color: C.muted }}>{[user.city, user.state].filter(Boolean).join(', ') || '-'}</td>
                     <td style={{ padding: '14px 16px' }}>
