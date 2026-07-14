@@ -572,9 +572,9 @@ export const productOrderApi = {
     return request<{ data: any[]; total: number; page: number; limit: number; totalPages: number }>(`/product-orders${q}`);
   },
   getById: (id: string) => request<any>(`/product-orders/${id}`),
-  updateStatus: (id: string, body: { status: string; rejectionReason?: string; trackingNumber?: string; courierName?: string }) =>
+  updateStatus: (id: string, body: { status: string; rejectionReason?: string; trackingNumber?: string; courierName?: string; refundMessage?: string }) =>
     request<any>(`/product-orders/${id}/status`, { method: 'PATCH', body: JSON.stringify(body) }),
-  getStats: () => request<any>('/product-orders/stats/summary'),
+  getStats: () => request<any>('/product-orders/summary/stats'),
   delete: (id: string) => request<void>(`/product-orders/${id}`, { method: 'DELETE' }),
 };
 
