@@ -9,16 +9,18 @@ import AlertDialog from '@/components/Shared/AlertDialog';
 
 interface GiftProduct {
   id: string;
+  displayId?: string;
   name: string;
   image: string;
   pointsRequired: number;
+  price: number;
   stock: number;
   status: 'active' | 'inactive';
   type: 'electrician' | 'dealer' | 'customer' | 'counterboy';
 }
 
 function AddGiftModal({ type, onClose, onSave, C }: { type: 'electrician' | 'dealer' | 'customer' | 'counterboy'; onClose: () => void; onSave: (g: Omit<GiftProduct, 'id'>) => void; C: any }) {
-  const [form, setForm] = useState({ name: '', image: '', pointsRequired: 500, stock: 10 });
+  const [form, setForm] = useState({ name: '', image: '', pointsRequired: 500, price: 0, stock: 10 });
   const [alertDialog, setAlertDialog] = useState<{ show: boolean; title: string; message: string; type: 'error' | 'success' | 'warning' | 'info' }>({ show: false, title: '', message: '', type: 'error' });
   const imgRef = useRef<HTMLInputElement>(null);
   const mouseDownInside = React.useRef(false);
@@ -66,10 +68,14 @@ function AddGiftModal({ type, onClose, onSave, C }: { type: 'electrician' | 'dea
             </div>
             <input ref={imgRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFile} />
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
             <div>
               <label style={{ fontSize: 12, fontWeight: 700, color: C.muted, display: 'block', marginBottom: 6, textTransform: 'uppercase' }}>Points Required</label>
               <input type="number" style={inputStyle} value={form.pointsRequired ?? ''} onChange={e => f('pointsRequired', e.target.value === '' ? '' : Number(e.target.value))} placeholder="0" />
+            </div>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 700, color: C.muted, display: 'block', marginBottom: 6, textTransform: 'uppercase' }}>MRP / Price</label>
+              <input type="number" min="0" style={inputStyle} value={form.price ?? ''} onChange={e => f('price', e.target.value === '' ? '' : Number(e.target.value))} placeholder="0" />
             </div>
             <div>
               <label style={{ fontSize: 12, fontWeight: 700, color: C.muted, display: 'block', marginBottom: 6, textTransform: 'uppercase' }}>Stock</label>
@@ -144,10 +150,14 @@ function EditGiftModal({ gift, onClose, onSave, C }: { gift: GiftProduct; onClos
             </div>
             <input ref={imgRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFile} />
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
             <div>
               <label style={{ fontSize: 12, fontWeight: 700, color: C.muted, display: 'block', marginBottom: 6, textTransform: 'uppercase' }}>Points Required</label>
               <input type="number" style={inputStyle} value={form.pointsRequired ?? ''} onChange={e => f('pointsRequired', e.target.value === '' ? '' : Number(e.target.value))} placeholder="0" />
+            </div>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 700, color: C.muted, display: 'block', marginBottom: 6, textTransform: 'uppercase' }}>MRP / Price</label>
+              <input type="number" min="0" style={inputStyle} value={form.price ?? ''} onChange={e => f('price', e.target.value === '' ? '' : Number(e.target.value))} placeholder="0" />
             </div>
             <div>
               <label style={{ fontSize: 12, fontWeight: 700, color: C.muted, display: 'block', marginBottom: 6, textTransform: 'uppercase' }}>Stock</label>
@@ -206,9 +216,11 @@ export default function GiftProducts({ role }: { role?: import('@/lib/types').Ad
       const data = Array.isArray(res) ? res : (res as any).data ?? [];
       setGifts(data.map((g: any) => ({
         id: g.id,
+        displayId: g.displayId,
         name: g.name,
         image: g.image || '',
         pointsRequired: g.pointsRequired ?? g.points_required ?? 0,
+        price: g.mrp ?? g.price ?? 0,
         stock: g.stock ?? 0,
         status: g.status ?? 'active',
         type: g.type ?? 'electrician',
@@ -257,19 +269,19 @@ export default function GiftProducts({ role }: { role?: import('@/lib/types').Ad
       <ConfirmDialog show={confirmState.show} title="Remove Gift" message="Are you sure you want to remove this gift product?" onConfirm={confirmDelete} onCancel={() => setConfirmState({ show: false, id: '' })} type="danger" />
       {showAdd && <AddGiftModal type={tab} onClose={() => setShowAdd(false)} onSave={async (g) => {
         try {
-          await giftApi.create({ name: g.name, image: g.image, pointsRequired: g.pointsRequired, stock: g.stock, status: g.status, type: g.type });
+          await giftApi.create({ name: g.name, image: g.image, pointsRequired: g.pointsRequired, price: g.price, mrp: g.price, stock: g.stock, status: g.status, type: g.type });
           await loadGifts();
         } catch (err) { console.error('Failed to create gift:', err); }
         setShowAdd(false);
       }} C={C} />}
       {editGift && <EditGiftModal gift={editGift} onClose={() => setEditGift(null)} onSave={async (g) => {
         try {
-          await giftApi.update(g.id, { name: g.name, image: g.image, pointsRequired: g.pointsRequired, stock: g.stock, status: g.status, type: g.type });
+          await giftApi.update(g.id, { name: g.name, image: g.image, pointsRequired: g.pointsRequired, price: g.price, mrp: g.price, stock: g.stock, status: g.status, type: g.type });
           await loadGifts();
         } catch (err) { console.error('Failed to update gift:', err); }
         setEditGift(null);
       }} C={C} />}
-      <ExportModal show={showExport} onClose={() => setShowExport(false)} title={`${tab.charAt(0).toUpperCase() + tab.slice(1)} Gifts`} fileName={`gift-products-${tab}`} getData={() => filtered.map(g => ({ ID: g.id, Type: g.type, Name: g.name, Points: g.pointsRequired, Stock: g.stock, Status: g.status }))} />
+      <ExportModal show={showExport} onClose={() => setShowExport(false)} title={`${tab.charAt(0).toUpperCase() + tab.slice(1)} Gifts`} fileName={`gift-products-${tab}`} getData={() => filtered.map(g => ({ ID: g.id, Type: g.type, Name: g.name, Points: g.pointsRequired, MRP: g.price, Stock: g.stock, Status: g.status }))} />
       <AlertDialog show={alertDialog.show} title={alertDialog.title} message={alertDialog.message} type={alertDialog.type} onClose={() => setAlertDialog({ ...alertDialog, show: false })} />
 
       {/* Header */}
@@ -362,7 +374,7 @@ export default function GiftProducts({ role }: { role?: import('@/lib/types').Ad
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: C.bg, borderBottom: `2px solid ${C.border}` }}>
-              {['ID', 'Type', 'Name', 'Image', 'Points', 'Stock', 'Status', 'Action'].map(h => (                <th key={h} style={{ padding: '14px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+              {['ID', 'Type', 'Name', 'Image', 'Points', 'MRP / Price', 'Stock', 'Status', 'Action'].map(h => (                <th key={h} style={{ padding: '14px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -371,7 +383,7 @@ export default function GiftProducts({ role }: { role?: import('@/lib/types').Ad
               <tr key={g.id} style={{ borderBottom: `1px solid ${C.border}`, transition: 'background 0.2s' }}
                 onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = C.bg}
                 onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}>
-                <td style={{ padding: '14px 16px', fontSize: 13, fontWeight: 800, color: C.muted }}>{g.id}</td>
+                <td style={{ padding: '14px 16px', fontSize: 13, fontWeight: 800, color: C.muted }}>{g.displayId ?? g.id}</td>
                 <td style={{ padding: '14px 16px' }}>
                   <span style={{
                     background: g.type === 'electrician' ? '#FFF0F0' : g.type === 'dealer' ? '#EFF6FF' : g.type === 'customer' ? '#FFF7ED' : '#F0FDFA',
@@ -393,6 +405,7 @@ export default function GiftProducts({ role }: { role?: import('@/lib/types').Ad
                 <td style={{ padding: '14px 16px' }}>
                   <span style={{ background: '#FEF3C7', color: '#92400E', fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 20 }}>{g.pointsRequired}</span>
                 </td>
+                <td style={{ padding: '14px 16px', fontSize: 13, fontWeight: 800, color: C.text }}>₹{Number(g.price ?? 0).toLocaleString('en-IN')}</td>
                 <td style={{ padding: '14px 16px', fontSize: 13, fontWeight: 600, color: C.text }}>{g.stock}</td>
                 <td style={{ padding: '14px 16px' }}>
                   <button onClick={() => toggleStatus(g.id)} style={{ background: g.status === 'active' ? '#D1FAE5' : '#FEE2E2', color: g.status === 'active' ? '#065F46' : '#991B1B', border: 'none', borderRadius: 20, padding: '4px 12px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
@@ -413,7 +426,7 @@ export default function GiftProducts({ role }: { role?: import('@/lib/types').Ad
               </tr>
             ))}
             {filtered.length === 0 && (
-              <tr><td colSpan={8} style={{ padding: '60px 20px', textAlign: 'center', color: C.muted }}>
+              <tr><td colSpan={9} style={{ padding: '60px 20px', textAlign: 'center', color: C.muted }}>
                 <Gift size={40} style={{ margin: '0 auto 12px', opacity: 0.3 }} />
                 <div style={{ fontSize: 14, fontWeight: 600 }}>No gifts found</div>
               </td></tr>
