@@ -1,5 +1,5 @@
 ﻿'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ShoppingBag, Bolt, Store, Eye, Pencil, Trash2, Package, SlidersHorizontal, Search, User, FileSpreadsheet } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { formatISTDateTime, formatISTDate, formatISTDateTimeFull } from '@/lib/dateIST';
@@ -52,14 +52,16 @@ const STATUS_CONFIG: Record<OrderStatus, { bg: string; color: string; label: str
   delivered: { bg: '#F0FDF4', color: '#166534', label: 'Delivered' },
   rejected:  { bg: '#FEE2E2', color: '#991B1B', label: 'Rejected' },
   cancelled: { bg: '#FFE4E6', color: '#BE123C', label: 'Cancelled' },
-  returned: { bg: '#F3E8FF', color: '#7E22CE', label: 'Returned' },
+  returned: { bg: '#F3E8FF', color: '#7E22CE', label: 'Return requested' },
   refunded: { bg: '#CCFBF1', color: '#0F766E', label: 'Refunded' },
 };
 
 function getOrderStatusDisplay(order: ProductOrder) {
-  const refundRequested = String(order.refundStatus ?? '').toLowerCase() === 'requested';
+  const refundRequested = ['pending', 'requested'].includes(String(order.refundStatus ?? '').toLowerCase());
   if (order.status === 'refunded') return { bg: '#CCFBF1', color: '#0F766E', label: 'Refund done' };
-  if (refundRequested) return { bg: '#FEF2F2', color: '#B91C1C', label: 'Refund requested' };
+  if (refundRequested && !['cancelled', 'returned'].includes(order.status)) {
+    return { bg: '#FEF2F2', color: '#B91C1C', label: 'Refund requested' };
+  }
   return STATUS_CONFIG[order.status];
 }
 
@@ -168,6 +170,7 @@ export default function ProductOrders({ role }: { role?: import('@/lib/types').A
   const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; order: ProductOrder | null }>({ show: false, order: null });
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
+  const loadingOrdersRef = useRef(false);
 
   const buildStats = (rows: ProductOrder[]) => ({
     total: rows.length,
@@ -182,9 +185,11 @@ export default function ProductOrders({ role }: { role?: import('@/lib/types').A
     refunded: rows.filter(o => o.status === 'refunded').length,
   });
 
-  const loadData = async () => {
+  const loadData = useCallback(async (silent = false) => {
+    if (loadingOrdersRef.current) return;
+    loadingOrdersRef.current = true;
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const ordersRes = await productOrderApi.getAll({ limit: '500' });
       const data = Array.isArray(ordersRes) ? ordersRes : (ordersRes as any).data ?? [];
       setOrders(data);
@@ -192,19 +197,28 @@ export default function ProductOrders({ role }: { role?: import('@/lib/types').A
     } catch (err) {
       console.error('Failed to load product orders:', err);
     } finally {
-      setLoading(false);
+      loadingOrdersRef.current = false;
+      if (!silent) setLoading(false);
     }
-  };
+  }, []);
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    void loadData();
+    // Keep order activity aligned with app requests without requiring a page refresh.
+    const syncTimer = setInterval(() => void loadData(true), 1000);
+    return () => clearInterval(syncTimer);
+  }, [loadData]);
 
+  const searchQuery = search.trim().toLowerCase();
   const filtered = orders.filter(o =>
     (tab === 'all' || o.userRole === tab) &&
     (filterStatus === 'all' ||
       (filterStatus === 'refund_requested'
-        ? String(o.refundStatus ?? '').toLowerCase() === 'requested' && o.status !== 'refunded'
+        ? ['pending', 'requested'].includes(String(o.refundStatus ?? '').toLowerCase()) && o.status !== 'refunded'
         : o.status === filterStatus)) &&
-    (search === '' || o.userName.toLowerCase().includes(search.toLowerCase()) || o.productName.toLowerCase().includes(search.toLowerCase()) || o.userPhone.includes(search))
+    (searchQuery === '' || [o.orderCode, o.id, o.userName, o.productName, o.userPhone, o.userCode]
+      .filter(Boolean)
+      .some(value => String(value).toLowerCase().includes(searchQuery)))
   );
 
   const openEditModal = (order: ProductOrder) => {
@@ -299,7 +313,7 @@ export default function ProductOrders({ role }: { role?: import('@/lib/types').A
           { status: 'refund_requested' as const, label: 'Refund requests', copy: 'Verify payment and complete refund processing', color: '#0F766E', soft: '#F0FDFA' },
         ].map(queue => {
           const count = queue.status === 'refund_requested'
-            ? orders.filter(order => String(order.refundStatus ?? '').toLowerCase() === 'requested' && order.status !== 'refunded').length
+            ? orders.filter(order => ['pending', 'requested'].includes(String(order.refundStatus ?? '').toLowerCase()) && order.status !== 'refunded').length
             : orders.filter(order => order.status === queue.status).length;
           const selected = filterStatus === queue.status;
           return <button key={queue.status} onClick={() => setFilterStatus(selected ? 'all' : queue.status)} title={queue.copy} style={{ textAlign: 'left', border: `1px solid ${selected ? queue.color : C.border}`, background: queue.soft, borderRadius: 11, padding: '10px 12px', cursor: 'pointer', boxShadow: selected ? `0 5px 14px ${queue.color}22` : 'none' }}>
@@ -326,7 +340,7 @@ export default function ProductOrders({ role }: { role?: import('@/lib/types').A
       <div style={{ background: C.card, borderRadius: 14, padding: '12px 16px', border: `1px solid ${C.border}`, marginBottom: 16, display: 'flex', gap: 10, alignItems: 'center', position: 'relative' }}>
         <div style={{ position: 'relative', flex: 1 }}>
           <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: C.muted, pointerEvents: 'none' }} />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, product, phone..." style={{ ...inputStyle, paddingLeft: 32, width: '100%', boxSizing: 'border-box' }} />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search order ID, name, product or phone..." style={{ ...inputStyle, paddingLeft: 32, width: '100%', boxSizing: 'border-box' }} />
         </div>
         {activeFilters > 0 && (
           <button onClick={() => setFilterStatus('all')} style={{ padding: '8px 12px', borderRadius: 8, border: `1px solid ${C.red}`, background: '#FFF0F0', color: C.red, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>Clear</button>
@@ -385,6 +399,7 @@ export default function ProductOrders({ role }: { role?: import('@/lib/types').A
           <tbody>
             {filtered.map(order => {
               const s = getOrderStatusDisplay(order);
+              const refundRequested = ['pending', 'requested'].includes(String(order.refundStatus ?? '').toLowerCase()) && order.status !== 'refunded';
               return (
                 <tr key={order.id} style={{ borderBottom: `1px solid ${C.border}`, transition: 'background 0.2s' }}
                   onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = C.bg}
@@ -419,7 +434,7 @@ export default function ProductOrders({ role }: { role?: import('@/lib/types').A
                     <span style={{ background: s.bg, color: s.color, fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 20, whiteSpace: 'nowrap' }}>{s.label}</span>
                   </td>
                   <td style={{ padding: '14px 16px', fontSize: 12, fontWeight: 700, color: order.status === 'cancelled' ? '#BE123C' : C.muted }}>
-                    {order.deliveryNotes || '—'}
+                    {refundRequested ? 'Refund requested' : order.status === 'cancelled' ? 'Cancelled' : order.deliveryNotes || '—'}
                   </td>
                   <td style={{ padding: '14px 16px' }}>
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
