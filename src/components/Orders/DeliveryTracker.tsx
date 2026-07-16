@@ -239,7 +239,6 @@ export default function DeliveryTracker({ role }: { role?: import('@/lib/types')
           <option value="payment_paid">Payment Done</option>
           <option value="pending">Pending Dispatch</option>
           <option value="approved">Order Confirmed</option>
-          <option value="out_for_delivery">Out For Delivery</option>
           <option value="shipped">Dispatched</option>
           <option value="delivered">Delivered</option>
           <option value="rejected">Rejected / Refund</option>
