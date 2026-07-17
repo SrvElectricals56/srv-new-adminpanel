@@ -169,6 +169,8 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
     },
     { label: 'Total Electricians', value: stats?.totalElectricians?.toLocaleString('en-IN') ?? '—', Icon: Bolt, change: 'All registered', up: true, color: '#1D4ED8', bg: '#FFF0F0', navigateTo: 'electricians' },
     { label: 'Total Dealers', value: roleCounts.dealers.toLocaleString('en-IN'), Icon: Store, change: 'All registered', up: true, color: '#3B82F6', bg: '#EFF6FF', navigateTo: 'dealers' },
+    { label: 'Total KYC', value: Number(stats?.totalKyc ?? 0).toLocaleString('en-IN'), Icon: FileText, change: `${Number(stats?.kycVerified ?? 0).toLocaleString('en-IN')} verified · ${Number(stats?.kycRejected ?? 0).toLocaleString('en-IN')} rejected`, up: true, color: '#15803D', bg: '#F0FDF4', navigateTo: 'electricians', subPage: 'kyc' },
+    { label: 'Total Enquiries', value: Number(stats?.totalEnquiries ?? 0).toLocaleString('en-IN'), Icon: MessageCircle, change: `${pendingEnquiries.toLocaleString('en-IN')} open`, up: true, color: '#C2410C', bg: '#FFF7ED', navigateTo: 'enquiry-support' },
     { label: 'Customers', value: roleCounts.customers.toLocaleString('en-IN'), Icon: UserRound, change: 'All registered', up: true, color: '#0F766E', bg: '#CCFBF1', navigateTo: 'app-users' },
     { label: 'Counter Boys', value: roleCounts.counterboys.toLocaleString('en-IN'), Icon: UserCog, change: 'All registered', up: true, color: '#92400E', bg: '#FEF3C7', navigateTo: 'counterboys' },
     { label: 'Scans Today', value: stats?.totalScansToday?.toLocaleString('en-IN') ?? '—', Icon: ScanLine, change: 'Today', up: true, color: '#10B981', bg: '#D1FAE5', navigateTo: 'electricians', subPage: 'scans' },
@@ -425,4 +427,3 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
     </div>
   );
 }
-

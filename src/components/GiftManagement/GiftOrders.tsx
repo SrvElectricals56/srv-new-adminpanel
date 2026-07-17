@@ -8,6 +8,7 @@ import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 import ExportModal from '@/components/Shared/ExportModal';
 
 type OrderStatus = 'pending' | 'approved' | 'shipped' | 'delivered' | 'rejected';
+const PAGE_SIZE = 25;
 
 interface GiftOrder {
   id: string;
@@ -173,12 +174,22 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
   const [showFilterPopup, setShowFilterPopup] = useState(false);
   const [trackingOrder, setTrackingOrder] = useState<GiftOrder | null>(null);
   const [confirmState, setConfirmState] = useState<{ show: boolean; id: string; action: 'approve' | 'reject' }>({ show: false, id: '', action: 'approve' });
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
 
   const loadOrders = async () => {
     try {
       setLoading(true);
-      const res = await giftApi.getOrders({ limit: '500' });
+      const res = await giftApi.getOrders({
+        page: String(page),
+        limit: String(PAGE_SIZE),
+        role: tab,
+        ...(filterStatus !== 'all' ? { status: filterStatus } : {}),
+      });
       const data = Array.isArray(res) ? res : (res as any).data ?? [];
+      setTotal(Array.isArray(res) ? data.length : Number((res as any).total ?? data.length));
+      setTotalPages(Array.isArray(res) ? 1 : Number((res as any).totalPages ?? 1));
       setOrders(data.map((o: any) => ({
         id: o.id,
         type: o.role ?? o.type ?? 'electrician',
@@ -205,11 +216,11 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
     }
   };
 
-  useEffect(() => { loadOrders(); }, []);
+  useEffect(() => { loadOrders(); }, [page, tab, filterStatus]);
+
+  useEffect(() => { setPage(1); }, [tab, filterStatus]);
 
   const filtered = orders.filter(o =>
-    o.type === tab &&
-    (filterStatus === 'all' || o.status === filterStatus) &&
     (search === '' || o.userName.toLowerCase().includes(search.toLowerCase()) || o.giftName.toLowerCase().includes(search.toLowerCase()) || o.dealerName.toLowerCase().includes(search.toLowerCase()))
   );
 
@@ -251,7 +262,7 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
           {[
-            { label: 'Total', value: orders.filter(o => o.type === tab).length, color: 'white' },
+            { label: 'Total', value: total, color: 'white' },
             { label: 'Pending', value: orders.filter(o => o.type === tab && o.status === 'pending').length, color: '#FCD34D' },
             { label: 'Delivered', value: orders.filter(o => o.type === tab && o.status === 'delivered').length, color: '#6EE7B7' },
           ].map(s => (
@@ -319,7 +330,7 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
             </div>
           )}
         </div>
-        <span style={{ fontSize: 13, color: C.muted, whiteSpace: 'nowrap' }}>{filtered.length} orders</span>
+        <span style={{ fontSize: 13, color: C.muted, whiteSpace: 'nowrap' }}>{total.toLocaleString('en-IN')} orders</span>
       </div>
 
       {/* Table */}
@@ -393,6 +404,17 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
           </tbody>
         </table>
       </div>
+      {totalPages > 1 && (
+        <div style={{ marginTop: 16, padding: '12px 16px', background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: 13, color: C.muted }}>
+            Page <strong style={{ color: C.text }}>{page}</strong> of <strong style={{ color: C.text }}>{totalPages}</strong>
+          </span>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))} style={{ padding: '8px 14px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.card, color: C.text, cursor: page === 1 ? 'not-allowed' : 'pointer', opacity: page === 1 ? 0.5 : 1 }}>Previous</button>
+            <button disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))} style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: C.red, color: 'white', cursor: page >= totalPages ? 'not-allowed' : 'pointer', opacity: page >= totalPages ? 0.5 : 1 }}>Next</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

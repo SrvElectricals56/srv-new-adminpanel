@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { ScanLine, QrCode, Scan, FileSpreadsheet } from 'lucide-react';
-import { scanApi } from '@/lib/api';
+import { dealerApi, electricianApi, scanApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
 import ExportModal from '@/components/Shared/ExportModal';
 import { formatISTDateTime } from '@/lib/dateIST';
@@ -15,6 +15,7 @@ interface ScanRecord {
   mode: string;
   location?: string;
   scannedAt: string;
+  role: 'electrician' | 'dealer';
 }
 
 const PAGE_SIZE = 50;
@@ -30,16 +31,19 @@ export default function ElectricianScanHistory() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterScanMode, setFilterScanMode] = useState<'all' | 'single' | 'multi'>('all');
+  const [filterRole, setFilterRole] = useState<'all' | 'electrician' | 'dealer'>('all');
   const [showExport, setShowExport] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [userLoading, setUserLoading] = useState(false);
 
   const loadData = useCallback(async (page: number) => {
     setLoading(true);
     try {
       const params: Record<string, string> = {
-        role: 'electrician',
         limit: String(PAGE_SIZE),
         page: String(page),
       };
+      if (filterRole !== 'all') params.role = filterRole;
       if (search) params.search = search;
       if (filterScanMode !== 'all') params.mode = filterScanMode;
 
@@ -59,6 +63,7 @@ export default function ElectricianScanHistory() {
         mode: s.mode ?? 'single',
         location: s.location,
         scannedAt: s.scannedAt,
+        role: s.role ?? 'electrician',
       })));
       setTotalCount(total);
       setTotalPoints(pts);
@@ -69,12 +74,26 @@ export default function ElectricianScanHistory() {
     } finally {
       setLoading(false);
     }
-  }, [search, filterScanMode]);
+  }, [search, filterScanMode, filterRole]);
 
   useEffect(() => {
     setCurrentPage(1);
     loadData(1);
-  }, [search, filterScanMode]);
+  }, [search, filterScanMode, filterRole]);
+
+  const openUser = async (scan: ScanRecord) => {
+    setUserLoading(true);
+    try {
+      const user = scan.role === 'dealer'
+        ? await dealerApi.getOne(scan.userId)
+        : await electricianApi.getOne(scan.userId);
+      setSelectedUser({ ...user, role: scan.role });
+    } catch (error) {
+      console.error('Failed to load scan user', error);
+    } finally {
+      setUserLoading(false);
+    }
+  };
 
   const goToPage = (page: number) => {
     setCurrentPage(page);
@@ -91,12 +110,25 @@ export default function ElectricianScanHistory() {
 
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
+      {selectedUser && (
+        <div onClick={() => setSelectedUser(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div onClick={e => e.stopPropagation()} style={{ width: 480, maxWidth: '95vw', background: C.card, borderRadius: 18, padding: 24, boxShadow: '0 25px 70px rgba(0,0,0,.25)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 18 }}>
+              <div><div style={{ fontSize: 18, fontWeight: 800, color: C.text }}>{selectedUser.name}</div><div style={{ fontSize: 12, color: C.muted, textTransform: 'capitalize' }}>{selectedUser.role} details</div></div>
+              <button onClick={() => setSelectedUser(null)} style={{ border: 'none', background: C.bg, color: C.text, borderRadius: 8, width: 32, height: 32, cursor: 'pointer' }}>✕</button>
+            </div>
+            {[['Code', selectedUser.electricianCode ?? selectedUser.dealerCode], ['Phone', selectedUser.phone], ['Email', selectedUser.email], ['City', selectedUser.city ?? selectedUser.town], ['State', selectedUser.state], ['KYC Status', selectedUser.kycStatus], ['Total Points', selectedUser.totalPoints]].map(([label, value]) => (
+              <div key={String(label)} style={{ display: 'grid', gridTemplateColumns: '140px 1fr', padding: '10px 0', borderBottom: `1px solid ${C.border}`, fontSize: 13 }}><span style={{ color: C.muted }}>{label}</span><strong style={{ color: C.text }}>{value ?? '—'}</strong></div>
+            ))}
+          </div>
+        </div>
+      )}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 26, fontWeight: 800, color: C.text, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
             <ScanLine size={24} style={{ color: C.red }} /> Scan History
           </h1>
-          <p style={{ color: C.muted, fontSize: 14 }}>View all scan records by electricians</p>
+          <p style={{ color: C.muted, fontSize: 14 }}>View scans and open electrician or dealer details</p>
         </div>
         <button onClick={() => setShowExport(true)} style={{ background: C.red, color: 'white', border: 'none', borderRadius: 10, padding: '10px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}><FileSpreadsheet size={14} /> Export</button>
       </div>
@@ -137,6 +169,11 @@ export default function ElectricianScanHistory() {
           <option value="single">Single Scan</option>
           <option value="multi">Multi Scan</option>
         </select>
+        <select value={filterRole} onChange={e => setFilterRole(e.target.value as any)} style={{ ...inputStyle, width: 'auto', minWidth: 150 }}>
+          <option value="all">All User Roles</option>
+          <option value="electrician">Electricians</option>
+          <option value="dealer">Dealers</option>
+        </select>
         <span style={{ fontSize: 13, color: C.muted, marginLeft: 'auto', whiteSpace: 'nowrap' }}>
           Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, totalCount)} of <strong>{totalCount.toLocaleString('en-IN')}</strong>
         </span>
@@ -163,7 +200,7 @@ export default function ElectricianScanHistory() {
                   onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = C.hoverRow}
                   onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}>
                   <td style={{ padding: '13px 16px' }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{scan.userName}</div>
+                    <button disabled={userLoading} onClick={() => openUser(scan)} style={{ padding: 0, border: 'none', background: 'transparent', fontSize: 14, fontWeight: 700, color: C.red, cursor: userLoading ? 'wait' : 'pointer', textDecoration: 'underline' }}>{scan.userName}</button>
                     <div style={{ fontSize: 11, color: C.muted }}>{scan.userId?.slice(0, 8)}…</div>
                   </td>
                   <td style={{ padding: '13px 16px', fontSize: 13, color: C.text }}>{scan.productName}</td>

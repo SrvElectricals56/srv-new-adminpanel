@@ -143,7 +143,7 @@ export default function KYCManagement() {
   const [confirmState, setConfirmState] = useState<{ show: boolean; title: string; message: string; onConfirm: () => void; type: 'success' | 'danger' }>({ show: false, title: '', message: '', onConfirm: () => {}, type: 'success' });
 
   useEffect(() => {
-    dealerApi.getAll({ limit: '500' }).then(res => {
+    dealerApi.getAll({ limit: '10000' }).then(res => {
       const data = Array.isArray(res) ? res : (res as any).data ?? [];
 
       // Normalize any LAN IP in image URLs to localhost for admin browser
