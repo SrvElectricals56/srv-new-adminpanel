@@ -31,7 +31,6 @@ export default function ElectricianScanHistory() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterScanMode, setFilterScanMode] = useState<'all' | 'single' | 'multi'>('all');
-  const [filterRole, setFilterRole] = useState<'all' | 'electrician' | 'dealer'>('all');
   const [showExport, setShowExport] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [userLoading, setUserLoading] = useState(false);
@@ -43,7 +42,9 @@ export default function ElectricianScanHistory() {
         limit: String(PAGE_SIZE),
         page: String(page),
       };
-      if (filterRole !== 'all') params.role = filterRole;
+      // This page belongs to Electrician management. Keep it focused on
+      // electrician activity instead of exposing a role filter for all users.
+      params.role = 'electrician';
       if (search) params.search = search;
       if (filterScanMode !== 'all') params.mode = filterScanMode;
 
@@ -74,12 +75,12 @@ export default function ElectricianScanHistory() {
     } finally {
       setLoading(false);
     }
-  }, [search, filterScanMode, filterRole]);
+  }, [search, filterScanMode]);
 
   useEffect(() => {
     setCurrentPage(1);
     loadData(1);
-  }, [search, filterScanMode, filterRole]);
+  }, [search, filterScanMode]);
 
   const openUser = async (scan: ScanRecord) => {
     setUserLoading(true);
@@ -161,18 +162,13 @@ export default function ElectricianScanHistory() {
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="Search electrician or product..."
+          placeholder="Search name, phone, electrician code, ID, or product..."
           style={{ ...inputStyle, flex: 1, minWidth: 220 }}
         />
         <select value={filterScanMode} onChange={e => setFilterScanMode(e.target.value as any)} style={{ ...inputStyle, width: 'auto', minWidth: 140 }}>
           <option value="all">All Scan Types</option>
           <option value="single">Single Scan</option>
           <option value="multi">Multi Scan</option>
-        </select>
-        <select value={filterRole} onChange={e => setFilterRole(e.target.value as any)} style={{ ...inputStyle, width: 'auto', minWidth: 150 }}>
-          <option value="all">All User Roles</option>
-          <option value="electrician">Electricians</option>
-          <option value="dealer">Dealers</option>
         </select>
         <span style={{ fontSize: 13, color: C.muted, marginLeft: 'auto', whiteSpace: 'nowrap' }}>
           Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, totalCount)} of <strong>{totalCount.toLocaleString('en-IN')}</strong>

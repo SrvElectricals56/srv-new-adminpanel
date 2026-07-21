@@ -124,7 +124,9 @@ const INDIVIDUAL_ROLE_IDS = ROLE_OPTIONS.filter((option) => option.id !== 'all')
 
 const EMPTY_FORM = {
   title: '', description: '', videoUrl: '', thumbnailUrl: '',
-  category: 'reels', displayOrder: 0, isActive: true, targetRoles: ['user'],
+  // Play Zone is shared learning content. New uploads must reach every
+  // signed-in profile unless an admin deliberately narrows the audience.
+  category: 'reels', displayOrder: 0, isActive: true, targetRoles: [...INDIVIDUAL_ROLE_IDS],
 };
 
 function getErrorMessage(error: unknown) {
@@ -385,7 +387,7 @@ export default function UploadPlays({ role }: { role?: string }) {
       category: play.category,
       displayOrder: play.displayOrder,
       isActive: play.isActive,
-      targetRoles: normalizeTargetRoles(play.targetRoles?.length ? play.targetRoles : ['user']),
+      targetRoles: normalizeTargetRoles(play.targetRoles?.length ? play.targetRoles : INDIVIDUAL_ROLE_IDS),
     });
     // Auto-detect if it's an uploaded file or URL
     setVideoInputMode(play.videoUrl?.includes('/uploads/videos/') ? 'upload' : 'url');
@@ -529,7 +531,7 @@ export default function UploadPlays({ role }: { role?: string }) {
     const categoryMatch = filterCat === 'all' || play.category === filterCat;
     const audienceMatch =
       audienceFilter === 'all' ||
-      normalizeTargetRoles(play.targetRoles?.length ? play.targetRoles : ['user']).includes(audienceFilter);
+      normalizeTargetRoles(play.targetRoles?.length ? play.targetRoles : INDIVIDUAL_ROLE_IDS).includes(audienceFilter);
 
     return categoryMatch && audienceMatch;
   });
