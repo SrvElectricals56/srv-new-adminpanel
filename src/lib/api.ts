@@ -160,7 +160,8 @@ async function refreshAccessToken(): Promise<string | null> {
 async function request<T>(
   path: string,
   options: RequestInit = {},
-  retried = false
+  retried = false,
+  transientRetries = 0,
 ): Promise<T> {
   const token = getToken();
   const method = String(options.method ?? 'GET').toUpperCase();
@@ -190,8 +191,17 @@ async function request<T>(
     if (res.status === 401 && !retried && path !== '/auth/login' && path !== '/auth/refresh') {
       const nextToken = await refreshAccessToken();
       if (nextToken) {
-        return request<T>(path, options, true);
+        return request<T>(path, options, true, transientRetries);
       }
+    }
+
+    if (
+      method === 'GET' &&
+      transientRetries < 1 &&
+      [500, 502, 503, 504].includes(res.status)
+    ) {
+      await new Promise(resolve => setTimeout(resolve, 350));
+      return request<T>(path, options, retried, transientRetries + 1);
     }
 
     if (!res.ok) {
