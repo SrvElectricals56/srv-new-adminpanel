@@ -479,11 +479,31 @@ function EditModal({ el, onClose, onSave, dealers = [] }: { el: Electrician | nu
               <>
                 <div>
                   <label style={labelStyle}>Total Points</label>
-                  <input style={inputStyle} type="number" value={form.totalPoints ?? ''} onChange={e => f('totalPoints', e.target.value === '' ? '' : +e.target.value)} placeholder="0" />
+                  <input
+                    style={inputStyle}
+                    type="number"
+                    min="0"
+                    value={form.totalPoints ?? ''}
+                    onChange={e => {
+                      const value = e.target.value === '' ? undefined : +e.target.value;
+                      setForm(current => ({ ...current, totalPoints: value, walletBalance: value }));
+                    }}
+                    placeholder="0"
+                  />
                 </div>
                 <div>
                   <label style={labelStyle}>Wallet Balance (₹)</label>
-                  <input style={inputStyle} type="number" value={form.walletBalance ?? ''} onChange={e => f('walletBalance', e.target.value === '' ? '' : +e.target.value)} placeholder="0" />
+                  <input
+                    style={inputStyle}
+                    type="number"
+                    min="0"
+                    value={form.walletBalance ?? ''}
+                    onChange={e => {
+                      const value = e.target.value === '' ? undefined : +e.target.value;
+                      setForm(current => ({ ...current, walletBalance: value, totalPoints: value }));
+                    }}
+                    placeholder="0"
+                  />
                 </div>
               </>
             )}
