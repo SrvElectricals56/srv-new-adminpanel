@@ -1,6 +1,6 @@
 'use client';
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { productApi, authApi, getToken, getStoredAdmin, setToken, setRefreshToken, setStoredAdmin, removeToken } from '@/lib/api';
+import { productApi, authApi, getToken, getStoredAdmin, setToken, setRefreshToken, setStoredAdmin, removeToken, isAuthenticationError } from '@/lib/api';
 import type { Product, PointsConfig, AdminRole } from '@/lib/types';
 
 interface AuthState {
@@ -117,10 +117,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
         })
         .catch(err => {
           console.error('Failed to restore admin session:', err);
-          removeToken();
-          setAuth({ isLoggedIn: false, role: 'staff', adminName: '', adminId: null });
-          setProducts([]);
-          setPointsConfig([]);
+          if (isAuthenticationError(err)) {
+            removeToken();
+            setAuth({ isLoggedIn: false, role: 'staff', adminName: '', adminId: null });
+            setProducts([]);
+            setPointsConfig([]);
+          } else {
+            // Keep the stored session during a temporary outage. A later focus or
+            // heartbeat will validate it without forcing the admin to log in again.
+            setAuth({
+              isLoggedIn: true,
+              role: mapRole(admin.role),
+              adminName: admin.name,
+              adminId: admin.id,
+            });
+          }
         });
     } else if (admin || token) {
       removeToken();
@@ -142,10 +153,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!auth.isLoggedIn) return;
 
     const validateSession = () => {
-      authApi.profile().catch(() => removeToken());
+      authApi.profile().catch((error) => {
+        if (isAuthenticationError(error)) removeToken();
+      });
     };
 
-    const intervalId = window.setInterval(validateSession, 10_000);
+    const intervalId = window.setInterval(validateSession, 5 * 60_000);
     window.addEventListener('focus', validateSession);
 
     return () => {

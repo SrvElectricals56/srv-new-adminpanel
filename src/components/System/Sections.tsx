@@ -460,7 +460,7 @@ export function PointsConfig({ role }: { role?: import('@/lib/types').AdminRole 
   const loadProducts = async () => {
     try {
       setLoading(true);
-      const res = await productApi.getAll({ limit: '500' });
+      const res = await productApi.getAll({ limit: '1000', page: '1' });
       const data = Array.isArray(res) ? res : (res as any).data ?? [];
       setProducts(data.map((p: any) => ({ ...p, _points: p.points })));
     } catch (err) { console.error(err); }
@@ -493,7 +493,7 @@ export function PointsConfig({ role }: { role?: import('@/lib/types').AdminRole 
   );
 
   return (
-    <div style={{ padding: '28px 32px', maxWidth: 1100 }}>
+    <div className="points-config-page" style={{ padding: '28px 32px', maxWidth: 1100 }}>
       <AlertDialog show={alertDialog.show} title={alertDialog.title} message={alertDialog.message} type={alertDialog.type} onClose={() => setAlertDialog({ ...alertDialog, show: false })} />
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 26, fontWeight: 800, color: C.text, marginBottom: 4 }}>Points Configuration</h1>
@@ -517,8 +517,8 @@ export function PointsConfig({ role }: { role?: import('@/lib/types').AdminRole 
       {loading ? (
         <div style={{ textAlign: 'center', padding: 40, color: C.muted }}>Loading products...</div>
       ) : (
-        <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, overflowX: 'auto', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', WebkitOverflowScrolling: 'touch' }}>
+          <table style={{ width: '100%', minWidth: 860, borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: C.surface, borderBottom: `1px solid ${C.border}` }}>
                 {['Product', 'SKU', 'Category', 'Current Points', 'Set Points', 'Save'].map(h => (

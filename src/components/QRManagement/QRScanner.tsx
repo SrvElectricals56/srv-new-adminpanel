@@ -41,26 +41,52 @@ const formatDateTime = (value?: string | null) => {
 };
 
 async function decodeQrImage(file: File): Promise<string> {
+  const BrowserBarcodeDetector = (globalThis as any).BarcodeDetector;
+  if (BrowserBarcodeDetector) {
+    try {
+      const detector = new BrowserBarcodeDetector({ formats: ['qr_code'] });
+      const bitmap = await createImageBitmap(file);
+      try {
+        const matches = await detector.detect(bitmap);
+        const value = matches?.[0]?.rawValue;
+        if (value) return value;
+      } finally {
+        bitmap.close();
+      }
+    } catch {
+      // Fall through to jsQR for browsers without a complete detector implementation.
+    }
+  }
+
   const image = await loadImage(file);
   const canvas = document.createElement('canvas');
-  const maxSize = 1400;
-  const scale = Math.min(1, maxSize / Math.max(image.naturalWidth, image.naturalHeight));
-  canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
-  canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
-
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   if (!ctx) throw new Error('Unable to prepare this image for scanning.');
-  ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
 
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const decoded = jsQR(imageData.data, imageData.width, imageData.height, {
-    inversionAttempts: 'attemptBoth',
-  });
+  // Try multiple sizes. A single aggressive resize loses the QR modules when
+  // the code occupies only a small part of a product/label photo.
+  const longestSide = Math.max(image.naturalWidth, image.naturalHeight);
+  const targetSizes = [...new Set([
+    Math.min(longestSide, 900),
+    Math.min(longestSide, 1600),
+    Math.min(longestSide, 2800),
+  ])];
 
-  if (!decoded?.data) {
-    throw new Error('No QR code found in this image. Please upload a clear, straight QR image.');
+  for (const targetSize of targetSizes) {
+    const scale = Math.min(1, targetSize / longestSide);
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const decoded = jsQR(imageData.data, imageData.width, imageData.height, {
+      inversionAttempts: 'attemptBoth',
+    });
+    if (decoded?.data) return decoded.data;
   }
-  return decoded.data;
+
+  throw new Error('No QR code found in this image. Please upload a clear, well-lit image with the full QR visible.');
 }
 
 function loadImage(file: File): Promise<HTMLImageElement> {

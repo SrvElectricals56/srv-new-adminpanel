@@ -1,6 +1,6 @@
 ﻿'use client';
 import React, { useState, useEffect } from 'react';
-import { Package, Box, Plus, CheckCircle, ScanLine, AlertTriangle, Star, Ban, SlidersHorizontal, Search, X } from 'lucide-react';
+import { Package, Box, Plus, CheckCircle, ScanLine, AlertTriangle, Star, Ban, SlidersHorizontal, Search, Trash2, X } from 'lucide-react';
 import type { Product, AdminRole } from '@/lib/types';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
 import { useAppContext } from '@/lib/appContext';
@@ -256,6 +256,7 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
   const [data, setData] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterCat, setFilterCat] = useState(initialCategory ?? 'All');
+  const [search, setSearch] = useState('');
   const [productStats, setProductStats] = useState({ total: 0, active: 0, totalScanned: 0, lowStock: 0 });
   const [dbCategories, setDbCategories] = useState<string[]>(CATEGORIES_FALLBACK);
   
@@ -290,7 +291,7 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
     lowStock: products.filter((p) => (p.stock || 0) < 500).length,
   });
 
-  const loadProducts = async (page = currentPage) => {
+  const loadProducts = async (page = currentPage, searchQuery = search) => {
     try {
       setLoading(true);
       const params: Record<string, string> = {
@@ -298,6 +299,7 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
         page: String(page),
       };
       if (filterCat !== 'All') params.category = filterCat;
+      if (searchQuery.trim()) params.search = searchQuery.trim();
 
       const res = await productApi.getAll(params);
       const products = (Array.isArray(res) ? res : (res as { data?: Record<string, unknown>[] }).data ?? []) as Record<string, unknown>[];
@@ -342,11 +344,15 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
     }
   };
 
-  // Re-fetch from page 1 whenever category filter changes (also covers initial mount)
+  // Search is server-side so results cover the complete catalog, not only the
+  // currently loaded page.
   useEffect(() => {
-    setCurrentPage(1);
-    loadProducts(1);
-  }, [filterCat]); // eslint-disable-line react-hooks/exhaustive-deps
+    const timer = window.setTimeout(() => {
+      setCurrentPage(1);
+      void loadProducts(1, search);
+    }, search.trim() ? 300 : 0);
+    return () => window.clearTimeout(timer);
+  }, [filterCat, search]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (initialCategory) {
@@ -354,7 +360,6 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
       onCategoryUsed?.();
     }
   }, [initialCategory]);
-  const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterStock, setFilterStock] = useState('all');
   const [filterBadge, setFilterBadge] = useState('all');
@@ -362,7 +367,7 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
   const [viewing, setViewing] = useState<Product | null>(null);
   const [editing, setEditing] = useState<Product | null | undefined>(undefined);
   const [showAdd, setShowAdd] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
   const [alertDialog, setAlertDialog] = useState<{ show: boolean; title: string; message: string; type: 'error' | 'success' | 'warning' | 'info' }>({ show: false, title: '', message: '', type: 'error' });
 
   // Get auth context for adminId
@@ -479,20 +484,24 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
     }
   };
 
-  const handleDelete = () => {
-    setShowDeleteConfirm(true);
+  const handleDelete = (product = editing ?? null) => {
+    if (product) setDeleteTarget(product);
   };
 
   const confirmDelete = async () => {
-    if (editing) {
+    if (deleteTarget) {
       try {
-        await productApi.delete(editing.id);
-        await loadProducts(currentPage);
-      } catch (err) {
+        await productApi.delete(deleteTarget.id);
+        if (editing?.id === deleteTarget.id) setEditing(undefined);
+        const nextPage = data.length === 1 && currentPage > 1 ? currentPage - 1 : currentPage;
+        setCurrentPage(nextPage);
+        await loadProducts(nextPage, search);
+        setAlertDialog({ show: true, title: 'Product Deleted', message: `"${deleteTarget.name}" was deleted successfully.`, type: 'success' });
+      } catch (err: any) {
         console.error('Failed to delete product:', err);
+        setAlertDialog({ show: true, title: 'Delete Failed', message: err?.message || 'Unable to delete this product.', type: 'error' });
       }
-      setEditing(undefined);
-      setShowDeleteConfirm(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -508,14 +517,14 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
       {viewing && <ProductModal product={viewing} onClose={() => setViewing(null)} onEdit={() => { setEditing(viewing); setViewing(null); }} canEdit={canEdit} />}
-      {(editing !== undefined || showAdd) && <EditModal product={showAdd ? null : editing!} onClose={() => { setEditing(undefined); setShowAdd(false); }} onSave={handleSave} onDelete={handleDelete} categories={dbCategories} role={role} canDelete={canDelete} />}
+      {(editing !== undefined || showAdd) && <EditModal product={showAdd ? null : editing!} onClose={() => { setEditing(undefined); setShowAdd(false); }} onSave={handleSave} onDelete={() => handleDelete()} categories={dbCategories} role={role} canDelete={canDelete} />}
       
       <ConfirmDialog
-        show={showDeleteConfirm}
+        show={deleteTarget !== null}
         title="Delete Product"
-        message={`Are you sure you want to delete "${editing?.name}"? This action cannot be undone and will also remove it from Points Config.`}
+        message={`Are you sure you want to delete "${deleteTarget?.name}"? This action cannot be undone and will also remove it from Points Config.`}
         onConfirm={confirmDelete}
-        onCancel={() => setShowDeleteConfirm(false)}
+        onCancel={() => setDeleteTarget(null)}
         confirmText="Delete"
         cancelText="Cancel"
         type="danger"
@@ -690,10 +699,16 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
                     {canEdit && (
                       <>
                         <button onClick={() => setEditing(p)} style={{ background: '#FFF7ED', color: '#C2410C', border: 'none', borderRadius: 7, padding: '6px 11px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Edit</button>
-                        <button onClick={() => updateProduct(p.id, { isActive: !p.isActive })} style={{ background: p.isActive ? '#FEE2E2' : '#D1FAE5', color: p.isActive ? '#991B1B' : '#065F46', border: 'none', borderRadius: 7, padding: '6px 8px', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                        <button onClick={() => updateProduct(p.id, { isActive: !p.isActive })} title={p.isActive ? 'Hide this product from the app' : 'Show this product in the app'} style={{ background: p.isActive ? '#FEE2E2' : '#D1FAE5', color: p.isActive ? '#991B1B' : '#065F46', border: 'none', borderRadius: 7, padding: '6px 9px', fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}>
                           {p.isActive ? <Ban size={13} /> : <CheckCircle size={13} />}
+                          {p.isActive ? 'Hide from App' : 'Show in App'}
                         </button>
                       </>
+                    )}
+                    {canDelete && (
+                      <button onClick={() => handleDelete(p)} title="Delete product" style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 7, padding: '6px 8px', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                        <Trash2 size={13} />
+                      </button>
                     )}
                     {!canEdit && (
                       <span style={{ fontSize: 11, color: C.muted, fontStyle: 'italic', padding: '6px 8px' }}>Read Only</span>

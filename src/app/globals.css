@@ -101,3 +101,13 @@ img {
   background: rgba(232, 69, 60, 0.15);
   color: #0F172A;
 }
+@media (max-width: 900px) {
+  .points-config-page {
+    padding: 20px 16px !important;
+    max-width: 100% !important;
+  }
+
+  .points-config-page input[type='text'] {
+    max-width: 100% !important;
+  }
+}

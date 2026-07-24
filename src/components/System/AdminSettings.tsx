@@ -1,10 +1,11 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { ShieldCheck, Plus, Pencil, Trash2, Eye, EyeOff, Key, UserCheck, Users, Lock } from 'lucide-react';
+import { ShieldCheck, Plus, Pencil, Trash2, Eye, EyeOff, Key, UserCheck, Users, Lock, Download } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { adminApi } from '@/lib/api';
 import { useAppContext } from '@/lib/appContext';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
+import ExportModal from '@/components/Shared/ExportModal';
 import { I } from '@/lib/iconMap';
 import { formatISTDateTime } from '@/lib/dateIST';
 
@@ -54,6 +55,7 @@ export default function AdminSettings() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'users' | 'roles' | 'password'>('users');
   const [saved, setSaved] = useState(false);
+  const [showExport, setShowExport] = useState(false);
   // Password Change Modal State
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordChangeUser, setPasswordChangeUser] = useState<AdminUser | null>(null);
@@ -338,6 +340,22 @@ export default function AdminSettings() {
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1200 }}>
       <ConfirmDialog show={deleteId !== null} title="Delete Admin" message={`Delete admin "${admins.find(a => a.id === deleteId)?.name}"? This cannot be undone.`} onConfirm={handleDelete} onCancel={() => setDeleteId(null)} confirmText="Delete" type="danger" />
+      <ExportModal
+        show={showExport}
+        onClose={() => setShowExport(false)}
+        title="Admin Accounts"
+        fileName="admin-accounts"
+        getData={() => admins.map((admin) => ({
+          Name: admin.name,
+          Email: admin.email || '',
+          Phone: admin.phone || '',
+          Role: ROLE_CONFIG[admin.role].label,
+          Status: admin.status,
+          'Last Login': admin.lastLogin ? formatISTDateTime(admin.lastLogin) : '',
+          'Created At': admin.createdAt ? formatISTDateTime(admin.createdAt) : '',
+          Permissions: admin.permissions.join(', '),
+        }))}
+      />
 
       {/* Password Change Modal */}
       {showPasswordModal && passwordChangeUser && (
@@ -478,6 +496,9 @@ export default function AdminSettings() {
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>{s.label}</div>
             </div>
           ))}
+          <button onClick={() => setShowExport(true)} disabled={!admins.length} style={{ padding: '10px 18px', borderRadius: 9, border: '1px solid rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.1)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: admins.length ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 6, opacity: admins.length ? 1 : 0.55 }}>
+            <Download size={14} /> Export
+          </button>
           <button onClick={openAdd} style={{ padding: '10px 18px', borderRadius: 9, border: 'none', background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
             <Plus size={14} /> Add Admin
           </button>

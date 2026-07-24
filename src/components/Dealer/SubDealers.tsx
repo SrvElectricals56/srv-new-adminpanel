@@ -15,6 +15,8 @@ type SubDealer = {
   district?: string | null;
   pincode?: string | null;
   electricianCount: number;
+  effectiveRole?: 'dealer';
+  roleLabel?: string;
   firstSeenAt: string;
   lastSeenAt: string;
 };
@@ -90,7 +92,7 @@ export default function SubDealers() {
     setElectricianForm({
       name: '',
       phone: '',
-      dealerName: row.name || 'SRV Dealer',
+      dealerName: row.name || 'SRV Sub Dealer',
       city: '',
       state: '',
       district: row.district || '',
@@ -134,7 +136,7 @@ export default function SubDealers() {
         pincode: electricianForm.pincode.trim() || viewing.pincode || undefined,
         address: electricianForm.address.trim() || undefined,
         dealerId: '',
-        fallbackDealerName: electricianForm.dealerName.trim() || viewing.name || 'SRV Dealer',
+        fallbackDealerName: electricianForm.dealerName.trim() || viewing.name || 'SRV Sub Dealer',
         fallbackDealerPhone: viewing.phone,
       });
       setShowAddElectrician(false);
@@ -156,7 +158,7 @@ export default function SubDealers() {
               <div>
                 <div style={{ fontSize: 18, fontWeight: 800, color: C.text }}>Associated Electricians</div>
                 <div style={{ fontSize: 12, color: C.muted, marginTop: 3 }}>
-                  {viewing.identifierType === 'legacy_code' ? 'Legacy dealer code' : 'SRV Dealer'} · {selectedIdentifier} · {selectedCount} electrician{selectedCount === 1 ? '' : 's'}
+                  {viewing.identifierType === 'legacy_code' ? 'Legacy dealer code' : 'SRV Sub Dealer'} · Dealer-equivalent role · {selectedIdentifier} · {selectedCount} electrician{selectedCount === 1 ? '' : 's'}
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -199,7 +201,7 @@ export default function SubDealers() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 12, marginBottom: 16 }}>
                 <div style={{ border: `1px solid ${C.border}`, borderRadius: 14, padding: 14, background: C.surface }}>
                   <div style={{ fontSize: 12, color: C.muted, fontWeight: 700 }}>Sub Dealer Name</div>
-                  <div style={{ fontSize: 16, fontWeight: 800, marginTop: 4 }}>{viewing.name || 'SRV Dealer'}</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, marginTop: 4 }}>{viewing.name || 'SRV Sub Dealer'}</div>
                 </div>
                 <div style={{ border: `1px solid ${C.border}`, borderRadius: 14, padding: 14, background: C.surface }}>
                   <div style={{ fontSize: 12, color: C.muted, fontWeight: 700 }}>{viewing.identifierType === 'legacy_code' ? 'Dealer Code' : 'Phone Number'}</div>
@@ -237,7 +239,7 @@ export default function SubDealers() {
                           <div style={{ fontWeight: 800 }}>{electrician.name}</div>
                           <div style={{ color: C.muted, fontSize: 12 }}>{electrician.electricianCode || '—'}</div>
                           <div style={{ color: C.muted, fontSize: 11, marginTop: 3 }}>
-                            Dealer: {electrician.fallbackDealerName || viewing.name || 'SRV Dealer'} {(electrician.fallbackDealerPhone || electrician.fallbackDealerCode || selectedIdentifier) ? `(${electrician.fallbackDealerPhone || electrician.fallbackDealerCode || selectedIdentifier})` : ''}
+                            Dealer: {electrician.fallbackDealerName || viewing.name || 'SRV Sub Dealer'} {(electrician.fallbackDealerPhone || electrician.fallbackDealerCode || selectedIdentifier) ? `(${electrician.fallbackDealerPhone || electrician.fallbackDealerCode || selectedIdentifier})` : ''}
                           </div>
                         </td>
                         <td style={{ padding: 14 }}>{electrician.phone}</td>
@@ -265,7 +267,7 @@ export default function SubDealers() {
 
       <div style={{ marginBottom: 20 }}>
         <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800 }}>Sub Dealers</h1>
-        <p style={{ margin: '6px 0 0', color: C.muted }}>Unregistered dealer phone numbers and unmatched legacy dealer codes associated with electricians.</p>
+        <p style={{ margin: '6px 0 0', color: C.muted }}>Unregistered dealer phone numbers are tracked as SRV Sub Dealers and treated as dealer-equivalent associations.</p>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 14, marginBottom: 18 }}>
@@ -293,7 +295,7 @@ export default function SubDealers() {
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 850 }}>
               <thead>
                 <tr style={{ background: C.surface, color: C.muted, textAlign: 'left' }}>
-                  {['Dealer Name', 'Phone / Dealer Code', 'District / Pincode', 'Electricians', 'First Seen', 'Last Seen'].map((head) => (
+                  {['Dealer Name', 'Role', 'Phone / Dealer Code', 'District / Pincode', 'Electricians', 'First Seen', 'Last Seen'].map((head) => (
                     <th key={head} style={{ padding: '13px 16px', fontSize: 12, fontWeight: 700 }}>{head}</th>
                   ))}
                 </tr>
@@ -301,7 +303,8 @@ export default function SubDealers() {
               <tbody>
                 {rows.map((row) => (
                   <tr key={row.id} onClick={() => openAssociatedElectricians(row)} title="Click to view associated electricians" style={{ borderTop: `1px solid ${C.border}`, cursor: 'pointer' }}>
-                    <td style={{ padding: 16, fontWeight: 700 }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Store size={17} color={C.accentText} />SRV Dealer</span></td>
+                    <td style={{ padding: 16, fontWeight: 700 }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Store size={17} color={C.accentText} />{row.name || 'SRV Sub Dealer'}</span></td>
+                    <td style={{ padding: 16 }}><span style={{ background: '#DBEAFE', color: '#1D4ED8', borderRadius: 999, padding: '5px 10px', fontSize: 11, fontWeight: 800 }}>Dealer</span></td>
                     <td style={{ padding: 16 }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><Phone size={15} color={C.muted} />{row.identifier || row.phone || row.dealerCode}</span></td>
                     <td style={{ padding: 16 }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><MapPin size={15} color={C.muted} />{row.district || '—'}{row.pincode ? ` - ${row.pincode}` : ''}</span></td>
                     <td style={{ padding: 16, fontWeight: 700 }}><button onClick={(event) => { event.stopPropagation(); openAssociatedElectricians(row); }} style={{ border: 0, borderRadius: 999, background: C.accentSoft, color: C.accentText, padding: '6px 12px', fontWeight: 800, cursor: 'pointer' }}>View {row.electricianCount}</button></td>

@@ -46,6 +46,19 @@ export const getStoredAdmin = () => {
 export const setStoredAdmin = (admin: object) =>
   localStorage.setItem('srv_admin', JSON.stringify(admin));
 
+export class ApiError extends Error {
+  constructor(
+    public readonly status: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
+export const isAuthenticationError = (error: unknown): boolean =>
+  error instanceof ApiError && (error.status === 401 || error.status === 403);
+
 let refreshPromise: Promise<string | null> | null = null;
 
 type CacheEntry = {
@@ -83,7 +96,7 @@ function shouldCacheGet(_path: string) {
 function getCrudFeedback(path: string, method: string) {
   if (typeof window === 'undefined') return null;
   if (!['POST', 'PATCH', 'PUT', 'DELETE'].includes(method)) return null;
-  if (path.startsWith('/auth/') || path.includes('/activity')) return null;
+  if (path.startsWith('/auth/') || path.startsWith('/settings/') || path.includes('/activity')) return null;
 
   const cleanPath = path.split('?')[0];
   const label = cleanPath
@@ -132,7 +145,7 @@ async function refreshAccessToken(): Promise<string | null> {
     })
       .then(async res => {
         if (!res.ok) {
-          removeToken();
+          if (res.status === 401 || res.status === 403) removeToken();
           return null;
         }
 
@@ -146,7 +159,8 @@ async function refreshAccessToken(): Promise<string | null> {
         return null;
       })
       .catch(() => {
-        removeToken();
+        // A temporary network failure must not destroy a valid admin session.
+        // The existing access token may still be usable when connectivity returns.
         return null;
       })
       .finally(() => {
@@ -213,7 +227,7 @@ async function request<T>(
       } catch {
         if (rawText) message = rawText;
       }
-      throw new Error(`[${res.status}] ${message || 'Request failed'}`);
+      throw new ApiError(res.status, message || 'Request failed');
     }
 
     if (res.status === 204) {
@@ -646,6 +660,11 @@ export const settingsApi = {
   getRatingHistory: () => request<any>('/settings/rate-us/history'),
   update: (key: string, value: string) =>
     request<any>(`/settings/${key}`, { method: 'PUT', body: JSON.stringify({ value }) }),
+  updateMany: (settings: Record<string, string>) =>
+    request<{ message: string; updated: number }>('/settings/bulk', {
+      method: 'PUT',
+      body: JSON.stringify({ settings }),
+    }),
   setPointsConfig: (body: object) =>
     request<any>('/settings/points-config', { method: 'POST', body: JSON.stringify(body) }),
 };

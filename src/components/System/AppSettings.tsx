@@ -216,11 +216,13 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
       ) as AppConfig;
 
       setConfig(normalizedConfig);
-      await Promise.all(
-        Object.entries({
-          ...normalizedConfig,
-          catalogPdfUrl: normalizedConfig.generalCatalogPdfUrl,
-        }).map(([key, value]) => settingsApi.update(key, String(value)))
+      await settingsApi.updateMany(
+        Object.fromEntries(
+          Object.entries({
+            ...normalizedConfig,
+            catalogPdfUrl: normalizedConfig.generalCatalogPdfUrl,
+          }).map(([key, value]) => [key, String(value)]),
+        ),
       );
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);

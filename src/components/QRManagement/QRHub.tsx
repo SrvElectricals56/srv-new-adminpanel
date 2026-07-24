@@ -273,6 +273,7 @@ export default function QRHub({ role }: QRHubProps) {
         batchId: batch.batchId,
         limit: String(Math.min(BATCH_EXPORT_PAGE_SIZE, remaining)),
         page: String(page),
+        includeDetails: 'false',
       });
       const pageRows = Array.isArray(res) ? res : (res as any).data ?? [];
       allRows.push(...pageRows);
@@ -332,7 +333,7 @@ export default function QRHub({ role }: QRHubProps) {
     setSelectedBatch(batch);
     setDetailsLoading(true);
     try {
-      const res = await qrCodeApi.getAll({ batchId: batch.batchId, limit: '100', page: '1' });
+      const res = await qrCodeApi.getAll({ batchId: batch.batchId, limit: '100', page: '1', includeDetails: 'false' });
       setBatchQrs(Array.isArray(res) ? res : (res as any).data ?? []);
     } catch (err: any) {
       setAlertDialog({ show: true, title: 'Batch Details Failed', message: err.message || 'Unable to load batch details.', type: 'error' });
