@@ -648,6 +648,10 @@ export const supportApi = {
     request<any>(`/support/tickets/${id}/respond`, { method: 'PATCH', body: JSON.stringify(body) }),
   updateStatus: (id: string, status: string) =>
     request<any>(`/support/tickets/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  updateReply: (ticketId: string, replyId: string, message: string) =>
+    request<any>(`/support/tickets/${ticketId}/replies/${replyId}`, { method: 'PATCH', body: JSON.stringify({ message }) }),
+  deleteReply: (ticketId: string, replyId: string) =>
+    request<any>(`/support/tickets/${ticketId}/replies/${replyId}`, { method: 'DELETE' }),
 };
 
 // â”€â”€â”€ Settings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

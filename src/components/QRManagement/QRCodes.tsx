@@ -191,6 +191,7 @@ export default function QRCodes({ role }: QRCodesProps) {
             usedBy: qr.lastScannedBy ?? qr.usedBy,
             lastScannedPhone: qr.lastScannedPhone,
             lastScannedCode: qr.lastScannedCode,
+            firstScan: qr.firstScan ?? null,
             qrImage: '',
           };
           return item;
@@ -203,20 +204,16 @@ export default function QRCodes({ role }: QRCodesProps) {
     }
   };
 
-  // Re-fetch when status changes immediately; debounce text search to avoid
-  // hammering the multi-million-row QR table on every keystroke.
-  useEffect(() => {
-    setCurrentPage(1);
-    loadQRCodes(1);
-  }, [filterStatus]); // eslint-disable-line react-hooks/exhaustive-deps
-
+  // One debounced request covers both status and text changes. Keeping this in
+  // a single effect avoids the duplicate full-table requests that occurred on
+  // the initial render.
   useEffect(() => {
     const timeout = window.setTimeout(() => {
       setCurrentPage(1);
       loadQRCodes(1);
-    }, 350);
+    }, searchTerm.trim() ? 350 : 0);
     return () => window.clearTimeout(timeout);
-  }, [searchTerm]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [filterStatus, searchTerm]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { loadStats(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -336,7 +333,7 @@ export default function QRCodes({ role }: QRCodesProps) {
           <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: C.muted }} />
           <input
             type="text"
-            placeholder="Search by QR ID, product name, or batch number..."
+            placeholder="Search QR number, date, product, SKU, or batch..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{

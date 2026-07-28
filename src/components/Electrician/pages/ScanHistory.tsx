@@ -10,6 +10,8 @@ interface ScanRecord {
   id: string;
   userId: string;
   userName: string;
+  userPhone?: string;
+  userCode?: string;
   productName: string;
   points: number;
   mode: string;
@@ -59,6 +61,8 @@ export default function ElectricianScanHistory() {
         id: s.id,
         userId: s.userId,
         userName: s.userName,
+        userPhone: s.userPhone,
+        userCode: s.userCode,
         productName: s.productName,
         points: s.points,
         mode: s.mode ?? 'single',
@@ -183,21 +187,25 @@ export default function ElectricianScanHistory() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: C.bg, borderBottom: `1px solid ${C.border}` }}>
-                {['Electrician', 'Product', 'Scan Type', 'Points', 'Date & Time', 'Location'].map(h => (
+                {['Electrician / Unique ID', 'Phone / Code', 'Product', 'Scan Type', 'Points', 'Date & Time', 'Location'].map(h => (
                   <th key={h} style={{ padding: '14px 16px', textAlign: h === 'Scan Type' || h === 'Points' ? 'center' : 'left', fontSize: 12, fontWeight: 700, color: C.muted, textTransform: 'uppercase' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {scans.length === 0 ? (
-                <tr><td colSpan={6} style={{ padding: '40px', textAlign: 'center', color: C.muted }}>No scan records found</td></tr>
+                <tr><td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: C.muted }}>No scan records found</td></tr>
               ) : scans.map(scan => (
                 <tr key={scan.id} style={{ borderBottom: `1px solid ${C.border}` }}
                   onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = C.hoverRow}
                   onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}>
                   <td style={{ padding: '13px 16px' }}>
                     <button disabled={userLoading} onClick={() => openUser(scan)} style={{ padding: 0, border: 'none', background: 'transparent', fontSize: 14, fontWeight: 700, color: C.red, cursor: userLoading ? 'wait' : 'pointer', textDecoration: 'underline' }}>{scan.userName}</button>
-                    <div style={{ fontSize: 11, color: C.muted }}>{scan.userId?.slice(0, 8)}…</div>
+                    <div style={{ fontSize: 11, color: C.muted, fontFamily: 'monospace' }}>ID: {scan.userId || '—'}</div>
+                  </td>
+                  <td style={{ padding: '13px 16px' }}>
+                    <div style={{ fontSize: 12, color: C.text, fontWeight: 700 }}>{scan.userPhone ? `+91 ${scan.userPhone}` : '—'}</div>
+                    <div style={{ fontSize: 11, color: C.muted, fontFamily: 'monospace' }}>{scan.userCode || 'No code'}</div>
                   </td>
                   <td style={{ padding: '13px 16px', fontSize: 13, color: C.text }}>{scan.productName}</td>
                   <td style={{ padding: '13px 16px', textAlign: 'center' }}>

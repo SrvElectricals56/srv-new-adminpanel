@@ -9,6 +9,17 @@ import AlertDialog from '@/components/Shared/AlertDialog';
 type ScanLookupResult = {
   qrCodeId?: string;
   code?: string;
+  productId?: string | null;
+  productName?: string | null;
+  productSku?: string | null;
+  batchId?: string | null;
+  batchNo?: number | null;
+  points?: number | null;
+  status?: 'active' | 'used' | 'inactive';
+  isScanned?: boolean;
+  scanCount?: number;
+  generatedAt?: string | null;
+  lastScannedAt?: string | null;
   firstScan?: {
     userName?: string | null;
     name?: string | null;
@@ -173,6 +184,7 @@ export default function QRScanner() {
   };
 
   const firstScan = result?.firstScan;
+  const isUsed = Boolean(firstScan || result?.isScanned);
   const scannerName = firstScan?.userName || firstScan?.name || 'Not available';
 
   return (
@@ -273,15 +285,19 @@ export default function QRScanner() {
                   <div style={{ fontSize: 18, fontWeight: 900, color: C.text }}>QR Lookup Result</div>
                   <div style={{ fontSize: 12, color: C.muted, marginTop: 3, fontFamily: 'monospace' }}>{result.code || result.qrCodeId}</div>
                 </div>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 11px', borderRadius: 999, background: firstScan ? '#D1FAE5' : '#FEF3C7', color: firstScan ? '#047857' : '#B45309', fontSize: 12, fontWeight: 900 }}>
-                  {firstScan ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
-                  {firstScan ? 'Scanned' : 'Not Scanned'}
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 11px', borderRadius: 999, background: isUsed ? '#D1FAE5' : '#FEF3C7', color: isUsed ? '#047857' : '#B45309', fontSize: 12, fontWeight: 900 }}>
+                  {isUsed ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
+                  {isUsed ? 'Scanned' : 'Not Scanned'}
                 </span>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
-                <InfoTile C={C} label="Product" value={firstScan?.productName || 'Not available'} icon={<ShieldCheck size={17} />} />
-                <InfoTile C={C} label="Points" value={String(firstScan?.pointsRedeemed ?? firstScan?.points ?? 0)} icon={<QrCode size={17} />} />
+                <InfoTile C={C} label="Product" value={result.productName || firstScan?.productName || 'Not available'} icon={<ShieldCheck size={17} />} />
+                <InfoTile C={C} label="SKU / Product ID" value={[result.productSku, result.productId].filter(Boolean).join(' / ') || 'Not available'} icon={<PackageIcon />} />
+                <InfoTile C={C} label="Batch" value={String(result.batchNo ?? result.batchId ?? 'Not available')} icon={<QrCode size={17} />} />
+                <InfoTile C={C} label="Points" value={String(firstScan?.pointsRedeemed ?? firstScan?.points ?? result.points ?? 0)} icon={<QrCode size={17} />} />
+                <InfoTile C={C} label="Generated At" value={formatDateTime(result.generatedAt)} icon={<CalendarClock size={17} />} />
+                <InfoTile C={C} label="Scan Count" value={String(result.scanCount ?? 0)} icon={<Search size={17} />} />
                 <InfoTile C={C} label="Scanned By" value={scannerName} icon={<UserRound size={17} />} />
                 <InfoTile C={C} label="Role / Code" value={[firstScan?.role, firstScan?.code].filter(Boolean).join(' / ') || 'Not available'} icon={<ShieldCheck size={17} />} />
                 <InfoTile C={C} label="Phone" value={firstScan?.phone ? `+91 ${firstScan.phone}` : 'Not available'} icon={<Phone size={17} />} />
@@ -305,6 +321,10 @@ export default function QRScanner() {
       `}</style>
     </div>
   );
+}
+
+function PackageIcon() {
+  return <ShieldCheck size={17} />;
 }
 
 function InfoTile({ C, label, value, icon }: { C: any; label: string; value: string; icon: ReactNode }) {

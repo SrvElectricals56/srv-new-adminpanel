@@ -10,6 +10,7 @@ import {
   QrCode,
   RefreshCw,
   Search,
+  Share2,
   Trash2,
 } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
@@ -32,6 +33,7 @@ interface QRBatch {
   batchNo: number | string | null;
   productId: string;
   productName: string;
+  productSku?: string;
   generatedDate: string;
   points: number;
   qty: number;
@@ -66,11 +68,13 @@ export default function QRHub({ role }: QRHubProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [hubSummary, setHubSummary] = useState({ totalQty: 0, usedQty: 0, activeQty: 0 });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [selectedBatch, setSelectedBatch] = useState<QRBatch | null>(null);
   const [batchQrs, setBatchQrs] = useState<any[]>([]);
   const [detailsLoading, setDetailsLoading] = useState(false);
+  const [detailsUsedOnly, setDetailsUsedOnly] = useState(false);
   const [editState, setEditState] = useState<EditState | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; batchId: string | null }>({ show: false, batchId: null });
   const [showExport, setShowExport] = useState(false);
@@ -134,6 +138,7 @@ export default function QRHub({ role }: QRHubProps) {
     batchNo: row.batchNo ?? row.batchId ?? row.id ?? '-',
     productId: String(row.productId ?? ''),
     productName: row.productName ?? '-',
+    productSku: row.productSku ?? undefined,
     generatedDate: row.generatedDate ?? row.createdAt ?? new Date().toISOString(),
     points: Number(row.points ?? row.rewardPoints ?? 0),
     qty: Number(row.qty ?? row.quantity ?? 0),
@@ -143,7 +148,11 @@ export default function QRHub({ role }: QRHubProps) {
 
   const getBatchLabel = (batch: QRBatch) => String(batch.batchNo ?? batch.batchId);
   const getRedeemerLabel = (qr: any) => {
-    const details = [qr.lastScannedName, qr.lastScannedPhone, qr.lastScannedCode].filter(Boolean);
+    const details = [
+      qr.firstScan?.userName ?? qr.lastScannedName,
+      qr.firstScan?.phone ?? qr.lastScannedPhone,
+      qr.firstScan?.code ?? qr.lastScannedCode,
+    ].filter(Boolean);
     return details.length ? details.join(' · ') : qr.lastScannedBy ?? '';
   };
   const getHistoryActionLabel = (type?: string) => {
@@ -186,6 +195,11 @@ export default function QRHub({ role }: QRHubProps) {
       const rows = Array.isArray(res) ? res : (res as any).data ?? [];
       setBatches(rows.map(mapBatch));
       setTotalCount(Array.isArray(res) ? rows.length : (res as any).total ?? rows.length);
+      setHubSummary((res as any).summary ?? {
+        totalQty: rows.reduce((sum: number, row: any) => sum + Number(row.qty ?? 0), 0),
+        usedQty: rows.reduce((sum: number, row: any) => sum + Number(row.usedQty ?? 0), 0),
+        activeQty: rows.reduce((sum: number, row: any) => sum + Number(row.activeQty ?? 0), 0),
+      });
     } catch (err: any) {
       setAlertDialog({ show: true, title: 'QR Hub Load Failed', message: err.message || 'Unable to load QR batches.', type: 'error' });
     } finally {
@@ -244,10 +258,6 @@ export default function QRHub({ role }: QRHubProps) {
     }, 300);
     return () => window.clearTimeout(timer);
   }, [searchTerm]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    loadHub(1, '');
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (canViewHistory) void loadDownloadHistory(1, '', '', '');
@@ -329,16 +339,45 @@ export default function QRHub({ role }: QRHubProps) {
     }
   };
 
-  const openDetails = async (batch: QRBatch) => {
+  const openDetails = async (batch: QRBatch, usedOnly = false) => {
     setSelectedBatch(batch);
+    setDetailsUsedOnly(usedOnly);
     setDetailsLoading(true);
     try {
-      const res = await qrCodeApi.getAll({ batchId: batch.batchId, limit: '100', page: '1', includeDetails: 'false' });
+      const res = await qrCodeApi.getAll({
+        batchId: batch.batchId,
+        limit: '500',
+        page: '1',
+        includeDetails: 'true',
+        ...(usedOnly ? { status: 'used' } : {}),
+      });
       setBatchQrs(Array.isArray(res) ? res : (res as any).data ?? []);
     } catch (err: any) {
       setAlertDialog({ show: true, title: 'Batch Details Failed', message: err.message || 'Unable to load batch details.', type: 'error' });
     } finally {
       setDetailsLoading(false);
+    }
+  };
+
+  const shareBatch = async (batch: QRBatch) => {
+    const message = [
+      `SRV QR Batch ${getBatchLabel(batch)}`,
+      `Product: ${batch.productName}`,
+      `SKU: ${batch.productSku || productSkuMap.get(batch.productId) || '-'}`,
+      `Quantity: ${batch.qty}`,
+      `Used: ${batch.usedQty ?? 0}`,
+      `Active: ${batch.activeQty ?? Math.max(0, batch.qty - (batch.usedQty ?? 0))}`,
+    ].join('\n');
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: `QR Batch ${getBatchLabel(batch)}`, text: message });
+      } else {
+        await navigator.clipboard.writeText(message);
+        setAlertDialog({ show: true, title: 'Batch Details Copied', message: 'Batch details were copied and are ready to share.', type: 'success' });
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return;
+      setAlertDialog({ show: true, title: 'Share Failed', message: error instanceof Error ? error.message : 'Unable to share this batch.', type: 'error' });
     }
   };
 
@@ -383,8 +422,8 @@ export default function QRHub({ role }: QRHubProps) {
 
   const statCards = [
     { label: 'Batches', value: totalCount.toLocaleString('en-IN'), color: '#60A5FA' },
-    { label: 'Visible Qty', value: batches.reduce((sum, batch) => sum + batch.qty, 0).toLocaleString('en-IN'), color: '#10B981' },
-    { label: 'Used', value: batches.reduce((sum, batch) => sum + (batch.usedQty ?? 0), 0).toLocaleString('en-IN'), color: '#F59E0B' },
+    { label: 'Total QR', value: hubSummary.totalQty.toLocaleString('en-IN'), color: '#10B981' },
+    { label: 'Used', value: hubSummary.usedQty.toLocaleString('en-IN'), color: '#F59E0B' },
   ];
 
   return (
@@ -415,7 +454,7 @@ export default function QRHub({ role }: QRHubProps) {
           <input
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            placeholder="Search by product name or batch number..."
+            placeholder="Search by product, SKU ID, or batch number..."
             style={{ width: '100%', padding: '10px 14px 10px 40px', border: `1.5px solid ${C.border}`, borderRadius: 10, outline: 'none', fontSize: 13, color: C.text, background: C.bg }}
           />
         </div>
@@ -432,7 +471,7 @@ export default function QRHub({ role }: QRHubProps) {
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 980 }}>
             <thead>
               <tr style={{ background: C.bg, borderBottom: `2px solid ${C.border}` }}>
-                {['Id', 'Product Name', 'Batch No.', 'Generate Date', 'Point', 'Qty', 'Action'].map((head, index) => (
+                {['Id', 'Product Name', 'Batch No.', 'Generate Date', 'Point', 'Qty', 'Used', 'Action'].map((head, index) => (
                   <th key={head} style={{ padding: '15px 18px', textAlign: index >= 4 ? 'center' : 'left', fontSize: 12, fontWeight: 800, color: C.muted, textTransform: 'uppercase' }}>{head}</th>
                 ))}
               </tr>
@@ -440,7 +479,7 @@ export default function QRHub({ role }: QRHubProps) {
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={7} style={{ padding: '54px 20px', textAlign: 'center', color: C.muted }}>
+                  <td colSpan={8} style={{ padding: '54px 20px', textAlign: 'center', color: C.muted }}>
                     <RefreshCw size={24} style={{ animation: 'spin 1s linear infinite', marginBottom: 10 }} />
                     <div style={{ fontSize: 14, fontWeight: 700 }}>Loading QR batches...</div>
                   </td>
@@ -448,7 +487,7 @@ export default function QRHub({ role }: QRHubProps) {
               )}
               {!loading && batches.length === 0 && (
                 <tr>
-                  <td colSpan={7} style={{ padding: '54px 20px', textAlign: 'center', color: C.muted }}>
+                  <td colSpan={8} style={{ padding: '54px 20px', textAlign: 'center', color: C.muted }}>
                     <QrCode size={44} style={{ marginBottom: 12, opacity: 0.35 }} />
                     <div style={{ fontSize: 14, fontWeight: 700 }}>No QR batches found</div>
                   </td>
@@ -467,7 +506,7 @@ export default function QRHub({ role }: QRHubProps) {
                       </div>
                       <div>
                         <div style={{ fontSize: 13, fontWeight: 800, color: C.text }}>{batch.productName}</div>
-                        <div style={{ fontSize: 11, color: C.muted }}>SKU: {productSkuMap.get(batch.productId) || batch.productId || '-'}</div>
+                        <div style={{ fontSize: 11, color: C.muted }}>SKU: {batch.productSku || productSkuMap.get(batch.productId) || batch.productId || '-'}</div>
                       </div>
                     </div>
                   </td>
@@ -484,6 +523,16 @@ export default function QRHub({ role }: QRHubProps) {
                   <td style={{ padding: '15px 18px', textAlign: 'center' }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 58, padding: '5px 10px', borderRadius: 999, background: '#D1FAE5', color: '#047857', fontSize: 12, fontWeight: 800 }}>{batch.qty}</span>
                   </td>
+                  <td style={{ padding: '15px 18px', textAlign: 'center' }}>
+                    <button
+                      onClick={() => openDetails(batch, true)}
+                      disabled={!batch.usedQty}
+                      title={batch.usedQty ? 'View the QR codes used in this batch' : 'No QR codes used'}
+                      style={{ minWidth: 58, padding: '5px 10px', borderRadius: 999, border: 'none', background: batch.usedQty ? '#FEF3C7' : C.bg, color: batch.usedQty ? '#B45309' : C.muted, fontSize: 12, fontWeight: 900, cursor: batch.usedQty ? 'pointer' : 'default' }}
+                    >
+                      {batch.usedQty ?? 0}
+                    </button>
+                  </td>
                   <td style={{ padding: '15px 18px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
                       {permissions.canExport && (
@@ -493,6 +542,9 @@ export default function QRHub({ role }: QRHubProps) {
                       )}
                       <button onClick={() => openDetails(batch)} title="View Batch" style={{ width: 32, height: 32, borderRadius: 8, border: 'none', background: C.red + '18', color: C.red, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Eye size={15} />
+                      </button>
+                      <button onClick={() => shareBatch(batch)} title="Share Batch" style={{ width: 32, height: 32, borderRadius: 8, border: 'none', background: '#DCFCE7', color: '#15803D', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Share2 size={15} />
                       </button>
                       {permissions.canEdit && (
                         <button onClick={() => openEdit(batch)} title="Edit Batch" style={{ width: 32, height: 32, borderRadius: 8, border: 'none', background: '#F5F3FF', color: '#7C3AED', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -721,8 +773,8 @@ export default function QRHub({ role }: QRHubProps) {
           <div style={{ background: C.card, borderRadius: 18, width: 820, maxWidth: '96vw', maxHeight: '88vh', overflow: 'hidden', border: `1px solid ${C.border}`, boxShadow: '0 25px 70px rgba(0,0,0,0.25)' }} onClick={e => e.stopPropagation()}>
             <div style={{ padding: '20px 24px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
-                <div style={{ fontSize: 18, fontWeight: 900, color: C.text }}>Batch {getBatchLabel(selectedBatch)}</div>
-                <div style={{ fontSize: 12, color: C.muted, marginTop: 3 }}>{selectedBatch.productName} | {selectedBatch.qty} QR codes | {selectedBatch.points} points</div>
+                <div style={{ fontSize: 18, fontWeight: 900, color: C.text }}>{detailsUsedOnly ? 'Used QR Codes' : 'Batch'} {getBatchLabel(selectedBatch)}</div>
+                <div style={{ fontSize: 12, color: C.muted, marginTop: 3 }}>{selectedBatch.productName} | {detailsUsedOnly ? `${selectedBatch.usedQty ?? 0} used` : `${selectedBatch.qty} QR codes`} | {selectedBatch.points} points</div>
               </div>
               <button onClick={() => setSelectedBatch(null)} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, width: 34, height: 34, cursor: 'pointer', color: C.muted }}>x</button>
             </div>
@@ -745,7 +797,8 @@ export default function QRHub({ role }: QRHubProps) {
                         <td style={{ padding: '12px 14px', fontSize: 12, color: qr.isScanned ? '#B45309' : '#047857', fontWeight: 800 }}>{qr.isScanned ? 'Used' : 'Active'}</td>
                         <td style={{ padding: '12px 14px', fontSize: 12, color: C.text }}>{formatISTDateTime(qr.createdAt ?? selectedBatch.generatedDate)}</td>
                         <td style={{ padding: '12px 14px', fontSize: 12, color: C.muted }}>
-                          {getRedeemerLabel(qr) || '-'}
+                          {getRedeemerLabel(qr) || qr.firstScan?.userName || '-'}
+                          {qr.firstScan?.scannedAt && <div style={{ marginTop: 3 }}>{formatISTDateTime(qr.firstScan.scannedAt)}</div>}
                         </td>
                       </tr>
                     ))}

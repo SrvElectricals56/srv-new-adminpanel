@@ -137,8 +137,6 @@ const STAFF_PRELOAD_PAGES = [
 const isPageAllowedForRole = (role: AdminRole, pageId?: string) =>
   role !== 'staff' || STAFF_ALLOWED_PAGES.has(pageId || 'dashboard');
 
-const SESSION_TIMEOUT_MS = 20 * 60 * 1000;
-const SESSION_ACTIVITY_KEY = 'srv_admin_last_activity';
 const ADMIN_PAGE_STATE_KEY = 'srv_admin_current_page';
 
 type AdminPageState = {
@@ -358,56 +356,6 @@ export default function Home() {
     setCounterBoySubPage(undefined);
     setProductCategoryFilter(undefined);
   }, [active, loggedIn, role]);
-
-  useEffect(() => {
-    if (!loggedIn) return;
-
-    let timeoutId = 0;
-    let lastActivityWrite = 0;
-    const markActivity = () => {
-      const now = Date.now();
-      if (now - lastActivityWrite > 5_000) {
-        localStorage.setItem(SESSION_ACTIVITY_KEY, String(now));
-        lastActivityWrite = now;
-      }
-      window.clearTimeout(timeoutId);
-      timeoutId = window.setTimeout(() => {
-        logout();
-        setActive('dashboard');
-      }, SESSION_TIMEOUT_MS);
-    };
-
-    const checkSession = () => {
-      const lastActivity = Number(localStorage.getItem(SESSION_ACTIVITY_KEY) || Date.now());
-      if (Date.now() - lastActivity >= SESSION_TIMEOUT_MS) {
-        logout();
-        setActive('dashboard');
-      }
-    };
-
-    const activityEvents: Array<keyof WindowEventMap> = [
-      'click',
-      'keydown',
-      'mousemove',
-      'scroll',
-      'touchstart',
-      'focus',
-    ];
-
-    markActivity();
-    const intervalId = window.setInterval(checkSession, 30_000);
-    activityEvents.forEach(eventName => {
-      window.addEventListener(eventName, markActivity, { passive: true });
-    });
-
-    return () => {
-      window.clearTimeout(timeoutId);
-      window.clearInterval(intervalId);
-      activityEvents.forEach(eventName => {
-        window.removeEventListener(eventName, markActivity);
-      });
-    };
-  }, [loggedIn, logout]);
 
   useEffect(() => {
     if (!loggedIn) return;

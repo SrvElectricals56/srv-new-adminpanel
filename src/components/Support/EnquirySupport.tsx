@@ -1,9 +1,10 @@
 ﻿'use client';
 import { useState, useEffect } from 'react';
-import { MessageCircle, Search, Filter, Send, X, Clock, CheckCircle, AlertCircle, User, Phone, Mail, Calendar, Image as ImageIcon } from 'lucide-react';
+import { MessageCircle, Search, Send, X, User, Phone, Mail, Calendar, Image as ImageIcon, Pencil, Trash2, Save } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { formatISTDateTime, formatISTDate, formatISTDateTimeFull } from '@/lib/dateIST';
 import { supportApi } from '@/lib/api';
+import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 
 const API_ORIGIN = process.env.NEXT_PUBLIC_API_URL!.replace(/\/api\/v1\/?$/, '');
 const normalizePhotoUrl = (value?: string | null) => {
@@ -37,6 +38,7 @@ interface Reply {
   senderName: string;
   message: string;
   timestamp: string;
+  editedAt?: string;
 }
 
 export default function EnquirySupport() {
@@ -50,6 +52,8 @@ export default function EnquirySupport() {
   const [replyMessage, setReplyMessage] = useState('');
   const [showReplyBox, setShowReplyBox] = useState(false);
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
+  const [editingReply, setEditingReply] = useState<{ id: string; message: string } | null>(null);
+  const [deletingReplyId, setDeletingReplyId] = useState<string | null>(null);
 
   const loadEnquiries = async () => {
     try {
@@ -70,7 +74,7 @@ export default function EnquirySupport() {
         subject: e.subject ?? '',
         message: e.message ?? '',
         category: e.category ?? 'General',
-        status: e.status ?? 'pending',
+        status: e.status === 'open' ? 'pending' : e.status === 'in_progress' ? 'in-progress' : (e.status ?? 'pending'),
         priority: e.priority ?? 'medium',
         createdAt: e.createdAt ?? e.created_at ?? new Date().toISOString(),
         updatedAt: e.updatedAt ?? e.updated_at ?? new Date().toISOString(),
@@ -125,6 +129,41 @@ export default function EnquirySupport() {
     }
   };
 
+  const handleEditReply = async () => {
+    if (!selectedEnquiry || !editingReply?.message.trim()) return;
+    try {
+      await supportApi.updateReply(selectedEnquiry.id, editingReply.id, editingReply.message.trim());
+      const update = (enquiry: Enquiry): Enquiry => ({
+        ...enquiry,
+        replies: enquiry.replies.map(reply => reply.id === editingReply.id
+          ? { ...reply, message: editingReply.message.trim(), editedAt: new Date().toISOString() }
+          : reply),
+      });
+      setEnquiries(previous => previous.map(enquiry => enquiry.id === selectedEnquiry.id ? update(enquiry) : enquiry));
+      setSelectedEnquiry(update(selectedEnquiry));
+      setEditingReply(null);
+    } catch (error) {
+      console.error('Failed to edit reply:', error);
+    }
+  };
+
+  const handleDeleteReply = async () => {
+    if (!selectedEnquiry || !deletingReplyId) return;
+    try {
+      await supportApi.deleteReply(selectedEnquiry.id, deletingReplyId);
+      const update = (enquiry: Enquiry): Enquiry => ({
+        ...enquiry,
+        replies: enquiry.replies.filter(reply => reply.id !== deletingReplyId),
+      });
+      setEnquiries(previous => previous.map(enquiry => enquiry.id === selectedEnquiry.id ? update(enquiry) : enquiry));
+      setSelectedEnquiry(update(selectedEnquiry));
+    } catch (error) {
+      console.error('Failed to delete reply:', error);
+    } finally {
+      setDeletingReplyId(null);
+    }
+  };
+
   const filteredEnquiries = enquiries.filter(enq => {
     const matchesSearch = enq.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          enq.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -171,6 +210,15 @@ export default function EnquirySupport() {
 
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1600 }}>
+      <ConfirmDialog
+        show={deletingReplyId !== null}
+        title="Delete Reply"
+        message="Delete this reply permanently?"
+        confirmText="Delete Reply"
+        type="danger"
+        onConfirm={handleDeleteReply}
+        onCancel={() => setDeletingReplyId(null)}
+      />
       {/* Header */}
       <div style={{ background: 'linear-gradient(135deg, #7C3AED, #5B21B6)', borderRadius: 16, padding: '24px 28px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -368,12 +416,28 @@ export default function EnquirySupport() {
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 2 }}>{reply.senderName}</div>
-                      <div style={{ fontSize: 11, color: C.muted }}>{formatISTDateTimeFull(reply.timestamp)}</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>{formatISTDateTimeFull(reply.timestamp)}{reply.editedAt ? ' · edited' : ''}</div>
                     </div>
+                    {reply.sender === 'admin' && (
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button onClick={() => setEditingReply({ id: reply.id, message: reply.message })} title="Edit reply" style={{ width: 30, height: 30, border: 'none', borderRadius: 8, background: '#EFF6FF', color: '#1D4ED8', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><Pencil size={13} /></button>
+                        <button onClick={() => setDeletingReplyId(reply.id)} title="Delete reply" style={{ width: 30, height: 30, border: 'none', borderRadius: 8, background: '#FEE2E2', color: '#B91C1C', cursor: 'pointer', display: 'grid', placeItems: 'center' }}><Trash2 size={13} /></button>
+                      </div>
+                    )}
                   </div>
-                  <div style={{ marginLeft: 46, padding: '12px 16px', background: reply.sender === 'admin' ? '#F3E8FF' : C.bg, borderRadius: 10, fontSize: 13, color: C.text, lineHeight: 1.6 }}>
-                    {reply.message}
-                  </div>
+                  {editingReply?.id === reply.id ? (
+                    <div style={{ marginLeft: 46 }}>
+                      <textarea value={editingReply.message} onChange={event => setEditingReply({ ...editingReply, message: event.target.value })} style={{ ...inp, minHeight: 90, resize: 'vertical', fontFamily: 'inherit' }} />
+                      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                        <button onClick={handleEditReply} disabled={!editingReply.message.trim()} style={{ border: 'none', borderRadius: 8, background: '#2563EB', color: '#fff', padding: '8px 12px', fontSize: 12, fontWeight: 800, cursor: 'pointer', display: 'flex', gap: 6, alignItems: 'center' }}><Save size={13} /> Save</button>
+                        <button onClick={() => setEditingReply(null)} style={{ border: `1px solid ${C.border}`, borderRadius: 8, background: C.bg, color: C.text, padding: '8px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ marginLeft: 46, padding: '12px 16px', background: reply.sender === 'admin' ? '#F3E8FF' : C.bg, borderRadius: 10, fontSize: 13, color: C.text, lineHeight: 1.6 }}>
+                      {reply.message}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

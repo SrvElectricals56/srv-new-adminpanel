@@ -259,6 +259,12 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
   const [search, setSearch] = useState('');
   const [productStats, setProductStats] = useState({ total: 0, active: 0, totalScanned: 0, lowStock: 0 });
   const [dbCategories, setDbCategories] = useState<string[]>(CATEGORIES_FALLBACK);
+  const [categoryRows, setCategoryRows] = useState<any[]>([]);
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
+  const [categoryDeleteTarget, setCategoryDeleteTarget] = useState<any | null>(null);
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterStock, setFilterStock] = useState('all');
+  const [filterBadge, setFilterBadge] = useState('all');
   
   // â”€â”€ Server-side pagination state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [currentPage, setCurrentPage] = useState(1);
@@ -300,6 +306,9 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
       };
       if (filterCat !== 'All') params.category = filterCat;
       if (searchQuery.trim()) params.search = searchQuery.trim();
+      if (filterStatus !== 'all') params.isActive = String(filterStatus === 'active');
+      if (filterStock !== 'all') params.stockStatus = filterStock;
+      if (filterBadge !== 'all') params.badge = filterBadge;
 
       const res = await productApi.getAll(params);
       const products = (Array.isArray(res) ? res : (res as { data?: Record<string, unknown>[] }).data ?? []) as Record<string, unknown>[];
@@ -321,7 +330,12 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
           .filter((c: any) => c?.isActive !== false)
           .map((c: any) => String(c?.label ?? c?.name ?? '').trim())
           .filter(Boolean);
-        const uniqueCats = Array.from(new Set([...masterCats, ...productCats, ...CATEGORIES_FALLBACK]))
+        setCategoryRows(Array.isArray(categoryRows) ? categoryRows : []);
+        const uniqueCats = Array.from(new Set([
+          ...masterCats,
+          ...productCats,
+          ...(masterCats.length ? [] : CATEGORIES_FALLBACK),
+        ]))
           .sort((a, b) => a.localeCompare(b));
         setDbCategories(uniqueCats);
       }
@@ -352,7 +366,7 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
       void loadProducts(1, search);
     }, search.trim() ? 300 : 0);
     return () => window.clearTimeout(timer);
-  }, [filterCat, search]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [filterBadge, filterCat, filterStatus, filterStock, search]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (initialCategory) {
@@ -360,9 +374,6 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
       onCategoryUsed?.();
     }
   }, [initialCategory]);
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [filterStock, setFilterStock] = useState('all');
-  const [filterBadge, setFilterBadge] = useState('all');
   const [showFilterPopup, setShowFilterPopup] = useState(false);
   const [viewing, setViewing] = useState<Product | null>(null);
   const [editing, setEditing] = useState<Product | null | undefined>(undefined);
@@ -389,7 +400,7 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
     const matchSearch = p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q) || (p.sku || '').toLowerCase().includes(q) || (p.sku || '').replace(/^SRV-/i, '').toLowerCase().includes(q) || (p.sub || '').toLowerCase().includes(q);
     const matchCat = filterCat === 'All' || p.category === filterCat;
     const matchStatus = filterStatus === 'all' || (filterStatus === 'active' ? p.isActive : !p.isActive);
-    const matchStock = filterStock === 'all' || (filterStock === 'low' ? p.stock < 500 : filterStock === 'out' ? p.stock === 0 : p.stock >= 500);
+    const matchStock = filterStock === 'all' || (filterStock === 'low' ? p.stock > 0 && p.stock < 500 : filterStock === 'out' ? p.stock === 0 : p.stock > 0);
     const matchBadge = filterBadge === 'all' || p.badge === filterBadge;
     return matchSearch && matchCat && matchStatus && matchStock && matchBadge;
   });
@@ -514,6 +525,20 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
     }
   };
 
+  const confirmCategoryDelete = async () => {
+    if (!categoryDeleteTarget) return;
+    try {
+      await productCategoryApi.delete(String(categoryDeleteTarget.id));
+      setCategoryRows(prev => prev.filter(category => category.id !== categoryDeleteTarget.id));
+      setDbCategories(prev => prev.filter(category => category !== (categoryDeleteTarget.label ?? categoryDeleteTarget.name)));
+      setAlertDialog({ show: true, title: 'Category Deleted', message: `"${categoryDeleteTarget.label ?? categoryDeleteTarget.name}" was deleted.`, type: 'success' });
+    } catch (error: any) {
+      setAlertDialog({ show: true, title: 'Category Delete Failed', message: error?.message || 'Unable to delete this category.', type: 'error' });
+    } finally {
+      setCategoryDeleteTarget(null);
+    }
+  };
+
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
       {viewing && <ProductModal product={viewing} onClose={() => setViewing(null)} onEdit={() => { setEditing(viewing); setViewing(null); }} canEdit={canEdit} />}
@@ -529,6 +554,36 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
         cancelText="Cancel"
         type="danger"
       />
+      <ConfirmDialog
+        show={categoryDeleteTarget !== null}
+        title="Delete Product Category"
+        message={`Delete "${categoryDeleteTarget?.label ?? categoryDeleteTarget?.name ?? ''}"? Products already assigned to it will keep their category value.`}
+        onConfirm={confirmCategoryDelete}
+        onCancel={() => setCategoryDeleteTarget(null)}
+        confirmText="Delete Category"
+        cancelText="Cancel"
+        type="danger"
+      />
+
+      {showCategoryManager && (
+        <div onClick={() => setShowCategoryManager(false)} style={{ position: 'fixed', inset: 0, zIndex: 1200, background: 'rgba(15,23,42,0.55)', display: 'grid', placeItems: 'center', padding: 20 }}>
+          <div onClick={event => event.stopPropagation()} style={{ width: 520, maxWidth: '95vw', maxHeight: '80vh', overflow: 'hidden', background: C.card, borderRadius: 18, border: `1px solid ${C.border}`, boxShadow: '0 25px 70px rgba(0,0,0,.25)' }}>
+            <div style={{ padding: '18px 20px', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div><div style={{ fontSize: 17, fontWeight: 900, color: C.text }}>Manage Product Categories</div><div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Delete categories you no longer need.</div></div>
+              <button onClick={() => setShowCategoryManager(false)} style={{ width: 32, height: 32, border: 'none', borderRadius: 8, background: C.bg, color: C.text, cursor: 'pointer' }}><X size={16} /></button>
+            </div>
+            <div style={{ padding: 16, overflowY: 'auto', maxHeight: 'calc(80vh - 76px)', display: 'grid', gap: 8 }}>
+              {categoryRows.map(category => (
+                <div key={category.id} style={{ padding: '11px 12px', border: `1px solid ${C.border}`, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                  <div><div style={{ color: C.text, fontSize: 13, fontWeight: 800 }}>{category.label ?? category.name}</div><div style={{ color: C.muted, fontSize: 11 }}>{Number(category.productCount ?? 0)} products</div></div>
+                  <button onClick={() => setCategoryDeleteTarget(category)} title="Delete category" style={{ border: 'none', borderRadius: 8, background: '#FEE2E2', color: '#991B1B', width: 34, height: 34, display: 'grid', placeItems: 'center', cursor: 'pointer' }}><Trash2 size={15} /></button>
+                </div>
+              ))}
+              {!categoryRows.length && <div style={{ padding: 30, textAlign: 'center', color: C.muted }}>No saved categories found.</div>}
+            </div>
+          </div>
+        </div>
+      )}
 
       <AlertDialog
         show={alertDialog.show}
@@ -543,9 +598,12 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
           <h1 style={{ fontSize: 26, fontWeight: 800, color: C.text, marginBottom: 4 }}>Products</h1>
           <p style={{ color: C.muted, fontSize: 14 }}>Manage product catalog, points and stock levels</p>
         </div>
-        {canCreate && (
-          <button onClick={() => setShowAdd(true)} style={{ background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 12, padding: '11px 22px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)', display: 'flex', alignItems: 'center', gap: 6 }}><Plus size={14} /> Add Product</button>
-        )}
+        <div style={{ display: 'flex', gap: 10 }}>
+          {canDelete && <button onClick={() => setShowCategoryManager(true)} style={{ background: C.card, color: C.text, border: `1px solid ${C.border}`, borderRadius: 12, padding: '11px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}><Trash2 size={14} /> Manage Categories</button>}
+          {canCreate && (
+            <button onClick={() => setShowAdd(true)} style={{ background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 12, padding: '11px 22px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29,78,216,0.3)', display: 'flex', alignItems: 'center', gap: 6 }}><Plus size={14} /> Add Product</button>
+          )}
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 22 }}>
@@ -618,7 +676,7 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
                 <div style={{ padding: '20px 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                   {[
                     { label: 'Status', value: filterStatus, set: setFilterStatus, options: [['all','All Status'],['active','Active'],['inactive','Inactive']] },
-                    { label: 'Stock Level', value: filterStock, set: setFilterStock, options: [['all','All Stock'],['low','Low (<500)'],['out','Out of Stock'],['ok','In Stock']] },
+                    { label: 'Stock Level', value: filterStock, set: setFilterStock, options: [['all','All Stock'],['in_stock','In Stock (>0)'],['low','Low (1-499)'],['out','Out of Stock']] },
                     ...(uniqueBadges.length > 0 ? [{ label: 'Badge', value: filterBadge, set: setFilterBadge, options: [['all','All Badges'], ...uniqueBadges.map(b => [b, b])] }] : []),
                   ].map(f => (
                     <div key={f.label}>

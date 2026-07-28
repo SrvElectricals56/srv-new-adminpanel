@@ -518,11 +518,11 @@ export function PointsConfig({ role }: { role?: import('@/lib/types').AdminRole 
         <div style={{ textAlign: 'center', padding: 40, color: C.muted }}>Loading products...</div>
       ) : (
         <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, overflowX: 'auto', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', WebkitOverflowScrolling: 'touch' }}>
-          <table style={{ width: '100%', minWidth: 860, borderCollapse: 'collapse' }}>
+          <table style={{ width: '100%', minWidth: 920, borderCollapse: 'collapse', tableLayout: 'fixed' }}>
             <thead>
               <tr style={{ background: C.surface, borderBottom: `1px solid ${C.border}` }}>
                 {['Product', 'SKU', 'Category', 'Current Points', 'Set Points', 'Save'].map(h => (
-                  <th key={h} style={{ textAlign: 'left', padding: '12px 16px', fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em', width: h === 'SKU' ? 180 : undefined }}>{h}</th>
+                  <th key={h} style={{ textAlign: h === 'Current Points' || h === 'Set Points' || h === 'Save' ? 'center' : 'left', padding: '12px 16px', fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em', width: h === 'Product' ? 260 : h === 'SKU' ? 170 : h === 'Category' ? 150 : h === 'Save' ? 100 : 120 }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -536,7 +536,7 @@ export function PointsConfig({ role }: { role?: import('@/lib/types').AdminRole 
                     onMouseEnter={ev => (ev.currentTarget as HTMLTableRowElement).style.background = C.hoverRow}
                     onMouseLeave={ev => (ev.currentTarget as HTMLTableRowElement).style.background = 'transparent'}>
                     {/* Product name + image */}
-                    <td style={{ padding: '12px 16px' }}>
+                    <td style={{ padding: '12px 16px', textAlign: 'center', verticalAlign: 'middle' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         {p.image && (
                           <img src={p.image} alt={p.name} style={{ width: 36, height: 36, objectFit: 'contain', borderRadius: 8, background: '#f8f8f8', flexShrink: 0 }}
@@ -559,13 +559,13 @@ export function PointsConfig({ role }: { role?: import('@/lib/types').AdminRole 
                       <span style={{ fontSize: 12, color: C.muted, textTransform: 'capitalize' }}>{p.category}</span>
                     </td>
                     {/* Current points */}
-                    <td style={{ padding: '12px 16px' }}>
-                      <span style={{ background: '#FFFBEB', color: '#92400E', fontSize: 14, fontWeight: 900, padding: '4px 12px', borderRadius: 8 }}>
+                    <td style={{ padding: '12px 16px', textAlign: 'center', verticalAlign: 'middle' }}>
+                      <span style={{ background: '#FFFBEB', color: '#92400E', fontSize: 14, fontWeight: 900, padding: '5px 10px', borderRadius: 8, display: 'inline-flex', width: 76, justifyContent: 'center', alignItems: 'center', whiteSpace: 'nowrap', boxSizing: 'border-box' }}>
                         ⭐ {p.points}
                       </span>
                     </td>
                     {/* Edit points */}
-                    <td style={{ padding: '12px 16px' }}>
+                    <td style={{ padding: '12px 16px', textAlign: 'center', verticalAlign: 'middle' }}>
                       <input
                         type="number"
                         min={0}
@@ -576,7 +576,7 @@ export function PointsConfig({ role }: { role?: import('@/lib/types').AdminRole 
                       />
                     </td>
                     {/* Save */}
-                    <td style={{ padding: '12px 16px' }}>
+                    <td style={{ padding: '12px 16px', textAlign: 'center', verticalAlign: 'middle' }}>
                       <button
                         onClick={() => savePoints(p)}
                         disabled={!canEdit || saving === p.id || !changed}

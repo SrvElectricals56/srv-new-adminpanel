@@ -77,7 +77,7 @@ function OrderDetailModal({ order, onClose, C }: { order: ProductOrder; onClose:
       onMouseUp={() => { if (!mouseDownInside.current) onClose(); }}
     >
       <div
-        style={{ background: C.card, borderRadius: 20, width: 520, maxWidth: '95vw', boxShadow: '0 25px 70px rgba(0,0,0,0.25)', border: `1px solid ${C.border}` }}
+        style={{ background: C.card, borderRadius: 20, width: 720, maxWidth: '95vw', maxHeight: '90vh', overflow: 'hidden', boxShadow: '0 25px 70px rgba(0,0,0,0.25)', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column' }}
         onMouseDown={e => { e.stopPropagation(); mouseDownInside.current = true; }}
         onMouseUp={e => e.stopPropagation()}
       >
@@ -85,7 +85,7 @@ function OrderDetailModal({ order, onClose, C }: { order: ProductOrder; onClose:
           <div style={{ fontSize: 17, fontWeight: 800, color: C.text }}>Order #{order.orderCode ?? order.id.slice(0, 8)}</div>
           <button onClick={onClose} style={{ background: C.bg, border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontSize: 16, color: C.muted }}>✕</button>
         </div>
-        <div style={{ padding: 24 }}>
+        <div style={{ padding: 24, overflowY: 'auto', minHeight: 0 }}>
           <div style={{ display: 'flex', gap: 16, marginBottom: 20, alignItems: 'center' }}>
             <img src={order.productImage} alt={order.productName} style={{ width: 90, height: 90, objectFit: 'cover', borderRadius: 12, border: `2px solid ${C.border}` }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
             <div>
@@ -118,7 +118,7 @@ function OrderDetailModal({ order, onClose, C }: { order: ProductOrder; onClose:
             ].map(item => (
               <div key={item.label} style={{ background: C.bg, borderRadius: 10, padding: '12px 14px' }}>
                 <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>{item.label}</div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{item.value}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: C.text, overflowWrap: 'anywhere', whiteSpace: 'pre-wrap' }}>{item.value}</div>
               </div>
             ))}
           </div>
@@ -204,9 +204,17 @@ export default function ProductOrders({ role }: { role?: import('@/lib/types').A
 
   useEffect(() => {
     void loadData();
-    // Keep order activity aligned with app requests without requiring a page refresh.
-    const syncTimer = setInterval(() => void loadData(true), 1000);
-    return () => clearInterval(syncTimer);
+    // Refresh in the background at a sensible interval and whenever the admin
+    // returns to this tab. The old one-second poll caused avoidable API and DB load.
+    const syncTimer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void loadData(true);
+    }, 30_000);
+    const refreshOnFocus = () => void loadData(true);
+    window.addEventListener('focus', refreshOnFocus);
+    return () => {
+      window.clearInterval(syncTimer);
+      window.removeEventListener('focus', refreshOnFocus);
+    };
   }, [loadData]);
 
   const searchQuery = search.trim().toLowerCase();
