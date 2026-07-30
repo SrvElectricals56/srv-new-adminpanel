@@ -132,7 +132,7 @@ export default function ElectricianKYC() {
   const loadStats = useCallback(async () => {
     try {
       const statuses = ['verified', 'pending', 'rejected', 'not_submitted'] as const;
-      const results = await Promise.all(statuses.map(status => electricianApi.getAll({ page: '1', limit: '1', status })));
+      const results = await Promise.all(statuses.map(kycStatus => electricianApi.getAll({ page: '1', limit: '1', kycStatus })));
       setStatusCounts(Object.fromEntries(statuses.map((status, index) => [status, Number(results[index].total ?? 0)])) as typeof statusCounts);
     } catch (error) {
       console.error('Failed to load KYC status totals:', error);
@@ -145,7 +145,7 @@ export default function ElectricianKYC() {
     try {
       const params: Record<string, string> = { page: String(page), limit: String(PAGE_SIZE) };
       if (search.trim()) params.search = search.trim();
-      if (filterStatus !== 'all') params.status = filterStatus;
+      if (filterStatus !== 'all') params.kycStatus = filterStatus;
       const res = await electricianApi.getAll(params);
       if (requestId !== requestSequence.current) return;
       const data = Array.isArray(res) ? res : (res as any).data ?? [];
