@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ScanLine, QrCode, Scan, FileSpreadsheet } from 'lucide-react';
 import { dealerApi, electricianApi, scanApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
@@ -36,8 +36,10 @@ export default function ElectricianScanHistory() {
   const [showExport, setShowExport] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [userLoading, setUserLoading] = useState(false);
+  const requestSequence = useRef(0);
 
   const loadData = useCallback(async (page: number) => {
+    const requestId = ++requestSequence.current;
     setLoading(true);
     try {
       const params: Record<string, string> = {
@@ -51,6 +53,7 @@ export default function ElectricianScanHistory() {
       if (filterScanMode !== 'all') params.mode = filterScanMode;
 
       const res = await scanApi.getAll(params);
+      if (requestId !== requestSequence.current) return;
       const data = Array.isArray(res) ? res : (res as any).data ?? [];
       const total = Array.isArray(res) ? data.length : (res as any).total ?? data.length;
       const pts = Array.isArray(res) ? 0 : (res as any).totalPoints ?? 0;
@@ -75,16 +78,19 @@ export default function ElectricianScanHistory() {
       setTotalSingle(single);
       setTotalMulti(multi);
     } catch (e) {
-      console.error(e);
+      if (requestId === requestSequence.current) console.error(e);
     } finally {
-      setLoading(false);
+      if (requestId === requestSequence.current) setLoading(false);
     }
   }, [search, filterScanMode]);
 
   useEffect(() => {
-    setCurrentPage(1);
-    loadData(1);
-  }, [search, filterScanMode]);
+    const timer = window.setTimeout(() => {
+      setCurrentPage(1);
+      void loadData(1);
+    }, search.trim() ? 300 : 0);
+    return () => window.clearTimeout(timer);
+  }, [loadData, search]);
 
   const openUser = async (scan: ScanRecord) => {
     setUserLoading(true);

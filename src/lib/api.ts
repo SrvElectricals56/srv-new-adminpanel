@@ -339,6 +339,8 @@ export const dealerApi = {
   },
   getSubDealerElectricians: (id: string) =>
     request<{ data: any[]; total: number; phone: string }>(`/dealers/sub-dealers/${id}/electricians`),
+  deleteSubDealer: (id: string) =>
+    request<{ message: string; unlinkedElectricians: number }>(`/dealers/sub-dealers/${id}`, { method: 'DELETE' }),
   getTop: (params?: Record<string, string>) => {
     const q = params ? '?' + new URLSearchParams(params).toString() : '';
     return request<any[]>(`/dealers/top${q}`);

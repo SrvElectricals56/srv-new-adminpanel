@@ -8,6 +8,7 @@ import {
   FileSpreadsheet,
   Info,
   RefreshCcw,
+  Search,
   Sparkles,
   Store,
   TrendingUp,
@@ -444,6 +445,7 @@ export default function ProActiveInactiveHub() {
   const [showExport, setShowExport] = useState(false);
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
+  const [search, setSearch] = useState('');
   const [showCalendar, setShowCalendar] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(() => {
     const today = new Date();
@@ -533,12 +535,13 @@ export default function ProActiveInactiveHub() {
 
   useEffect(() => {
     setVisibleCount(CARD_RENDER_CHUNK);
-  }, [activeRole, activeBucket]);
+  }, [activeRole, activeBucket, search]);
 
   const roleMeta = ROLE_TABS.find((tab) => tab.id === activeRole) ?? ROLE_TABS[0];
   const RoleMetaIcon = roleMeta.Icon;
   const activeData = datasets[activeRole];
   const unfilteredBucketRows = useDeferredValue(activeData[activeBucket]);
+  const deferredSearch = useDeferredValue(search.trim().toLowerCase());
   const todayIso = toDateInput(new Date());
   const todayMonthIso = todayIso.slice(0, 7);
   const [calendarYear, calendarMonthNumber] = calendarMonth.split('-').map(Number);
@@ -556,6 +559,12 @@ export default function ProActiveInactiveHub() {
     }),
   ];
   const bucketRows = unfilteredBucketRows.filter((item) => {
+    if (deferredSearch) {
+      const searchable = [item.name, item.code, item.phone, item.location, item.status, item.reason, ...item.metrics]
+        .join(' ')
+        .toLowerCase();
+      if (!searchable.includes(deferredSearch)) return false;
+    }
     if (!fromDate && !toDate) return true;
     if (!item.activityDateIso) return false;
     if (fromDate && item.activityDateIso < fromDate) return false;
@@ -810,6 +819,21 @@ export default function ProActiveInactiveHub() {
               </button>
             );
           })}
+        </div>
+
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, boxShadow: C.shadow, padding: 14, marginBottom: 14 }}>
+          <div style={{ position: 'relative' }}>
+            <Search size={17} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: roleMeta.accent }} />
+            <input
+              value={search}
+              onChange={event => setSearch(event.target.value)}
+              placeholder={`Search ${activeBucket} ${roleMeta.label.toLowerCase()} by name, code, phone, location, status, or activity...`}
+              style={{ width: '100%', boxSizing: 'border-box', padding: '11px 40px', borderRadius: 11, border: `1.5px solid ${search ? roleMeta.accent : C.border}`, background: C.bg, color: C.text, outline: 'none', fontSize: 13.5 }}
+            />
+            {search ? (
+              <button onClick={() => setSearch('')} title="Clear search" style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', border: 0, background: 'transparent', color: C.muted, cursor: 'pointer', fontSize: 18 }}>×</button>
+            ) : null}
+          </div>
         </div>
 
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 18, boxShadow: C.shadow, overflow: 'hidden', marginBottom: 20 }}>

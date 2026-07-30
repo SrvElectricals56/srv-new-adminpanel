@@ -19,6 +19,7 @@ type RedemptionRecord = {
   amount?: number;
   status: string;
   upiId?: string | null;
+  upiQrCodeImage?: string | null;
   bankAccount?: string | null;
   ifsc?: string | null;
   accountHolderName?: string | null;
@@ -295,6 +296,12 @@ export default function RoleRedemptionRequestsPage({
                         {row.status === 'pending' ? (
                           <div style={{ display: 'flex', gap: 8 }}>
                             <button
+                              onClick={() => setViewItem(row)}
+                              style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: '7px 10px', cursor: 'pointer', color: C.muted, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                            >
+                              <Eye size={13} /> View
+                            </button>
+                            <button
                               onClick={() => void handleApprove(row)}
                               disabled={submittingId === row.id}
                               style={{ background: '#D1FAE5', color: '#065F46', border: 'none', borderRadius: 8, padding: '7px 12px', fontSize: 12, fontWeight: 700, cursor: submittingId === row.id ? 'wait' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}
@@ -360,6 +367,15 @@ export default function RoleRedemptionRequestsPage({
                         {value}
                       </div>
                     ))}
+                    {viewItem.upiQrCodeImage ? (
+                      <div style={{ background: C.card, borderRadius: 10, padding: 12 }}>
+                        <div style={{ color: C.muted, fontWeight: 700, fontSize: 13, marginBottom: 8 }}>UPI QR Code</div>
+                        <a href={viewItem.upiQrCodeImage} target="_blank" rel="noreferrer" title="Open full-size UPI QR code">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={viewItem.upiQrCodeImage} alt="UPI QR Code" style={{ width: 180, height: 180, objectFit: 'contain', background: '#fff', borderRadius: 10, border: `1px solid ${C.border}` }} />
+                        </a>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
 

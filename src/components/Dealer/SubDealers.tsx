@@ -1,9 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Plus, Search, Store, Users, MapPin, Phone } from 'lucide-react';
+import { Plus, Search, Store, Users, MapPin, Phone, Trash2 } from 'lucide-react';
 import { dealerApi, electricianApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
+import type { AdminRole } from '@/lib/types';
+import ConfirmDialog from '@/components/Shared/ConfirmDialog';
+import AlertDialog from '@/components/Shared/AlertDialog';
 
 type SubDealer = {
   id: string;
@@ -43,8 +46,9 @@ type AssociatedElectrician = {
   joinedDate?: string;
 };
 
-export default function SubDealers() {
+export default function SubDealers({ role }: { role: AdminRole }) {
   const C = useThemePalette();
+  const canDelete = role === 'super_admin';
   const [rows, setRows] = useState<SubDealer[]>([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
@@ -56,6 +60,9 @@ export default function SubDealers() {
   const [associatedError, setAssociatedError] = useState('');
   const [showAddElectrician, setShowAddElectrician] = useState(false);
   const [savingElectrician, setSavingElectrician] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<SubDealer | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [alertDialog, setAlertDialog] = useState<{ show: boolean; title: string; message: string; type: 'error' | 'success' }>({ show: false, title: '', message: '', type: 'success' });
   const [electricianForm, setElectricianForm] = useState({
     name: '',
     phone: '',
@@ -149,8 +156,51 @@ export default function SubDealers() {
     }
   };
 
+  const deleteSubDealer = async () => {
+    if (!deleteTarget || deleting) return;
+    setDeleting(true);
+    try {
+      const result = await dealerApi.deleteSubDealer(deleteTarget.id);
+      if (viewing?.id === deleteTarget.id) setViewing(null);
+      setDeleteTarget(null);
+      await load();
+      setAlertDialog({
+        show: true,
+        title: 'Sub Dealer Deleted',
+        message: `${result.unlinkedElectricians} associated electrician account${result.unlinkedElectricians === 1 ? ' was' : 's were'} preserved and unlinked.`,
+        type: 'success',
+      });
+    } catch (error) {
+      setAlertDialog({
+        show: true,
+        title: 'Delete Failed',
+        message: error instanceof Error ? error.message : 'Unable to delete sub dealer.',
+        type: 'error',
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div style={{ padding: 24, color: C.text }}>
+      <ConfirmDialog
+        show={deleteTarget !== null}
+        title="Delete Sub Dealer"
+        message={`Delete ${deleteTarget?.name || 'this sub dealer'} (${deleteTarget?.identifier || ''})? Associated electrician accounts will be preserved but unlinked from this unregistered dealer.`}
+        confirmText={deleting ? 'Deleting...' : 'Delete'}
+        cancelText="Cancel"
+        type="danger"
+        onConfirm={() => void deleteSubDealer()}
+        onCancel={() => { if (!deleting) setDeleteTarget(null); }}
+      />
+      <AlertDialog
+        show={alertDialog.show}
+        title={alertDialog.title}
+        message={alertDialog.message}
+        type={alertDialog.type}
+        onClose={() => setAlertDialog(current => ({ ...current, show: false }))}
+      />
       {viewing && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={() => setViewing(null)}>
           <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, width: 1080, maxWidth: '96vw', maxHeight: '88vh', overflow: 'hidden', boxShadow: '0 25px 70px rgba(0,0,0,0.25)' }} onClick={event => event.stopPropagation()}>
@@ -295,7 +345,7 @@ export default function SubDealers() {
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 850 }}>
               <thead>
                 <tr style={{ background: C.surface, color: C.muted, textAlign: 'left' }}>
-                  {['Dealer Name', 'Role', 'Phone / Dealer Code', 'District / Pincode', 'Electricians', 'First Seen', 'Last Seen'].map((head) => (
+                  {['Dealer Name', 'Role', 'Phone / Dealer Code', 'District / Pincode', 'Electricians', 'First Seen', 'Last Seen', 'Actions'].map((head) => (
                     <th key={head} style={{ padding: '13px 16px', fontSize: 12, fontWeight: 700 }}>{head}</th>
                   ))}
                 </tr>
@@ -310,6 +360,17 @@ export default function SubDealers() {
                     <td style={{ padding: 16, fontWeight: 700 }}><button onClick={(event) => { event.stopPropagation(); openAssociatedElectricians(row); }} style={{ border: 0, borderRadius: 999, background: C.accentSoft, color: C.accentText, padding: '6px 12px', fontWeight: 800, cursor: 'pointer' }}>View {row.electricianCount}</button></td>
                     <td style={{ padding: 16, color: C.muted, fontSize: 13 }}>{date(row.firstSeenAt)}</td>
                     <td style={{ padding: 16, color: C.muted, fontSize: 13 }}>{date(row.lastSeenAt)}</td>
+                    <td style={{ padding: 16 }}>
+                      {canDelete ? (
+                        <button
+                          onClick={(event) => { event.stopPropagation(); setDeleteTarget(row); }}
+                          title="Delete sub dealer"
+                          style={{ border: 0, borderRadius: 8, background: '#FEE2E2', color: '#991B1B', width: 34, height: 34, display: 'grid', placeItems: 'center', cursor: 'pointer' }}
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      ) : <span style={{ color: C.muted, fontSize: 12 }}>View only</span>}
+                    </td>
                   </tr>
                 ))}
               </tbody>

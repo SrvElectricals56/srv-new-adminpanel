@@ -656,7 +656,7 @@ export default function Home() {
       case 'pro-active-inactive': return <ProActiveInactiveHub />;
       case 'electricians': return <ElectricianHub role={role} defaultPage={electricianSubPage} onSubPageChange={(sp) => { showRouteLoader(); setElectricianSubPage(sp); }} />;
       case 'dealers': return <DealerHub role={role} defaultPage={dealerSubPage} onSubPageChange={(sp) => { showRouteLoader(); setDealerSubPage(sp); }} />;
-      case 'sub-dealers': return <SubDealers />;
+      case 'sub-dealers': return <SubDealers role={role} />;
       case 'app-users': return <AppUserHub key={`app-users-${appUserSubPage ?? 'users'}`} role={role} defaultPage={appUserSubPage} onSubPageChange={(sp) => { showRouteLoader(); setAppUserSubPage(sp); }} />;
       case 'counterboys': return <CounterBoyHub key={`counterboys-${counterBoySubPage ?? 'counterboys'}`} role={role} defaultPage={counterBoySubPage} onSubPageChange={(sp) => { showRouteLoader(); setCounterBoySubPage(sp); }} />;
       case 'products': return <Products role={role} initialCategory={productCategoryFilter} onCategoryUsed={() => setProductCategoryFilter(undefined)} />;

@@ -6,6 +6,18 @@
 const IST_LOCALE = 'en-IN';
 const IST_TZ = 'Asia/Kolkata';
 
+/** "2025-06-15" in IST, safe for API date filters regardless of browser timezone. */
+export function formatISTDateInput(date: Date): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    timeZone: IST_TZ,
+  }).formatToParts(date);
+  const value = (type: Intl.DateTimeFormatPartTypes) => parts.find(part => part.type === type)?.value ?? '';
+  return `${value('year')}-${value('month')}-${value('day')}`;
+}
+
 /** "15 Jun, 02:30 PM" — used in scan history, wallet transactions */
 export function formatISTDateTime(iso?: string | null): string {
   if (!iso) return '';

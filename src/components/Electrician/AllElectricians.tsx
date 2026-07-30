@@ -15,7 +15,7 @@ import SearchableSelect from '@/components/Shared/SearchableSelect';
 import PasswordInputField from '@/components/Shared/PasswordInputField';
 import CustomerActivityPanel from '@/components/Shared/CustomerActivityPanel';
 import { I } from '@/lib/iconMap';
-import { formatISTDate, formatISTDateTime } from '@/lib/dateIST';
+import { formatISTDate, formatISTDateInput, formatISTDateTime } from '@/lib/dateIST';
 
 interface ElectriciansProps {
   role: AdminRole;
@@ -603,22 +603,22 @@ export default function Electricians({ role }: ElectriciansProps) {
       // Date filter → convert to dateFrom / dateTo
       if (dateFilter !== 'all') {
         const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const today = formatISTDateInput(now);
         if (dateFilter === 'today') {
-          params.dateFrom = today.toISOString().split('T')[0];
-          params.dateTo   = today.toISOString().split('T')[0];
+          params.dateFrom = today;
+          params.dateTo   = today;
         } else if (dateFilter === 'yesterday') {
-          const y = new Date(today); y.setDate(y.getDate() - 1);
-          params.dateFrom = y.toISOString().split('T')[0];
-          params.dateTo   = y.toISOString().split('T')[0];
+          const y = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+          params.dateFrom = formatISTDateInput(y);
+          params.dateTo   = formatISTDateInput(y);
         } else if (dateFilter === 'week') {
-          const w = new Date(today); w.setDate(w.getDate() - 7);
-          params.dateFrom = w.toISOString().split('T')[0];
-          params.dateTo   = today.toISOString().split('T')[0];
+          const w = new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000);
+          params.dateFrom = formatISTDateInput(w);
+          params.dateTo   = today;
         } else if (dateFilter === 'month') {
-          const m = new Date(today); m.setDate(m.getDate() - 30);
-          params.dateFrom = m.toISOString().split('T')[0];
-          params.dateTo   = today.toISOString().split('T')[0];
+          const m = new Date(now.getTime() - 29 * 24 * 60 * 60 * 1000);
+          params.dateFrom = formatISTDateInput(m);
+          params.dateTo   = today;
         } else if (dateFilter === 'custom' && customDateRange.from && customDateRange.to) {
           params.dateFrom = customDateRange.from;
           params.dateTo   = customDateRange.to;

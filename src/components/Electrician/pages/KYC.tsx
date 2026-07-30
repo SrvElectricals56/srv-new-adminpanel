@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { FileCheck, Eye, Check, X, Search, Upload, ImageIcon, Pencil, Trash2, FileSpreadsheet } from 'lucide-react';
 import { electricianApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
@@ -13,14 +13,13 @@ interface ElectricianKYCItem {
   electricianCode: string;
   kycStatus: 'not_submitted' | 'pending' | 'verified' | 'rejected';
   aadharNumber?: string;
-  panNumber?: string;
   aadharFrontImage?: string;
-  panDocument?: string;
-  gstDocument?: string;
   kycRejectionReason?: string;
   joinedDate: string;
   updatedAt?: string;
 }
+
+const PAGE_SIZE = 50;
 
 function ImageUploadBox({ label, value, onChange, C }: { label: string; value?: string; onChange: (v: string) => void; C: any }) {
   const ref = useRef<HTMLInputElement>(null);
@@ -64,10 +63,7 @@ function DocThumb({ src, C }: { src?: string; C: any }) {
 function EditKYCModal({ doc, onClose, onSave, C }: { doc: ElectricianKYCItem; onClose: () => void; onSave: (data: Partial<ElectricianKYCItem>) => void; C: any }) {
   const [form, setForm] = useState<Partial<ElectricianKYCItem>>({
     aadharNumber: doc.aadharNumber ?? '',
-    panNumber: doc.panNumber ?? '',
     aadharFrontImage: doc.aadharFrontImage ?? '',
-    panDocument: doc.panDocument ?? '',
-    gstDocument: doc.gstDocument ?? '',
     kycStatus: doc.kycStatus,
     kycRejectionReason: doc.kycRejectionReason ?? '',
   });
@@ -86,20 +82,12 @@ function EditKYCModal({ doc, onClose, onSave, C }: { doc: ElectricianKYCItem; on
           <button onClick={onClose} style={{ background: C.bg, border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontSize: 16 }}>✕</button>
         </div>
         <div style={{ padding: 24, display: 'grid', gap: 16 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-            <div>
-              <label style={labelStyle}>Aadhar Number</label>
-              <input style={inputStyle} value={form.aadharNumber ?? ''} maxLength={12} onChange={e => { if (/^\d*$/.test(e.target.value)) f('aadharNumber', e.target.value); }} placeholder="12-digit Aadhar" />
-            </div>
-            <div>
-              <label style={labelStyle}>PAN Number</label>
-              <input style={inputStyle} value={form.panNumber ?? ''} maxLength={10} onChange={e => f('panNumber', e.target.value.toUpperCase())} placeholder="ABCDE1234F" />
-            </div>
+          <div>
+            <label style={labelStyle}>Aadhar Number</label>
+            <input style={inputStyle} value={form.aadharNumber ?? ''} maxLength={12} onChange={e => { if (/^\d*$/.test(e.target.value)) f('aadharNumber', e.target.value); }} placeholder="12-digit Aadhar" />
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
+          <div>
             <ImageUploadBox label="Aadhar Card" value={form.aadharFrontImage} onChange={v => f('aadharFrontImage', v)} C={C} />
-            <ImageUploadBox label="PAN Document" value={form.panDocument} onChange={v => f('panDocument', v)} C={C} />
-            <ImageUploadBox label="GST Document" value={form.gstDocument} onChange={v => f('gstDocument', v)} C={C} />
           </div>
           <div>
             <label style={labelStyle}>KYC Status</label>
@@ -135,10 +123,31 @@ export default function ElectricianKYC() {
   const [selectedDoc, setSelectedDoc] = useState<ElectricianKYCItem | null>(null);
   const [editingDoc, setEditingDoc] = useState<ElectricianKYCItem | null>(null);
   const [showExport, setShowExport] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [statusCounts, setStatusCounts] = useState({ verified: 0, pending: 0, rejected: 0, not_submitted: 0 });
+  const requestSequence = useRef(0);
   const [confirmState, setConfirmState] = useState<{ show: boolean; title: string; message: string; onConfirm: () => void; type: 'success' | 'danger' }>({ show: false, title: '', message: '', onConfirm: () => {}, type: 'success' });
 
-  useEffect(() => {
-    electricianApi.getAll({ limit: '10000' }).then(res => {
+  const loadStats = useCallback(async () => {
+    try {
+      const statuses = ['verified', 'pending', 'rejected', 'not_submitted'] as const;
+      const results = await Promise.all(statuses.map(status => electricianApi.getAll({ page: '1', limit: '1', status })));
+      setStatusCounts(Object.fromEntries(statuses.map((status, index) => [status, Number(results[index].total ?? 0)])) as typeof statusCounts);
+    } catch (error) {
+      console.error('Failed to load KYC status totals:', error);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const loadDocuments = useCallback(async (page: number) => {
+    const requestId = ++requestSequence.current;
+    setLoading(true);
+    try {
+      const params: Record<string, string> = { page: String(page), limit: String(PAGE_SIZE) };
+      if (search.trim()) params.search = search.trim();
+      if (filterStatus !== 'all') params.status = filterStatus;
+      const res = await electricianApi.getAll(params);
+      if (requestId !== requestSequence.current) return;
       const data = Array.isArray(res) ? res : (res as any).data ?? [];
 
       // Normalize any LAN IP in image URLs to localhost for admin browser
@@ -152,35 +161,40 @@ export default function ElectricianKYC() {
 
       setDocuments(data.map((e: any) => ({
         id: e.id,
-        name: e.name,
-        phone: e.phone,
-        electricianCode: e.electricianCode,
+        name: String(e.name ?? ''),
+        phone: String(e.phone ?? ''),
+        electricianCode: String(e.electricianCode ?? ''),
         kycStatus: e.kycStatus ?? 'not_submitted',
         aadharNumber: e.aadharNumber,
-        panNumber: e.panNumber,
         aadharFrontImage: normalizeUrl(e.aadharFrontImage),
-        panDocument: normalizeUrl(e.panDocument),
-        gstDocument: normalizeUrl(e.gstDocument),
         kycRejectionReason: e.kycRejectionReason,
         joinedDate: e.joinedDate,
         updatedAt: e.updatedAt,
       })));
-    }).catch(console.error).finally(() => setLoading(false));
-  }, []);
+      setTotalCount(Array.isArray(res) ? data.length : Number((res as any).total ?? data.length));
+    } catch (error) {
+      if (requestId === requestSequence.current) console.error('Failed to load electrician KYC:', error);
+    } finally {
+      if (requestId === requestSequence.current) setLoading(false);
+    }
+  }, [filterStatus, search]);
 
-  const filtered = documents.filter(k => {
-    const matchSearch = !search ||
-      k.name.toLowerCase().includes(search.toLowerCase()) ||
-      k.electricianCode.toLowerCase().includes(search.toLowerCase()) ||
-      (k.phone && k.phone.includes(search));
-    const matchStatus = filterStatus === 'all' || k.kycStatus === filterStatus;
-    return matchSearch && matchStatus;
-  });
+  useEffect(() => {
+    void loadStats();
+  }, [loadStats]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setCurrentPage(1);
+      void loadDocuments(1);
+    }, search.trim() ? 300 : 0);
+    return () => window.clearTimeout(timer);
+  }, [loadDocuments, search]);
 
   // Sort: pending first (latest resubmit on top), then rejected, not_submitted, verified last
   // Within same status: most recently updated first
   const STATUS_ORDER: Record<string, number> = { pending: 0, rejected: 1, not_submitted: 2, verified: 3 };
-  const sorted = [...filtered].sort((a, b) => {
+  const sorted = [...documents].sort((a, b) => {
     const diff = (STATUS_ORDER[a.kycStatus] ?? 2) - (STATUS_ORDER[b.kycStatus] ?? 2);
     if (diff !== 0) return diff;
     const aTime = new Date(a.updatedAt || a.joinedDate).getTime();
@@ -197,6 +211,7 @@ export default function ElectricianKYC() {
         try {
           await electricianApi.update(doc.id, { kycStatus: 'verified', kycRejectionReason: null });
           setDocuments(prev => prev.map(d => d.id === doc.id ? { ...d, kycStatus: 'verified', kycRejectionReason: undefined } : d));
+          void loadStats();
         } catch (err) { console.error(err); }
         setConfirmState(s => ({ ...s, show: false }));
       }
@@ -218,6 +233,7 @@ export default function ElectricianKYC() {
         try {
           await electricianApi.update(doc.id, { kycStatus: 'rejected', kycRejectionReason: reason.trim() });
           setDocuments(prev => prev.map(d => d.id === doc.id ? { ...d, kycStatus: 'rejected', kycRejectionReason: reason.trim() } : d));
+          void loadStats();
         } catch (err) { console.error(err); }
         setConfirmState(s => ({ ...s, show: false }));
       }
@@ -230,30 +246,30 @@ export default function ElectricianKYC() {
       await electricianApi.update(editingDoc.id, data);
       setDocuments(prev => prev.map(d => d.id === editingDoc.id ? { ...d, ...data } : d));
       setEditingDoc(null);
+      void loadStats();
     } catch (err) { console.error(err); }
   };
 
   const handleDelete = (doc: ElectricianKYCItem) => {
     setConfirmState({
       show: true, title: 'Delete KYC Data',
-      message: `Delete KYC data for ${doc.name}? This will clear all documents and reset KYC status.`,
+      message: `Delete Aadhar KYC data for ${doc.name}? This will clear the uploaded Aadhar document and reset KYC status.`,
       type: 'danger',
       onConfirm: async () => {
         try {
           await electricianApi.update(doc.id, {
             kycStatus: 'not_submitted',
-            aadharNumber: null, panNumber: null,
+            aadharNumber: null,
             aadharFrontImage: null, aadharBackImage: null,
-            panDocument: null, gstDocument: null,
             kycRejectionReason: null,
           });
           setDocuments(prev => prev.map(d => d.id === doc.id ? {
             ...d, kycStatus: 'not_submitted',
-            aadharNumber: undefined, panNumber: undefined,
+            aadharNumber: undefined,
             aadharFrontImage: undefined, aadharBackImage: undefined,
-            panDocument: undefined, gstDocument: undefined,
             kycRejectionReason: undefined,
           } : d));
+          void loadStats();
         } catch (err) { console.error(err); }
         setConfirmState(s => ({ ...s, show: false }));
       }
@@ -268,13 +284,19 @@ export default function ElectricianKYC() {
   };
 
   const stats = [
-    { label: 'Total', value: documents.length, color: '#3B82F6', bg: '#EFF6FF', filter: 'all' },
-    { label: 'Verified', value: documents.filter(d => d.kycStatus === 'verified').length, color: '#10B981', bg: '#D1FAE5', filter: 'verified' },
-    { label: 'Pending', value: documents.filter(d => d.kycStatus === 'pending').length, color: '#F59E0B', bg: '#FFFBEB', filter: 'pending' },
-    { label: 'Rejected', value: documents.filter(d => d.kycStatus === 'rejected').length, color: '#EF4444', bg: '#FEE2E2', filter: 'rejected' },
+    { label: 'Total', value: Object.values(statusCounts).reduce((sum, value) => sum + value, 0), color: '#3B82F6', bg: '#EFF6FF', filter: 'all' },
+    { label: 'Verified', value: statusCounts.verified, color: '#10B981', bg: '#D1FAE5', filter: 'verified' },
+    { label: 'Pending', value: statusCounts.pending, color: '#F59E0B', bg: '#FFFBEB', filter: 'pending' },
+    { label: 'Rejected', value: statusCounts.rejected, color: '#EF4444', bg: '#FEE2E2', filter: 'rejected' },
   ];
 
   const inputStyle: React.CSSProperties = { width: '100%', padding: '9px 12px', border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 13.5, outline: 'none', background: C.surface, color: C.text, boxSizing: 'border-box' };
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const goToPage = (page: number) => {
+    const nextPage = Math.min(totalPages, Math.max(1, page));
+    setCurrentPage(nextPage);
+    void loadDocuments(nextPage);
+  };
 
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
@@ -288,7 +310,7 @@ export default function ElectricianKYC() {
         </div>
         <button onClick={() => setShowExport(true)} style={{ background: C.red, color: 'white', border: 'none', borderRadius: 10, padding: '10px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}><FileSpreadsheet size={14} /> Export</button>
       </div>
-      <ExportModal show={showExport} onClose={() => setShowExport(false)} title="Electrician KYC" fileName="electrician-kyc" getData={() => documents.map(d => ({ Name: d.name, Code: d.electricianCode, KYCStatus: d.kycStatus, Aadhar: d.aadharNumber ?? '', PAN: d.panNumber ?? '' }))} />
+      <ExportModal show={showExport} onClose={() => setShowExport(false)} title="Electrician KYC" fileName="electrician-kyc" getData={() => documents.map(d => ({ Name: d.name, Code: d.electricianCode, KYCStatus: d.kycStatus, Aadhar: d.aadharNumber ?? '' }))} />
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 24 }}>
         {stats.map((s, i) => (
@@ -323,7 +345,7 @@ export default function ElectricianKYC() {
           <option value="rejected">Rejected</option>
           <option value="not_submitted">Not Submitted</option>
         </select>
-        <span style={{ fontSize: 13, color: C.muted, marginLeft: 'auto' }}>{filtered.length} results</span>
+        <span style={{ fontSize: 13, color: C.muted, marginLeft: 'auto' }}>{documents.length} shown of {totalCount.toLocaleString('en-IN')} results</span>
       </div>
 
       <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
@@ -331,14 +353,14 @@ export default function ElectricianKYC() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: C.bg, borderBottom: `1px solid ${C.border}` }}>
-                {['Electrician', 'Code', 'Aadhar', 'PAN Doc', 'GST Doc', 'KYC Status', 'Actions'].map(h => (
-                  <th key={h} style={{ padding: '14px 16px', textAlign: ['Aadhar','PAN Doc','GST Doc'].includes(h) ? 'center' : 'left', fontSize: 12, fontWeight: 700, color: C.muted, textTransform: 'uppercase' }}>{h}</th>
+                {['Electrician', 'Code', 'Aadhar', 'KYC Status', 'Actions'].map(h => (
+                  <th key={h} style={{ padding: '14px 16px', textAlign: h === 'Aadhar' ? 'center' : 'left', fontSize: 12, fontWeight: 700, color: C.muted, textTransform: 'uppercase' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
-                <tr><td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: C.muted }}>No electricians found</td></tr>
+              {documents.length === 0 ? (
+                <tr><td colSpan={5} style={{ padding: '40px', textAlign: 'center', color: C.muted }}>No electricians found</td></tr>
               ) : sorted.map(doc => {
                 const status = statusConfig[doc.kycStatus] ?? statusConfig['not_submitted'];
                 return (
@@ -346,8 +368,6 @@ export default function ElectricianKYC() {
                     <td style={{ padding: '13px 16px' }}><div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{doc.name}</div></td>
                     <td style={{ padding: '13px 16px', fontSize: 12, color: C.muted, fontFamily: 'monospace' }}>{doc.electricianCode}</td>
                     <td style={{ padding: '13px 16px', textAlign: 'center' }}><DocThumb src={doc.aadharFrontImage} C={C} /></td>
-                    <td style={{ padding: '13px 16px', textAlign: 'center' }}><DocThumb src={doc.panDocument} C={C} /></td>
-                    <td style={{ padding: '13px 16px', textAlign: 'center' }}><DocThumb src={doc.gstDocument} C={C} /></td>
                     <td style={{ padding: '13px 16px', textAlign: 'center' }}><span style={{ background: status.bg, color: status.color, fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20 }}>{status.label}</span></td>
                     <td style={{ padding: '13px 16px' }}>
                       <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
@@ -370,6 +390,16 @@ export default function ElectricianKYC() {
         )}
       </div>
 
+      {totalPages > 1 && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 14, padding: '12px 16px', background: C.card, borderRadius: 12, border: `1px solid ${C.border}` }}>
+          <span style={{ fontSize: 13, color: C.muted }}>Page <strong style={{ color: C.text }}>{currentPage}</strong> of <strong style={{ color: C.text }}>{totalPages}</strong></span>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1} style={{ padding: '7px 14px', borderRadius: 8, border: `1px solid ${C.border}`, background: currentPage === 1 ? C.bg : C.card, color: currentPage === 1 ? C.muted : C.text, cursor: currentPage === 1 ? 'not-allowed' : 'pointer', fontWeight: 700 }}>Previous</button>
+            <button onClick={() => goToPage(currentPage + 1)} disabled={currentPage >= totalPages} style={{ padding: '7px 14px', borderRadius: 8, border: `1px solid ${C.border}`, background: currentPage >= totalPages ? C.bg : C.card, color: currentPage >= totalPages ? C.muted : C.text, cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer', fontWeight: 700 }}>Next</button>
+          </div>
+        </div>
+      )}
+
       {selectedDoc && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={() => setSelectedDoc(null)}>
           <div style={{ background: C.card, borderRadius: 16, width: 580, maxWidth: '95vw', boxShadow: '0 25px 70px rgba(0,0,0,0.2)', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
@@ -378,11 +408,11 @@ export default function ElectricianKYC() {
               <button onClick={() => setSelectedDoc(null)} style={{ background: C.bg, border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontSize: 16 }}>✕</button>
             </div>
             <div style={{ padding: 22, display: 'grid', gap: 10 }}>
-              {[['Code', selectedDoc.electricianCode], ['KYC Status', selectedDoc.kycStatus], ['Aadhar Number', selectedDoc.aadharNumber || '—'], ['PAN Number', selectedDoc.panNumber || '—'], ['Rejection Reason', selectedDoc.kycRejectionReason || '—']].map(([k, v]) => (
+              {[['Code', selectedDoc.electricianCode], ['KYC Status', selectedDoc.kycStatus], ['Aadhar Number', selectedDoc.aadharNumber || '—'], ['Rejection Reason', selectedDoc.kycRejectionReason || '—']].map(([k, v]) => (
                 <div key={k} style={{ background: C.bg, borderRadius: 10, padding: 12, fontSize: 13 }}><strong>{k}:</strong> {v}</div>
               ))}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginTop: 4 }}>
-                {[['Aadhar', selectedDoc.aadharFrontImage], ['PAN', selectedDoc.panDocument], ['GST', selectedDoc.gstDocument]].map(([label, src]) => (
+              <div style={{ marginTop: 4 }}>
+                {[['Aadhar', selectedDoc.aadharFrontImage]].map(([label, src]) => (
                   <div key={label}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: C.muted, marginBottom: 8, textTransform: 'uppercase' }}>{label}</div>
                     {src ? <img src={src} alt={label} style={{ width: '100%', borderRadius: 10, border: `1px solid ${C.border}` }} /> : <div style={{ height: 80, background: C.bg, borderRadius: 10, border: `1px dashed ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.muted, fontSize: 12 }}>No image</div>}
