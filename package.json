@@ -15,7 +15,7 @@
     "jsqr": "^1.4.0",
     "jszip": "^3.10.1",
     "lucide-react": "^1.8.0",
-    "next": "16.2.11",
+    "next": "16.3.0",
     "officegen": "^0.6.5",
     "qrcode": "^1.5.4",
     "react": "19.2.4",
@@ -31,12 +31,21 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.2.9",
+    "eslint-config-next": "16.3.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   },
   "overrides": {
-    "postcss": "8.5.12",
+    "minimatch@3.1.5": {
+      "brace-expansion": "1.1.18"
+    },
+    "minimatch@5.1.9": {
+      "brace-expansion": "2.1.4"
+    },
+    "minimatch@10.2.5": {
+      "brace-expansion": "5.0.9"
+    },
+    "postcss": "8.5.26",
     "sharp": "$sharp"
   }
 }
