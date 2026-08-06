@@ -10,6 +10,7 @@ import { I } from '@/lib/iconMap';
 interface AppConfig {
   // App Info
   appName: string; tagline: string; appVersion: string; minAppVersion: string;
+  iosUpdateAvailable: boolean; androidUpdateMessage: string; iosUpdateMessage: string; iosReviewMaintenanceMessage: string;
   // Maintenance
   maintenanceMode: boolean; maintenanceMessage: string;
   // Support
@@ -46,6 +47,10 @@ interface AppConfig {
 
 const INITIAL: AppConfig = {
   appName: 'SRV Electricals', tagline: 'Power Your Rewards', appVersion: '2.1.0', minAppVersion: '2.0.0',
+  iosUpdateAvailable: false,
+  androidUpdateMessage: 'A newer version of SRV Electricals is available with important improvements. Please update to continue.',
+  iosUpdateMessage: 'A newer version of SRV Electricals is available on the App Store. Please update to continue.',
+  iosReviewMaintenanceMessage: 'SRV Electricals for iOS is temporarily under maintenance while the latest version is being prepared. Please try again soon.',
   maintenanceMode: false, maintenanceMessage: 'App is under maintenance. Please try again later.',
   supportPhone: '+91 88376 84004', supportEmail: 'info@srvelectricals.com', whatsappNumber: '918837684004',
   maxPointsPerDay: 500, minRedemptionPoints: 500, pointsExpiry: 365, cashbackRate: 5, referrerBonus: 500, refereeBonus: 250,
@@ -383,11 +388,28 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
               <div style={{ padding: '16px', background: C.bg, borderRadius: 12, border: `1px solid ${C.border}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Force Update</div>
-                    <div style={{ fontSize: 12, color: C.muted }}>Force users to update to minimum version</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Android Force Update</div>
+                    <div style={{ fontSize: 12, color: C.muted }}>Keep the Google Play update screen for Android users below the minimum version</div>
                   </div>
                   <Toggle value={config.forceUpdate} onChange={v => f('forceUpdate', v)} />
                 </div>
+                {config.forceUpdate && (
+                  <div><label style={lbl}>Android Update Message</label><input style={inp} value={config.androidUpdateMessage} onChange={e => f('androidUpdateMessage', e.target.value)} /></div>
+                )}
+              </div>
+              <div style={{ padding: '16px', background: config.iosUpdateAvailable ? '#ECFDF5' : '#FFF7ED', borderRadius: 12, border: `1px solid ${config.iosUpdateAvailable ? '#A7F3D0' : '#FED7AA'}` }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>iOS Update Available on App Store</div>
+                    <div style={{ fontSize: 12, color: C.muted }}>{config.iosUpdateAvailable ? 'iOS users below the minimum version see the App Store update screen' : 'Apple review pending: iOS users below the minimum version see maintenance instead'}</div>
+                  </div>
+                  <Toggle value={config.iosUpdateAvailable} onChange={v => f('iosUpdateAvailable', v)} />
+                </div>
+                {config.iosUpdateAvailable ? (
+                  <div><label style={lbl}>iOS Update Message</label><input style={inp} value={config.iosUpdateMessage} onChange={e => f('iosUpdateMessage', e.target.value)} /></div>
+                ) : (
+                  <div><label style={lbl}>iOS Review Maintenance Message</label><input style={inp} value={config.iosReviewMaintenanceMessage} onChange={e => f('iosReviewMaintenanceMessage', e.target.value)} /></div>
+                )}
               </div>
               <div style={{ padding: '16px', background: config.maintenanceMode ? '#FEF2F2' : C.bg, borderRadius: 12, border: `1px solid ${config.maintenanceMode ? '#FCA5A5' : C.border}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
