@@ -6,6 +6,7 @@ import { formatISTDateTime, formatISTDate, formatISTDateTimeFull } from '@/lib/d
 import type { AdminRole } from '@/lib/types';
 import { productApi, qrCodeApi } from '@/lib/api';
 import AlertDialog from '@/components/Shared/AlertDialog';
+import { buildQrExcelData, groupQrExcelItemsByBatch } from '@/lib/qrExcel';
 
 let qrCodeLibraryPromise: Promise<typeof import('qrcode')> | null = null;
 const loadQrCodeLibrary = () => {
@@ -25,6 +26,10 @@ interface GeneratedQR {
   qrData: string; // base64 image
   generatedAt: string;
   status: 'active' | 'used';
+  batchId: string;
+  batchNo: number | string;
+  productCategory?: string;
+  productSubCategory?: string;
 }
 
 export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
@@ -160,6 +165,10 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
                 qrData,
                 generatedAt: qr.createdAt || new Date().toISOString(),
                 status: 'active' as const,
+                batchId: String((result as any).batchId),
+                batchNo: (result as any).batchNo,
+                productCategory: product.category,
+                productSubCategory: product.subCategory,
               };
             })
           );
@@ -178,6 +187,10 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
             qrData: '', // empty — will be generated on download
             generatedAt: qr.createdAt || new Date().toISOString(),
             status: 'active' as const,
+            batchId: String((result as any).batchId),
+            batchNo: (result as any).batchNo,
+            productCategory: product.category,
+            productSubCategory: product.subCategory,
           });
         }
       }
@@ -255,6 +268,45 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
     return result;
   };
 
+  const appendQrExcelWorksheets = (
+    XLSX: typeof import('xlsx'),
+    workbook: ReturnType<typeof XLSX.utils.book_new>,
+    qrs: GeneratedQR[],
+  ) => {
+    const batches = groupQrExcelItemsByBatch(qrs);
+    batches.forEach((batch, batchIndex) => {
+      const { headers, rows, qrColumnCount } = buildQrExcelData(batch);
+      const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+      worksheet['!cols'] = [
+        { wch: 10 },
+        { wch: 28 },
+        { wch: 10 },
+        { wch: 12 },
+        { wch: 14 },
+        ...Array.from({ length: qrColumnCount }, () => ({ wch: 36 })),
+      ];
+      const rawSheetName = batches.length === 1
+        ? 'QR Codes'
+        : `Batch ${batch[0]?.batchNo ?? batchIndex + 1}`;
+      XLSX.utils.book_append_sheet(
+        workbook,
+        worksheet,
+        rawSheetName.replace(/[\\/?*\[\]:]/g, ' ').slice(0, 31),
+      );
+    });
+  };
+
+  const saveBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   // ── Download All as ZIP (PNG images + Excel) ──────────────────────
   const downloadZip = async () => {
     if (!generatedQRs.length) return;
@@ -278,24 +330,8 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
       });
 
       // 2. Excel file inside zip
-      const wsData = [
-        ['QR ID', 'Product Name', 'SKU Code', 'Points', 'Generated At', 'Status'],
-        ...resolved.map(q => [
-          q.id,
-          q.productName,
-          q.productId,
-          q.points,
-          formatISTDateTime(q.generatedAt),
-          q.status,
-        ]),
-      ];
-      const ws = XLSX.utils.aoa_to_sheet(wsData);
-      ws['!cols'] = [
-        { wch: 36 }, { wch: 28 }, { wch: 18 },
-        { wch: 8 },  { wch: 22 }, { wch: 10 },
-      ];
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'QR Codes');
+      appendQrExcelWorksheets(XLSX, wb, resolved);
       const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
       zip.file('QR_Codes_Data.xlsx', excelBuffer);
 
@@ -349,34 +385,24 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
     if (!generatedQRs.length) return;
     setDownloading('excel');
     try {
-      const XLSX = await import('xlsx');
-      const wsData = [
-        ['QR ID', 'Product Name', 'SKU Code', 'Points', 'Generated At', 'Status'],
-        ...generatedQRs.map(q => [
-          q.id,
-          q.productName,
-          q.productId,
-          q.points,
-          formatISTDateTime(q.generatedAt),
-          q.status,
-        ]),
-      ];
-      const ws = XLSX.utils.aoa_to_sheet(wsData);
-      // Set column widths
-      ws['!cols'] = [
-        { wch: 36 }, // QR ID
-        { wch: 28 }, // Product Name
-        { wch: 18 }, // Product ID
-        { wch: 8 },  // Points
-        { wch: 22 }, // Generated At
-        { wch: 10 }, // Status
-      ];
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'QR Codes');
-      XLSX.writeFile(wb, `QR_Codes_${Date.now()}.xlsx`);
-      await recordQrDownload(generatedQRs, 'excel');
+      const batches = groupQrExcelItemsByBatch(generatedQRs);
+      let downloadHistoryRecordedByBackend = false;
+      if (batches.length === 1 && batches[0][0]?.batchId) {
+        const { blob, filename } = await qrCodeApi.downloadBatchExcel(batches[0][0].batchId);
+        saveBlob(blob, filename);
+        downloadHistoryRecordedByBackend = true;
+      } else {
+        const XLSX = await import('xlsx');
+        const workbook = XLSX.utils.book_new();
+        appendQrExcelWorksheets(XLSX, workbook, generatedQRs);
+        XLSX.writeFile(workbook, `QR_Codes_${Date.now()}.xlsx`);
+      }
+      if (!downloadHistoryRecordedByBackend) {
+        await recordQrDownload(generatedQRs, 'excel');
+      }
     } catch (err) {
       console.error('Excel error:', err);
+      setAlertDialog({ show: true, title: 'Excel Download Failed', message: err instanceof Error ? err.message : 'Unable to download QR Excel file.', type: 'error' });
     }
     setDownloading(null);
   };
