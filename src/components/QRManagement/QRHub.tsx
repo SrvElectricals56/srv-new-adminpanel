@@ -81,6 +81,7 @@ export default function QRHub({ role }: QRHubProps) {
   const [exportTitle, setExportTitle] = useState('QR Hub');
   const [exportFileName, setExportFileName] = useState('qr-hub');
   const [exportRows, setExportRows] = useState<object[]>([]);
+  const [exportBatch, setExportBatch] = useState<QRBatch | null>(null);
   const [historyRows, setHistoryRows] = useState<any[]>([]);
   const [historySearch, setHistorySearch] = useState('');
   const [historyFromDate, setHistoryFromDate] = useState('');
@@ -303,6 +304,7 @@ export default function QRHub({ role }: QRHubProps) {
   };
 
   const openHubExport = () => {
+    setExportBatch(null);
     setExportTitle('QR Hub');
     setExportFileName('qr-hub');
     setExportRows(getHubExportRows());
@@ -325,17 +327,43 @@ export default function QRHub({ role }: QRHubProps) {
         setAlertDialog({
           show: true,
           title: 'Large Batch Export Limited',
-          message: `This batch has ${batch.qty.toLocaleString('en-IN')} QR codes. The admin UI exports the first ${BATCH_EXPORT_MAX_ROWS.toLocaleString('en-IN')} rows to keep the browser responsive. Use a server-side export job for the full batch.`,
+          message: `This batch has ${batch.qty.toLocaleString('en-IN')} QR codes. Excel downloads the full batch from the server using 2 columns, or 4 columns for 3x3/4x3 modular boxes. CSV, PDF, and ZIP are limited to the first ${BATCH_EXPORT_MAX_ROWS.toLocaleString('en-IN')} rows.`,
           type: 'info',
         });
       }
       setExportTitle(`QR Batch ${getBatchLabel(batch)}`);
       setExportFileName(`qr-batch-${getBatchLabel(batch)}`);
       setExportRows(rows);
+      setExportBatch(batch);
       setShowExport(true);
-      void recordBatchDownload(batch, 'batch_export', rows.length || batch.qty);
     } catch (err: any) {
       setAlertDialog({ show: true, title: 'Export Failed', message: err.message || 'Unable to prepare batch export.', type: 'error' });
+    }
+  };
+
+  const downloadBatchExcel = async () => {
+    if (!exportBatch) return;
+    try {
+      const { blob, filename } = await qrCodeApi.downloadBatchExcel(exportBatch.batchId);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      if (canViewHistory) {
+        void loadDownloadHistory(1, historySearch, historyFromDate, historyToDate);
+      }
+    } catch (error: any) {
+      setAlertDialog({
+        show: true,
+        title: 'Excel Download Failed',
+        message: error?.message || 'Unable to download the QR batch Excel file.',
+        type: 'error',
+      });
+      throw error;
     }
   };
 
@@ -845,7 +873,19 @@ export default function QRHub({ role }: QRHubProps) {
         </div>
       )}
 
-      <ExportModal show={showExport} onClose={() => setShowExport(false)} title={exportTitle} fileName={exportFileName} getData={() => exportRows} />
+      <ExportModal
+        show={showExport}
+        onClose={() => { setShowExport(false); setExportBatch(null); }}
+        title={exportTitle}
+        fileName={exportFileName}
+        getData={() => exportRows}
+        onExcelExport={exportBatch ? downloadBatchExcel : undefined}
+        onExportComplete={exportBatch ? async (format) => {
+          if (format !== 'excel') {
+            await recordBatchDownload(exportBatch, `batch_${format}`, exportRows.length || exportBatch.qty);
+          }
+        } : undefined}
+      />
 
       <ConfirmDialog
         show={deleteConfirm.show}

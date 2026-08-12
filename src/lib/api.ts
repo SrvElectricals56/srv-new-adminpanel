@@ -437,6 +437,48 @@ export const qrCodeApi = {
     const q = params ? '?' + new URLSearchParams(params).toString() : '';
     return request<{ data: any[]; total: number; page: number; limit: number; totalPages: number }>(`/qr-codes/download-history${q}`);
   },
+  downloadBatchExcel: async (batchId: string) => {
+    const path = `/qr-codes/batches/${encodeURIComponent(batchId)}/export-excel`;
+
+    const download = async (retried = false): Promise<{ blob: Blob; filename: string }> => {
+      const token = getToken();
+      const headers: Record<string, string> = {};
+      if (token) headers.Authorization = `Bearer ${token}`;
+      const res = await fetch(`${BASE_URL}${path}`, {
+        method: 'GET',
+        headers,
+        cache: 'no-store',
+      });
+
+      if (res.status === 401 && !retried) {
+        const nextToken = await refreshAccessToken();
+        if (nextToken) return download(true);
+      }
+
+      if (!res.ok) {
+        const rawText = await res.text().catch(() => '');
+        let message = res.statusText || 'Excel download failed';
+        try {
+          const parsed = rawText ? JSON.parse(rawText) : null;
+          if (parsed?.message) message = parsed.message;
+        } catch {
+          if (rawText) message = rawText;
+        }
+        throw new ApiError(res.status, message);
+      }
+
+      const disposition = res.headers.get('content-disposition') ?? '';
+      const encodedName = disposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1];
+      const quotedName = disposition.match(/filename="([^"]+)"/i)?.[1];
+      const filename = encodedName
+        ? decodeURIComponent(encodedName)
+        : quotedName || `QR-Codes-${batchId}.xlsx`;
+
+      return { blob: await res.blob(), filename };
+    };
+
+    return download();
+  },
   scanLookup: (qrCode: string) =>
     request<any>('/qr-codes/scan-lookup', { method: 'POST', body: JSON.stringify({ qrCode }) }),
 };

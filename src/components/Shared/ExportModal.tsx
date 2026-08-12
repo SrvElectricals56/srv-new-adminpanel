@@ -10,9 +10,11 @@ interface ExportModalProps {
   title: string;
   getData: () => object[];
   fileName: string;
+  onExcelExport?: () => Promise<void> | void;
+  onExportComplete?: (format: 'excel' | 'csv' | 'pdf' | 'zip') => Promise<void> | void;
 }
 
-export default function ExportModal({ show, onClose, title, getData, fileName }: ExportModalProps) {
+export default function ExportModal({ show, onClose, title, getData, fileName, onExcelExport, onExportComplete }: ExportModalProps) {
   const C = useThemePalette();
   const [exporting, setExporting] = useState<string | null>(null);
   const mouseDownInside = React.useRef(false);
@@ -21,16 +23,21 @@ export default function ExportModal({ show, onClose, title, getData, fileName }:
 
   const handleExport = async (format: 'excel' | 'csv' | 'pdf' | 'zip') => {
     const rows = getData();
-    if (!rows.length) return;
+    if (format !== 'excel' && !rows.length) return;
+    if (format === 'excel' && !onExcelExport && !rows.length) return;
     setExporting(format);
 
     try {
       const dateTag = new Date().toISOString().slice(0, 10);
       const name = `${fileName}-${dateTag}`;
-      const keys = Object.keys(rows[0]);
+      const keys = rows.length ? Object.keys(rows[0]) : [];
 
       if (format === 'excel') {
-        exportRowsToExcel(rows, title, name);
+        if (onExcelExport) {
+          await onExcelExport();
+        } else {
+          exportRowsToExcel(rows, title, name);
+        }
 
       } else if (format === 'csv') {
         const esc = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`;
@@ -77,6 +84,7 @@ export default function ExportModal({ show, onClose, title, getData, fileName }:
         a.href = URL.createObjectURL(blob); a.download = `${name}.zip`;
         document.body.appendChild(a); a.click(); document.body.removeChild(a);
       }
+      await onExportComplete?.(format);
     } catch (err) {
       console.error('Export error:', err);
     }
