@@ -6,7 +6,7 @@ import { formatISTDateTime, formatISTDate, formatISTDateTimeFull } from '@/lib/d
 import type { AdminRole } from '@/lib/types';
 import { productApi, qrCodeApi } from '@/lib/api';
 import AlertDialog from '@/components/Shared/AlertDialog';
-import { buildQrExcelData, groupQrExcelItemsByBatch } from '@/lib/qrExcel';
+import { buildQrCsvData, buildQrExcelData, groupQrExcelItemsByBatch } from '@/lib/qrExcel';
 
 let qrCodeLibraryPromise: Promise<typeof import('qrcode')> | null = null;
 const loadQrCodeLibrary = () => {
@@ -362,11 +362,11 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
     if (!generatedQRs.length) return;
     setDownloading('csv');
     const escape = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
-    const header = ['QR ID', 'Product Name', 'SKU Code', 'Points', 'Generated At', 'Status'].map(escape).join(',');
-    const rows = generatedQRs.map(q =>
-      [q.id, q.productName, q.productId, q.points, formatISTDateTime(q.generatedAt), q.status].map(escape).join(',')
-    );
-    const csv = '\uFEFF' + [header, ...rows].join('\r\n'); // BOM for Excel UTF-8
+    const { headers, rows } = buildQrCsvData(generatedQRs);
+    const csv = '\uFEFF' + [
+      headers.map(escape).join(','),
+      ...rows.map(row => row.map(escape).join(',')),
+    ].join('\r\n'); // BOM for Excel UTF-8
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

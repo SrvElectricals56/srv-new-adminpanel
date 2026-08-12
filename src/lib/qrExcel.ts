@@ -64,3 +64,27 @@ export function groupQrExcelItemsByBatch<T extends QrExcelItem>(items: T[]): T[]
   });
   return [...batches.values()];
 }
+
+export function buildQrCsvData(items: QrExcelItem[]): {
+  headers: string[];
+  rows: Array<Array<string | number>>;
+} {
+  const batchData = groupQrExcelItemsByBatch(items).map(buildQrExcelData);
+  const maxQrColumnCount = batchData.reduce<2 | 4>(
+    (maximum, data) => data.qrColumnCount > maximum ? data.qrColumnCount : maximum,
+    2,
+  );
+  const headers = [
+    'ID',
+    'Product Name',
+    'Points',
+    'Status',
+    'Batch No.',
+    ...Array.from({ length: maxQrColumnCount }, (_, index) => `QR Code ${index + 1}`),
+  ];
+  const rows = batchData.flatMap(data => data.rows.map(row => [
+    ...row,
+    ...Array.from({ length: maxQrColumnCount - data.qrColumnCount }, () => ''),
+  ]));
+  return { headers, rows };
+}
