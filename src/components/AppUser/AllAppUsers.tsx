@@ -410,6 +410,7 @@ export default function AllAppUsers({ role }: AllAppUsersProps) {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [appStatusFilter, setAppStatusFilter] = useState('');
   const [stateFilter, setStateFilter] = useState('');
@@ -434,30 +435,41 @@ export default function AllAppUsers({ role }: AllAppUsersProps) {
   const LIMIT = 20;
   const sanitizeOptions = (values: string[]) => Array.from(new Set(values.map(value => value.trim()).filter(value => value && value !== '?'))).sort((a, b) => a.localeCompare(b));
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => window.clearTimeout(timer);
+  }, [search]);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const params: Record<string, string> = { page: String(page), limit: String(LIMIT) };
-      if (search) params.search = search;
+      if (debouncedSearch) params.search = debouncedSearch;
       if (statusFilter) params.status = statusFilter;
       if (appStatusFilter) params.appInstalled = appStatusFilter;
       if (stateFilter) params.state = stateFilter;
       if (cityFilter) params.city = cityFilter;
-      const [res, statesRes, citiesRes] = await Promise.all([
-        appUserApi.getAll(params),
-        appUserApi.getDistinctStates(),
-        appUserApi.getDistinctCities(stateFilter ? { state: stateFilter } : undefined),
-      ]);
+      const res = await appUserApi.getAll(params);
       setUsers(res.data ?? []);
       setTotal(res.total ?? 0);
-      setAllStates(sanitizeOptions(statesRes.states ?? []));
-      setAllCities(sanitizeOptions(citiesRes.cities ?? []));
     } catch {
       setAlert({ show: true, type: 'error', title: 'Error', message: 'Failed to load customers' });
     } finally {
       setLoading(false);
     }
-  }, [appStatusFilter, cityFilter, page, search, stateFilter, statusFilter]);
+  }, [appStatusFilter, cityFilter, debouncedSearch, page, stateFilter, statusFilter]);
+
+  useEffect(() => {
+    void appUserApi.getDistinctStates()
+      .then(result => setAllStates(sanitizeOptions(result.states ?? [])))
+      .catch(() => setAllStates([]));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    void appUserApi.getDistinctCities(stateFilter ? { state: stateFilter } : undefined)
+      .then(result => setAllCities(sanitizeOptions(result.cities ?? [])))
+      .catch(() => setAllCities([]));
+  }, [stateFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (cityFilter && !allCities.includes(cityFilter)) {

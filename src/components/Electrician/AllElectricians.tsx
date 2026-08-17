@@ -1,6 +1,6 @@
 ﻿'use client';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { FileSpreadsheet, Plus, Users, Star, ScanLine, Wallet, Trash2, SlidersHorizontal, Calendar, Medal, Award, Trophy, Gem } from 'lucide-react';
+import { FileSpreadsheet, Plus, Users, Star, ScanLine, Wallet, Trash2, SlidersHorizontal, Calendar, Medal, Award, Trophy, Gem, Smartphone } from 'lucide-react';
 import { electricianApi, dealerApi } from '@/lib/api';
 import type { Electrician, MemberTier, UserStatus, AdminRole } from '@/lib/types';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
@@ -15,7 +15,7 @@ import SearchableSelect from '@/components/Shared/SearchableSelect';
 import PasswordInputField from '@/components/Shared/PasswordInputField';
 import CustomerActivityPanel from '@/components/Shared/CustomerActivityPanel';
 import { I } from '@/lib/iconMap';
-import { formatISTDate, formatISTDateInput, formatISTDateTime } from '@/lib/dateIST';
+import { formatISTDate, formatISTDateTime, getISTDatePresetRange } from '@/lib/dateIST';
 
 interface ElectriciansProps {
   role: AdminRole;
@@ -305,7 +305,7 @@ function EditModal({ el, onClose, onSave, dealers = [] }: { el: Electrician | nu
     return {
       name: '', profileImage: '', phone: '', email: '', city: '', state: '', district: '',
       electricianCode: '',
-      tier: 'Silver', status: 'active', dealerId: '', dealerName: '', bankLinked: false,
+      tier: 'Silver', status: 'inactive', dealerId: '', dealerName: '', bankLinked: false,
       upiId: '', walletBalance: 0, totalPoints: 0, totalScans: 0, totalRedemptions: 0,
       recentActivity: 'Just joined', joinedDate: new Date().toISOString().split('T')[0],
     };
@@ -539,6 +539,7 @@ export default function Electricians({ role }: ElectriciansProps) {
 
   // ── Filter state (declared before loadData so useCallback can close over them) ──
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filterTier, setFilterTier] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterState, setFilterState] = useState('all');
@@ -553,19 +554,27 @@ export default function Electricians({ role }: ElectriciansProps) {
 
   // ── Tier counts (fetched separately for accurate totals across all pages) ──
   const [tierCounts, setTierCounts] = useState<{ Silver: number; Gold: number; Platinum: number; Diamond: number }>({ Silver: 0, Gold: 0, Platinum: 0, Diamond: 0 });
+  const [installationStats, setInstallationStats] = useState({ total: 0, installed: 0, notInstalled: 0 });
   const [allStates, setAllStates] = useState<string[]>([]);
   const [allCities, setAllCities] = useState<string[]>([]);
   const [allCategories, setAllCategories] = useState<string[]>([]);
   const sanitizeOptions = (values: string[]) => Array.from(new Set(values.map(value => value.trim()).filter(value => value && value !== '?'))).sort((a, b) => a.localeCompare(b));
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => window.clearTimeout(timer);
+  }, [search]);
+
   const loadTierCounts = async () => {
     try {
-      const [counts, statesRes, catsRes] = await Promise.all([
+      const [counts, installationCounts, statesRes, catsRes] = await Promise.all([
         electricianApi.getTierCounts(),
+        electricianApi.getStats(),
         electricianApi.getDistinctStates(),
         electricianApi.getDistinctCategories(),
       ]);
       setTierCounts(counts);
+      setInstallationStats(installationCounts);
       setAllStates(sanitizeOptions(statesRes.states ?? []));
       setAllCategories(sanitizeOptions(catsRes.categories ?? []));
     } catch (err) {
@@ -583,6 +592,15 @@ export default function Electricians({ role }: ElectriciansProps) {
     }
   }, []);
 
+  const loadDealerOptions = useCallback(async () => {
+    try {
+      const options = await dealerApi.getOptions();
+      setDealers(options.map(d => ({ id: d.id, name: d.name, dealerCode: d.dealerCode })));
+    } catch (err) {
+      console.error('Failed to load dealer options:', err);
+    }
+  }, []);
+
   const loadData = useCallback(async (page: number) => {
     try {
       setLoading(true);
@@ -590,7 +608,7 @@ export default function Electricians({ role }: ElectriciansProps) {
         limit: String(PAGE_SIZE),
         page: String(page),
       };
-      if (search) params.search = search;
+      if (debouncedSearch) params.search = debouncedSearch;
       if (filterTier !== 'all') params.tier = filterTier;
       if (filterStatus !== 'all') params.status = filterStatus;
       if (filterState !== 'all') params.state = filterState;
@@ -602,23 +620,10 @@ export default function Electricians({ role }: ElectriciansProps) {
 
       // Date filter → convert to dateFrom / dateTo
       if (dateFilter !== 'all') {
-        const now = new Date();
-        const today = formatISTDateInput(now);
-        if (dateFilter === 'today') {
-          params.dateFrom = today;
-          params.dateTo   = today;
-        } else if (dateFilter === 'yesterday') {
-          const y = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-          params.dateFrom = formatISTDateInput(y);
-          params.dateTo   = formatISTDateInput(y);
-        } else if (dateFilter === 'week') {
-          const w = new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000);
-          params.dateFrom = formatISTDateInput(w);
-          params.dateTo   = today;
-        } else if (dateFilter === 'month') {
-          const m = new Date(now.getTime() - 29 * 24 * 60 * 60 * 1000);
-          params.dateFrom = formatISTDateInput(m);
-          params.dateTo   = today;
+        if (dateFilter !== 'custom') {
+          const range = getISTDatePresetRange(dateFilter);
+          params.dateFrom = range.from;
+          params.dateTo = range.to;
         } else if (dateFilter === 'custom' && customDateRange.from && customDateRange.to) {
           params.dateFrom = customDateRange.from;
           params.dateTo   = customDateRange.to;
@@ -626,21 +631,15 @@ export default function Electricians({ role }: ElectriciansProps) {
       }
 
       setLoadError(null);
-      const [elecRes, dealRes] = await Promise.all([
-        electricianApi.getAll(params),
-        dealerApi.getAll({ limit: '500' }),
-      ]);
-      const dealData = Array.isArray(dealRes) ? dealRes : (dealRes as any).data ?? [];
-      setDealers(dealData.map((d: any) => ({ id: d.id, name: d.name, dealerCode: d.dealerCode })));
+      const elecRes = await electricianApi.getAll(params);
 
       const rawElecs = Array.isArray(elecRes) ? elecRes : (elecRes as any).data ?? [];
       const total = Array.isArray(elecRes) ? rawElecs.length : (elecRes as any).total ?? rawElecs.length;
       setTotalCount(total);
 
-      const dealerMap = new Map(dealData.map((d: any) => [d.id, d.name]));
       setData(rawElecs.map((e: any) => ({
         ...e,
-        dealerName: e.dealerName ?? e.dealer?.name ?? (e.dealerId ? dealerMap.get(e.dealerId) : null) ?? '—',
+        dealerName: e.dealerName ?? e.dealer?.name ?? e.fallbackDealerName ?? '—',
         recentActivity: e.recentActivity ?? e.lastActivityAt ?? 'N/A',
       })));
     } catch (err: any) {
@@ -649,16 +648,27 @@ export default function Electricians({ role }: ElectriciansProps) {
     } finally {
       setLoading(false);
     }
-  }, [search, filterTier, filterStatus, filterState, filterCity, filterCategory, filterBank, filterWelcomeBonus, filterAppInstalled, dateFilter, customDateRange]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, filterTier, filterStatus, filterState, filterCity, filterCategory, filterBank, filterWelcomeBonus, filterAppInstalled, dateFilter, customDateRange]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const loadOne = async (id: string, mode: 'view' | 'edit') => {
+    try {
+      const electrician = await electricianApi.getOne(id);
+      if (mode === 'view') setViewing(electrician);
+      else setEditing(electrician);
+    } catch (err) {
+      console.error('Failed to load electrician details:', err);
+      setLoadError('Failed to load electrician details. Please try again.');
+    }
+  };
 
   // Re-fetch from page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
     loadData(1);
-  }, [search, filterTier, filterStatus, filterState, filterCity, filterCategory, filterBank, filterWelcomeBonus, filterAppInstalled, dateFilter, customDateRange]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, filterTier, filterStatus, filterState, filterCity, filterCategory, filterBank, filterWelcomeBonus, filterAppInstalled, dateFilter, customDateRange]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Initial load
-  useEffect(() => { loadData(1); loadTierCounts(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { loadTierCounts(); void loadDealerOptions(); }, [loadDealerOptions]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     void loadCities(filterState);
@@ -884,6 +894,18 @@ export default function Electricians({ role }: ElectriciansProps) {
         ))}
       </div>
 
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(180px,1fr))', gap: 12, marginBottom: 22 }}>
+        {[
+          { label: 'App Installed', value: installationStats.installed, filter: 'installed', color: '#047857', bg: '#D1FAE5' },
+          { label: 'Not Installed', value: installationStats.notInstalled, filter: 'not_installed', color: '#B45309', bg: '#FEF3C7' },
+        ].map(item => (
+          <button key={item.filter} onClick={() => setFilterAppInstalled(item.filter)} style={{ background: C.card, borderRadius: 14, padding: '14px 18px', border: `1px solid ${filterAppInstalled === item.filter ? item.color : C.border}`, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left' }}>
+            <span style={{ width: 38, height: 38, borderRadius: 10, background: item.bg, color: item.color, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><Smartphone size={19} /></span>
+            <span><strong style={{ display: 'block', fontSize: 21, color: C.text }}>{item.value}</strong><span style={{ fontSize: 12, fontWeight: 700, color: item.color }}>{item.label}</span></span>
+          </button>
+        ))}
+      </div>
+
       {/* Filters */}
       <div style={{ background: C.card, borderRadius: 14, padding: '14px 18px', border: `1px solid ${C.border}`, marginBottom: 16, display: 'flex', gap: 10, alignItems: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', position: 'relative' }}>
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, phone, city, code, dealer..." style={{ ...inputStyle, flex: '0 1 320px', maxWidth: 320 }} onFocus={e => (e.target as HTMLInputElement).style.borderColor = C.red} onBlur={e => (e.target as HTMLInputElement).style.borderColor = C.border} />
@@ -1095,8 +1117,8 @@ export default function Electricians({ role }: ElectriciansProps) {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ fontSize: 12, color: C.muted }}>{e.phone}</div>
                   <div style={{ display: 'flex', gap: 6 }}>
-                    <button onClick={() => setViewing(e)} style={{ background: '#EFF6FF', color: '#1D4ED8', border: 'none', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>View</button>
-                    {permissions.canEdit && <button onClick={() => setEditing(e)} style={{ background: '#FFF7ED', color: '#C2410C', border: 'none', borderRadius: 8, padding: '6px 11px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Edit</button>}
+                    <button onClick={() => { void loadOne(e.id, 'view'); }} style={{ background: '#EFF6FF', color: '#1D4ED8', border: 'none', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>View</button>
+                    {permissions.canEdit && <button onClick={() => { void loadOne(e.id, 'edit'); }} style={{ background: '#FFF7ED', color: '#C2410C', border: 'none', borderRadius: 8, padding: '6px 11px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Edit</button>}
                     {permissions.canDelete && <button onClick={() => handleDelete(e.id)} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 8, padding: '6px 8px', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Trash2 size={13} /></button>}
                   </div>
                 </div>
@@ -1135,7 +1157,7 @@ export default function Electricians({ role }: ElectriciansProps) {
               const tier = TIER_CONFIG[e.tier] ?? TIER_CONFIG['Silver'];
               const status = STATUS_CONFIG[e.status] ?? STATUS_CONFIG['inactive'];
               return (
-                <tr key={e.id} onClick={event => { if (!(event.target as HTMLElement).closest('button,select,input,a')) setViewing(e); }} style={{ borderBottom: `1px solid ${C.border}`, transition: 'background 0.12s', cursor: 'pointer' }}
+                <tr key={e.id} onClick={event => { if (!(event.target as HTMLElement).closest('button,select,input,a')) void loadOne(e.id, 'view'); }} style={{ borderBottom: `1px solid ${C.border}`, transition: 'background 0.12s', cursor: 'pointer' }}
                   onMouseEnter={ev => (ev.currentTarget as HTMLTableRowElement).style.background = C.hoverRow}
                   onMouseLeave={ev => (ev.currentTarget as HTMLTableRowElement).style.background = 'transparent'}>
                   <td style={{ padding: '13px 14px' }}>
@@ -1171,9 +1193,9 @@ export default function Electricians({ role }: ElectriciansProps) {
                   </td>
                   <td style={{ padding: '13px 14px', minWidth: 190, width: 190 }}>
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                      <button onClick={() => setViewing(e)} style={{ background: '#EFF6FF', color: '#1D4ED8', border: 'none', borderRadius: 7, padding: '6px 11px', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', minWidth: 58 }}>View</button>
+                      <button onClick={() => { void loadOne(e.id, 'view'); }} style={{ background: '#EFF6FF', color: '#1D4ED8', border: 'none', borderRadius: 7, padding: '6px 11px', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', minWidth: 58 }}>View</button>
                       {permissions.canEdit && (
-                        <button onClick={() => setEditing(e)} style={{ background: '#FFF7ED', color: '#C2410C', border: 'none', borderRadius: 7, padding: '6px 11px', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', minWidth: 58 }}>Edit</button>
+                        <button onClick={() => { void loadOne(e.id, 'edit'); }} style={{ background: '#FFF7ED', color: '#C2410C', border: 'none', borderRadius: 7, padding: '6px 11px', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', minWidth: 58 }}>Edit</button>
                       )}
                       {permissions.canDelete && (
                         <button onClick={() => handleDelete(e.id)} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 7, padding: '6px 8px', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 34, minHeight: 30 }}><Trash2 size={13} /></button>

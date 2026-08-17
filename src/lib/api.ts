@@ -294,6 +294,8 @@ export const electricianApi = {
   },
   getTierCounts: () =>
     request<{ Silver: number; Gold: number; Platinum: number; Diamond: number }>('/electricians/tier-counts'),
+  getStats: () =>
+    request<{ total: number; installed: number; notInstalled: number }>('/electricians/stats'),
   getTop: (params?: Record<string, string>) => {
     const q = params ? '?' + new URLSearchParams(params).toString() : '';
     return request<any[]>(`/electricians/top${q}`);
@@ -332,7 +334,9 @@ export const dealerApi = {
     return request<{ data: any[]; total: number; page: number; limit: number }>(`/dealers${q}`);
   },
   getStats: () =>
-    request<{ total: number; active: number; pending: number; inactive: number }>('/dealers/stats'),
+    request<{ total: number; active: number; pending: number; inactive: number; installed: number; notInstalled: number }>('/dealers/stats'),
+  getOptions: () =>
+    request<Array<{ id: string; name: string; dealerCode: string; phone: string }>>('/dealers/options'),
   getSubDealers: (params?: Record<string, string>) => {
     const q = params ? '?' + new URLSearchParams(params).toString() : '';
     return request<{ data: any[]; total: number; page: number; limit: number }>(`/dealers/sub-dealers${q}`);
@@ -437,6 +441,11 @@ export const qrCodeApi = {
     const q = params ? '?' + new URLSearchParams(params).toString() : '';
     return request<{ data: any[]; total: number; page: number; limit: number; totalPages: number }>(`/qr-codes/download-history${q}`);
   },
+  regenerate: (id: string) =>
+    request<{ codes: { id: string; code: string }[]; message: string }>(
+      `/qr-codes/${encodeURIComponent(id)}/regenerate`,
+      { method: 'POST' },
+    ),
   downloadBatchExcel: async (batchId: string) => {
     const path = `/qr-codes/batches/${encodeURIComponent(batchId)}/export-excel`;
 

@@ -40,6 +40,7 @@ export interface Electrician {
   dealerName: string;
   bankLinked: boolean;
   upiId?: string;
+  upiQrCodeImage?: string | null;
   bankAccount?: string;
   ifsc?: string;
   recentActivity: string;
@@ -77,6 +78,7 @@ export interface Dealer {
   gstNumber: string;
   bankLinked: boolean;
   upiId?: string;
+  upiQrCodeImage?: string | null;
   totalOrders?: number;
   monthlyTarget?: number;
   achievedTarget?: number;
@@ -255,6 +257,7 @@ export interface AppUser {
   kycStatus: string;
   bankLinked: boolean;
   upiId?: string;
+  upiQrCodeImage?: string | null;
   bankAccount?: string;
   ifsc?: string;
   bankName?: string;
@@ -304,6 +307,7 @@ export interface CounterBoy {
   totalRedemptions: number;
   bankLinked: boolean;
   upiId?: string;
+  upiQrCodeImage?: string | null;
   bankAccount?: string;
   ifsc?: string;
   bankName?: string;

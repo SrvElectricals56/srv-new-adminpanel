@@ -1,6 +1,6 @@
 ﻿'use client';
 import { useState, useEffect, useRef } from 'react';
-import { QrCode, Download, Eye, Trash2, Search, Filter, Calendar, Package, Copy, Check, Share2 } from 'lucide-react';
+import { QrCode, Download, Eye, Trash2, Search, Filter, Calendar, Package, Copy, Check, Share2, RefreshCw } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { formatISTDateTime, formatISTDate, formatISTDateTimeFull } from '@/lib/dateIST';
 import type { AdminRole } from '@/lib/types';
@@ -9,6 +9,7 @@ import { useAppContext } from '@/lib/appContext';
 import { qrCodeApi } from '@/lib/api';
 import QRCodeLib from 'qrcode';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
+import AlertDialog from '@/components/Shared/AlertDialog';
 import { I } from '@/lib/iconMap';
 
 interface QRCodesProps {
@@ -225,6 +226,40 @@ export default function QRCodes({ role }: QRCodesProps) {
 
   const handleDeleteQR = (qrId: string) => {
     setDeleteConfirm({ show: true, qrId });
+  };
+
+  const [regenerateConfirm, setRegenerateConfirm] = useState<QRCodeItem | null>(null);
+  const [regenerating, setRegenerating] = useState(false);
+  const [regenerateAlert, setRegenerateAlert] = useState({ show: false, title: '', message: '', type: 'success' as 'success' | 'error' });
+
+  const confirmRegenerate = async () => {
+    const qr = regenerateConfirm;
+    if (!qr || regenerating) return;
+    setRegenerating(true);
+    try {
+      const result = await qrCodeApi.regenerate(qr.id);
+      const replacementCode = result.codes?.[0]?.code;
+      setSelectedQR(null);
+      setRegenerateConfirm(null);
+      await Promise.all([loadQRCodes(currentPage), loadStats()]);
+      setRegenerateAlert({
+        show: true,
+        title: 'Replacement QR Generated',
+        message: replacementCode
+          ? `New active QR: ${replacementCode}. The used QR and its scan history were preserved.`
+          : result.message,
+        type: 'success',
+      });
+    } catch (error) {
+      setRegenerateAlert({
+        show: true,
+        title: 'QR Regeneration Failed',
+        message: error instanceof Error ? error.message : 'Unable to regenerate this QR code.',
+        type: 'error',
+      });
+    } finally {
+      setRegenerating(false);
+    }
   };
 
   const recordQrDownload = async (qr: QRCodeItem, downloadType = 'single_png') => {
@@ -725,6 +760,30 @@ export default function QRCodes({ role }: QRCodesProps) {
             </div>
 
             <div style={{ display: 'flex', gap: 12 }}>
+              {selectedQR.status === 'used' && (
+                <button
+                  onClick={() => setRegenerateConfirm(selectedQR)}
+                  disabled={regenerating}
+                  style={{
+                    flex: 1,
+                    background: '#D97706',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: 12,
+                    padding: '12px',
+                    fontSize: 14,
+                    fontWeight: 700,
+                    cursor: regenerating ? 'wait' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                  }}
+                >
+                  <RefreshCw size={16} />
+                  Regenerate
+                </button>
+              )}
               <button
                 onClick={() => handleDownloadQR(selectedQR)}
                 style={{
@@ -796,6 +855,22 @@ export default function QRCodes({ role }: QRCodesProps) {
         onCancel={() => setDeleteConfirm({ show: false, qrId: null })}
         confirmText="Delete"
         type="danger"
+      />
+      <ConfirmDialog
+        show={Boolean(regenerateConfirm)}
+        title="Regenerate Used QR"
+        message="A new active QR with the same product and points will be created. The used QR and its scan history will remain unchanged."
+        onConfirm={() => { void confirmRegenerate(); }}
+        onCancel={() => setRegenerateConfirm(null)}
+        confirmText={regenerating ? 'Generating...' : 'Generate Replacement'}
+        type="warning"
+      />
+      <AlertDialog
+        show={regenerateAlert.show}
+        title={regenerateAlert.title}
+        message={regenerateAlert.message}
+        type={regenerateAlert.type}
+        onClose={() => setRegenerateAlert(current => ({ ...current, show: false }))}
       />
     </div>
   );

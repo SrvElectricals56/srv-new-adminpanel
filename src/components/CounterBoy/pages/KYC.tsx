@@ -167,7 +167,7 @@ export default function CounterBoyKYC() {
   useEffect(() => {
     let active = true;
 
-    void counterboyApi.getAll({ limit: '500' })
+    void counterboyApi.getAll({ limit: '500', includeMedia: 'true' })
       .then((res: CounterBoyKYCItem[] | { data?: CounterBoyKYCItem[] }) => {
         if (!active) return;
         const data = Array.isArray(res) ? res : res.data ?? [];

@@ -51,6 +51,10 @@ export default function CounterBoyBankLinked() {
 
   useEffect(() => { load(); }, []);
 
+  const viewDetails = async (id: string) => {
+    try { setViewing(await counterboyApi.getOne(id)); } catch (error) { console.error(error); }
+  };
+
   const filtered = rows.filter(row => {
     const q = search.toLowerCase();
     return row.name.toLowerCase().includes(q) || row.phone.includes(q) || row.counterboyCode.toLowerCase().includes(q);
@@ -165,7 +169,7 @@ export default function CounterBoyBankLinked() {
                   <td style={{ padding: '14px 16px', fontSize: 12, color: C.text }}>{row.upiId ?? row.bankAccount ?? '—'}</td>
                   <td style={{ padding: '14px 16px' }}>
                     <div style={{ display: 'flex', gap: 6 }}>
-                      <button onClick={() => setViewing(row)} title="View" style={{ background: '#EFF6FF', color: '#1D4ED8', border: 'none', borderRadius: 7, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Eye size={14} /></button>
+                      <button onClick={() => { void viewDetails(row.id); }} title="View" style={{ background: '#EFF6FF', color: '#1D4ED8', border: 'none', borderRadius: 7, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Eye size={14} /></button>
                       <button onClick={() => setEditing({ ...row })} title="Edit" style={{ background: '#FFF7ED', color: '#C2410C', border: 'none', borderRadius: 7, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Pencil size={14} /></button>
                       <button onClick={() => setClearState({ show: true, row })} title="Delete bank details" style={{ background: '#FEF2F2', color: '#B91C1C', border: 'none', borderRadius: 7, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Trash2 size={14} /></button>
                     </div>
@@ -183,6 +187,7 @@ export default function CounterBoyBankLinked() {
             {[['Name', viewing.name], ['Code', viewing.counterboyCode], ['Phone', viewing.phone], ['Dealer', viewing.dealerName ?? '—'], ['Bank Linked', viewing.bankLinked ? 'Yes' : 'No'], ['UPI ID', viewing.upiId ?? '—'], ['Bank Name', viewing.bankName ?? '—'], ['Account Holder', viewing.accountHolderName ?? '—'], ['Bank Account', viewing.bankAccount ?? '—'], ['IFSC', viewing.ifsc ?? '—'], ['Wallet Balance', `₹${(viewing.walletBalance ?? 0).toLocaleString('en-IN')}`]].map(([key, value]) => (
               <div key={String(key)} style={{ background: C.bg, borderRadius: 10, padding: 12, fontSize: 13, marginBottom: 8 }}><strong>{key}:</strong> {value}</div>
             ))}
+            {viewing.upiQrCodeImage ? <a href={viewing.upiQrCodeImage} target="_blank" rel="noreferrer"><img src={viewing.upiQrCodeImage} alt="Counter boy UPI QR code" style={{ width: 180, height: 180, objectFit: 'contain', display: 'block', margin: '14px auto 0', borderRadius: 10, background: '#fff', border: `1px solid ${C.border}` }} /></a> : null}
           </div>
         </div>
       )}

@@ -167,7 +167,7 @@ export default function UserKYC() {
   useEffect(() => {
     let active = true;
 
-    void appUserApi.getAll({ limit: '500' })
+    void appUserApi.getAll({ limit: '500', includeMedia: 'true' })
       .then((res: UserKYCItem[] | { data?: UserKYCItem[] }) => {
         if (!active) return;
         const data = Array.isArray(res) ? res : res.data ?? [];

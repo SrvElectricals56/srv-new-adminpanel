@@ -18,7 +18,7 @@ function ViewModal({ d, onClose, C }: { d: Dealer; onClose: () => void; C: any }
   const tier = TIER_CONFIG[d.tier as MemberTier] ?? TIER_CONFIG['Silver'];
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={onClose}>
-      <div style={{ background: C.card, borderRadius: 20, width: 540, maxWidth: '95vw', boxShadow: '0 25px 70px rgba(0,0,0,0.25)', border: `1px solid ${C.border}` }} onClick={e => e.stopPropagation()}>
+      <div style={{ background: C.card, borderRadius: 20, width: 540, maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 70px rgba(0,0,0,0.25)', border: `1px solid ${C.border}` }} onClick={e => e.stopPropagation()}>
         <div style={{ background: C.heroGradient, padding: '22px 26px', borderRadius: '20px 20px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <div style={{ fontSize: 18, fontWeight: 800, color: 'white' }}>{d.name}</div>
@@ -46,6 +46,12 @@ function ViewModal({ d, onClose, C }: { d: Dealer; onClose: () => void; C: any }
               <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{item.value}</div>
             </div>
           ))}
+          {d.upiQrCodeImage ? (
+            <a href={d.upiQrCodeImage} target="_blank" rel="noreferrer" style={{ gridColumn: '1/-1', background: C.bg, borderRadius: 10, padding: 14, color: C.text, textDecoration: 'none' }}>
+              <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textTransform: 'uppercase', marginBottom: 8 }}>UPI QR Code · click to open</div>
+              <img src={d.upiQrCodeImage} alt="Dealer UPI QR code" style={{ width: 180, height: 180, display: 'block', margin: '0 auto', objectFit: 'contain', borderRadius: 10, background: '#fff' }} />
+            </a>
+          ) : null}
         </div>
       </div>
     </div>
@@ -159,6 +165,10 @@ export default function DealerBankLinked() {
   const [editing, setEditing] = useState<Dealer | null>(null);
   const [confirmState, setConfirmState] = useState<{ show: boolean; id: string; linked: boolean }>({ show: false, id: '', linked: false });
   const [clearState, setClearState] = useState<{ show: boolean; row: Dealer | null }>({ show: false, row: null });
+
+  const viewDetails = async (id: string) => {
+    try { setViewing(await dealerApi.getOne(id)); } catch (error) { console.error(error); }
+  };
 
   const filtered = data.filter(d => {
     const q = search.toLowerCase();
@@ -333,7 +343,7 @@ export default function DealerBankLinked() {
                   </td>
                   <td style={{ padding: '14px 16px' }}>
                     <div style={{ display: 'flex', gap: 6 }}>
-                      <button onClick={() => setViewing(d)} title="View" style={{ background: '#EFF6FF', color: '#1D4ED8', border: 'none', borderRadius: 7, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Eye size={14} /></button>
+                      <button onClick={() => { void viewDetails(d.id); }} title="View" style={{ background: '#EFF6FF', color: '#1D4ED8', border: 'none', borderRadius: 7, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Eye size={14} /></button>
                       <button onClick={() => setEditing(d)} title="Edit" style={{ background: '#FFF7ED', color: '#C2410C', border: 'none', borderRadius: 7, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Pencil size={14} /></button>
                       <button onClick={() => setClearState({ show: true, row: d })} title="Delete bank details" style={{ background: '#FEF2F2', color: '#B91C1C', border: 'none', borderRadius: 7, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Trash2 size={14} /></button>
                     </div>

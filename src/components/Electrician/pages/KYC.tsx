@@ -143,7 +143,7 @@ export default function ElectricianKYC() {
     const requestId = ++requestSequence.current;
     setLoading(true);
     try {
-      const params: Record<string, string> = { page: String(page), limit: String(PAGE_SIZE) };
+      const params: Record<string, string> = { page: String(page), limit: String(PAGE_SIZE), includeMedia: 'true' };
       if (search.trim()) params.search = search.trim();
       if (filterStatus !== 'all') params.kycStatus = filterStatus;
       const res = await electricianApi.getAll(params);

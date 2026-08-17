@@ -1,6 +1,6 @@
 ﻿'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { FileSpreadsheet, Plus, Store, CheckCircle, Bolt, Clock, MapPin, Phone, Building2, Target, Check, Pencil, SlidersHorizontal, Calendar, Trash2 } from 'lucide-react';
+import { FileSpreadsheet, Plus, Store, CheckCircle, Bolt, Clock, MapPin, Phone, Building2, Target, Check, Pencil, SlidersHorizontal, Calendar, Trash2, Smartphone } from 'lucide-react';
 import { dealerApi, financeApi } from '@/lib/api';
 import type { Dealer, MemberTier, UserStatus, AdminRole } from '@/lib/types';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
@@ -14,7 +14,7 @@ import PasswordInputField from '@/components/Shared/PasswordInputField';
 import SearchableSelect from '@/components/Shared/SearchableSelect';
 import CustomerActivityPanel from '@/components/Shared/CustomerActivityPanel';
 import { I } from '@/lib/iconMap';
-import { formatISTDate } from '@/lib/dateIST';
+import { formatISTDate, getISTDatePresetRange } from '@/lib/dateIST';
 
 interface DealersProps {
   role: AdminRole;
@@ -406,6 +406,7 @@ export default function Dealers({ role }: DealersProps) {
 
   // ── Filter state (declared before loadData so useCallback can close over them) ──
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filterTier, setFilterTier] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterState, setFilterState] = useState('all');
@@ -416,10 +417,15 @@ export default function Dealers({ role }: DealersProps) {
   const [customDateRange, setCustomDateRange] = useState<{ from: string; to: string }>({ from: '', to: '' });
 
   // ── Stats (fetched separately for accurate totals across all pages) ──
-  const [dealerStats, setDealerStats] = useState({ total: 0, active: 0, pending: 0, inactive: 0 });
+  const [dealerStats, setDealerStats] = useState({ total: 0, active: 0, pending: 0, inactive: 0, installed: 0, notInstalled: 0 });
   const [allStates, setAllStates] = useState<string[]>([]);
   const [allCities, setAllCities] = useState<string[]>([]);
   const sanitizeOptions = (values: string[]) => Array.from(new Set(values.map(value => value.trim()).filter(value => value && value !== '?'))).sort((a, b) => a.localeCompare(b));
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => window.clearTimeout(timer);
+  }, [search]);
 
   const loadStats = async () => {
     try {
@@ -451,7 +457,7 @@ export default function Dealers({ role }: DealersProps) {
         limit: String(PAGE_SIZE),
         page: String(page),
       };
-      if (search) params.search = search;
+      if (debouncedSearch) params.search = debouncedSearch;
       if (filterTier !== 'all') params.tier = filterTier;
       if (filterStatus !== 'all') params.status = filterStatus;
       if (filterState !== 'all') params.state = filterState;
@@ -461,23 +467,10 @@ export default function Dealers({ role }: DealersProps) {
 
       // Date filter → convert to dateFrom / dateTo
       if (dateFilter !== 'all') {
-        const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        if (dateFilter === 'today') {
-          params.dateFrom = today.toISOString().split('T')[0];
-          params.dateTo   = today.toISOString().split('T')[0];
-        } else if (dateFilter === 'yesterday') {
-          const y = new Date(today); y.setDate(y.getDate() - 1);
-          params.dateFrom = y.toISOString().split('T')[0];
-          params.dateTo   = y.toISOString().split('T')[0];
-        } else if (dateFilter === 'week') {
-          const w = new Date(today); w.setDate(w.getDate() - 7);
-          params.dateFrom = w.toISOString().split('T')[0];
-          params.dateTo   = today.toISOString().split('T')[0];
-        } else if (dateFilter === 'month') {
-          const m = new Date(today); m.setDate(m.getDate() - 30);
-          params.dateFrom = m.toISOString().split('T')[0];
-          params.dateTo   = today.toISOString().split('T')[0];
+        if (dateFilter !== 'custom') {
+          const range = getISTDatePresetRange(dateFilter);
+          params.dateFrom = range.from;
+          params.dateTo = range.to;
         } else if (dateFilter === 'custom' && customDateRange.from && customDateRange.to) {
           params.dateFrom = customDateRange.from;
           params.dateTo   = customDateRange.to;
@@ -494,16 +487,26 @@ export default function Dealers({ role }: DealersProps) {
     } finally {
       setLoading(false);
     }
-  }, [search, filterTier, filterStatus, filterState, filterCity, filterBank, filterAppInstalled, dateFilter, customDateRange]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, filterTier, filterStatus, filterState, filterCity, filterBank, filterAppInstalled, dateFilter, customDateRange]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const loadOne = async (id: string, mode: 'view' | 'edit') => {
+    try {
+      const dealer = await dealerApi.getOne(id);
+      if (mode === 'view') setViewing(dealer);
+      else setEditing(dealer);
+    } catch (err) {
+      console.error('Failed to load dealer details:', err);
+    }
+  };
 
   // Re-fetch from page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
     loadData(1);
-  }, [search, filterTier, filterStatus, filterState, filterCity, filterBank, filterAppInstalled, dateFilter, customDateRange]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, filterTier, filterStatus, filterState, filterCity, filterBank, filterAppInstalled, dateFilter, customDateRange]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Initial load
-  useEffect(() => { loadData(1); loadStats(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { loadStats(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     void loadCities(filterState);
@@ -519,10 +522,8 @@ export default function Dealers({ role }: DealersProps) {
   useEffect(() => {
     const onVisible = () => { if (document.visibilityState === 'visible') loadData(currentPage); };
     document.addEventListener('visibilitychange', onVisible);
-    const interval = setInterval(() => loadData(currentPage), 30000);
     return () => {
       document.removeEventListener('visibilitychange', onVisible);
-      clearInterval(interval);
     };
   }, [currentPage, loadData]);
   const [showFilterPopup, setShowFilterPopup] = useState(false);
@@ -690,13 +691,15 @@ export default function Dealers({ role }: DealersProps) {
       />
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, marginBottom: 22 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(175px,1fr))', gap: 14, marginBottom: 22 }}>
         {[
           { label: 'Total Dealers', value: dealerStats.total, Icon: Store, color: '#3B82F6', bg: '#EFF6FF' },
           { label: 'Active', value: dealerStats.active, Icon: CheckCircle, color: '#065F46', bg: '#D1FAE5' },
           { label: 'Pending Approval', value: dealerStats.pending, Icon: Clock, color: '#92400E', bg: '#FEF3C7' },
+          { label: 'App Installed', value: dealerStats.installed, Icon: Smartphone, color: '#047857', bg: '#D1FAE5', appFilter: 'installed' },
+          { label: 'Not Installed', value: dealerStats.notInstalled, Icon: Smartphone, color: '#B45309', bg: '#FEF3C7', appFilter: 'not_installed' },
         ].map((s, i) => (
-          <div key={i} style={{ background: C.card, borderRadius: 14, padding: '16px 18px', border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+          <div key={i} onClick={() => s.appFilter && setFilterAppInstalled(s.appFilter)} style={{ background: C.card, borderRadius: 14, padding: '16px 18px', border: `1px solid ${s.appFilter && filterAppInstalled === s.appFilter ? s.color : C.border}`, display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', cursor: s.appFilter ? 'pointer' : 'default' }}>
             <div style={{ width: 42, height: 42, borderRadius: 12, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.color }}><s.Icon size={20} /></div>
             <div><div style={{ fontSize: 22, fontWeight: 800, color: C.text }}>{s.value}</div><div style={{ fontSize: 12, color: s.color, fontWeight: 700 }}>{s.label}</div></div>
           </div>
@@ -867,8 +870,8 @@ export default function Dealers({ role }: DealersProps) {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ fontSize: 12, color: C.muted, display: 'flex', alignItems: 'center', gap: 4 }}><Phone size={12} /> {d.phone}</div>
                   <div style={{ display: 'flex', gap: 6 }}>
-                    <button onClick={() => setViewing(d)} style={{ background: '#EFF6FF', color: '#1D4ED8', border: 'none', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>View</button>
-                    {permissions.canEdit && <button onClick={() => setEditing(d)} style={{ background: '#FFF7ED', color: '#C2410C', border: 'none', borderRadius: 8, padding: '6px 11px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Edit</button>}
+                    <button onClick={() => { void loadOne(d.id, 'view'); }} style={{ background: '#EFF6FF', color: '#1D4ED8', border: 'none', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>View</button>
+                    {permissions.canEdit && <button onClick={() => { void loadOne(d.id, 'edit'); }} style={{ background: '#FFF7ED', color: '#C2410C', border: 'none', borderRadius: 8, padding: '6px 11px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Edit</button>}
                     {permissions.canDelete && <button onClick={() => handleDelete(d.id)} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 8, padding: '6px 8px', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Trash2 size={13} /></button>}
                     {!permissions.canEdit && !permissions.canDelete && <span style={{ fontSize: 12, color: C.muted, fontStyle: 'italic' }}>View Only</span>}
                   </div>
@@ -892,7 +895,7 @@ export default function Dealers({ role }: DealersProps) {
                 const tier = TIER_CONFIG[d.tier] ?? TIER_CONFIG['Silver'];
                 const status = STATUS_CONFIG[d.status] ?? STATUS_CONFIG['inactive'];
                 return (
-                  <tr key={d.id} onClick={event => { if (!(event.target as HTMLElement).closest('button,select,input,a')) setViewing(d); }} style={{ borderBottom: `1px solid ${C.border}`, cursor: 'pointer' }}
+                  <tr key={d.id} onClick={event => { if (!(event.target as HTMLElement).closest('button,select,input,a')) void loadOne(d.id, 'view'); }} style={{ borderBottom: `1px solid ${C.border}`, cursor: 'pointer' }}
                     onMouseEnter={ev => (ev.currentTarget as HTMLTableRowElement).style.background = C.hoverRow}
                     onMouseLeave={ev => (ev.currentTarget as HTMLTableRowElement).style.background = 'transparent'}>
                     <td style={{ padding: '13px 16px' }}>
@@ -922,8 +925,8 @@ export default function Dealers({ role }: DealersProps) {
                     </td>
                     <td style={{ padding: '13px 16px' }}>
                       <div style={{ display: 'flex', gap: 6 }}>
-                        <button onClick={() => setViewing(d)} style={{ background: '#EFF6FF', color: '#1D4ED8', border: 'none', borderRadius: 7, padding: '6px 11px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>View</button>
-                        {permissions.canEdit && <button onClick={() => setEditing(d)} style={{ background: '#FFF7ED', color: '#C2410C', border: 'none', borderRadius: 7, padding: '6px 11px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Edit</button>}
+                        <button onClick={() => { void loadOne(d.id, 'view'); }} style={{ background: '#EFF6FF', color: '#1D4ED8', border: 'none', borderRadius: 7, padding: '6px 11px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>View</button>
+                        {permissions.canEdit && <button onClick={() => { void loadOne(d.id, 'edit'); }} style={{ background: '#FFF7ED', color: '#C2410C', border: 'none', borderRadius: 7, padding: '6px 11px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Edit</button>}
                         {permissions.canDelete && <button onClick={() => handleDelete(d.id)} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 7, padding: '6px 8px', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Trash2 size={13} /></button>}
                         {!permissions.canEdit && !permissions.canDelete && <span style={{ fontSize: 11, color: C.muted, fontStyle: 'italic', padding: '6px 8px' }}>View Only</span>}
                       </div>

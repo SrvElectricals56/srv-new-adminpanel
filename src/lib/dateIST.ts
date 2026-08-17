@@ -18,6 +18,35 @@ export function formatISTDateInput(date: Date): string {
   return `${value('year')}-${value('month')}-${value('day')}`;
 }
 
+export type ISTDatePreset = 'today' | 'yesterday' | 'week' | 'month';
+
+/** Calendar-aligned IST ranges used by admin filters (Monday-start week). */
+export function getISTDatePresetRange(
+  preset: ISTDatePreset,
+  now = new Date(),
+): { from: string; to: string } {
+  const today = formatISTDateInput(now);
+  const [year, month, day] = today.split('-').map(Number);
+  const calendarDate = new Date(Date.UTC(year, month - 1, day));
+
+  if (preset === 'today') return { from: today, to: today };
+  if (preset === 'yesterday') {
+    calendarDate.setUTCDate(calendarDate.getUTCDate() - 1);
+  } else if (preset === 'week') {
+    const weekday = calendarDate.getUTCDay();
+    calendarDate.setUTCDate(calendarDate.getUTCDate() - (weekday === 0 ? 6 : weekday - 1));
+  } else {
+    calendarDate.setUTCDate(1);
+  }
+
+  const from = [
+    calendarDate.getUTCFullYear(),
+    String(calendarDate.getUTCMonth() + 1).padStart(2, '0'),
+    String(calendarDate.getUTCDate()).padStart(2, '0'),
+  ].join('-');
+  return { from, to: preset === 'yesterday' ? from : today };
+}
+
 /** "15 Jun, 02:30 PM" — used in scan history, wallet transactions */
 export function formatISTDateTime(iso?: string | null): string {
   if (!iso) return '';
