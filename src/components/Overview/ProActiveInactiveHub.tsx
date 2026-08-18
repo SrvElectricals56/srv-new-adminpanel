@@ -149,6 +149,7 @@ function parseDateValue(value: unknown): Date | null {
 
 function getActivityDate(row: ActivityRow): Date | null {
   const candidates = [
+    row.lastScanAt,
     row.lastLoginAt,
     row.lastLogin,
     row.lastActivityAt,
@@ -281,14 +282,16 @@ function classifyRow(row: ActivityRow, role: RoleTab): { bucket: ActivityTab; re
   }
 
   if (role === 'electrician') {
-    const score = totalScans * 5 + totalPoints + totalRedemptions * 150 + walletBalance;
-    if (veryRecent && (totalScans >= 10 || totalPoints >= 500 || totalRedemptions >= 1 || walletBalance >= 500)) {
-      return { bucket: 'proactive', reason: 'Recently active with strong scan, reward, or wallet momentum.', score };
+    const activityStatus = getString(row, 'activityStatus').toLowerCase();
+    const scansLast7Days = getNumber(row, 'scansLast7Days');
+    const score = scansLast7Days * 1000 + totalScans;
+    if (activityStatus === 'proactive' || (!activityStatus && veryRecent)) {
+      return { bucket: 'proactive', reason: 'Scanned at least one QR code during the last 7 days.', score };
     }
-    if (recentlyActive || totalScans > 0 || totalPoints > 0 || totalRedemptions > 0) {
-      return { bucket: 'active', reason: 'Showing app usage or reward activity, but below the proactive threshold.', score };
+    if (activityStatus === 'active' || (!activityStatus && recentlyActive)) {
+      return { bucket: 'active', reason: 'Scanned within the last 30 days or is within the 30-day new-account grace period.', score };
     }
-    return { bucket: 'inactive', reason: 'No meaningful recent scan or reward activity detected.', score };
+    return { bucket: 'inactive', reason: 'No QR code scan was recorded during the last 30 full days.', score };
   }
 
   if (role === 'dealer') {
@@ -363,20 +366,16 @@ const CRITERIA: Record<RoleTab, { icon: string; proactive: string[]; active: str
   electrician: {
     icon: 'Bolt',
     proactive: [
-      'Last activity within 7 days AND at least one of:',
-      '  • 10+ total scans',
-      '  • 500+ total points',
-      '  • 1+ redemptions',
-      '  • Wallet balance 500+',
+      'At least one QR code scan during the last 7 days',
+      '(Covers daily and weekly scanners)',
     ],
     active: [
-      'Last activity within 30 days, OR',
-      'Has some scans, points, or redemptions',
-      '(Below proactive thresholds)',
+      'Most recent QR scan is within the last 30 days, OR',
+      'New account is still within its first 30 days',
     ],
     inactive: [
       'Account status is inactive / suspended, OR',
-      'No meaningful scan, reward, or wallet activity detected',
+      'No QR code scan during the last 30 full days',
     ],
   },
   dealer: {

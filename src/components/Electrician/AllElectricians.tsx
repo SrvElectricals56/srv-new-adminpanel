@@ -305,7 +305,7 @@ function EditModal({ el, onClose, onSave, dealers = [] }: { el: Electrician | nu
     return {
       name: '', profileImage: '', phone: '', email: '', city: '', state: '', district: '',
       electricianCode: '',
-      tier: 'Silver', status: 'inactive', dealerId: '', dealerName: '', bankLinked: false,
+      tier: 'Silver', status: 'active', dealerId: '', dealerName: '', bankLinked: false,
       upiId: '', walletBalance: 0, totalPoints: 0, totalScans: 0, totalRedemptions: 0,
       recentActivity: 'Just joined', joinedDate: new Date().toISOString().split('T')[0],
     };
