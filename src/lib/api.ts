@@ -152,6 +152,7 @@ async function refreshAccessToken(): Promise<string | null> {
         const data = await res.json();
         if (data?.accessToken) {
           setToken(data.accessToken);
+          if (data.refreshToken) setRefreshToken(data.refreshToken);
           return data.accessToken as string;
         }
 

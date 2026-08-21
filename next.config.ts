@@ -8,6 +8,7 @@ const apiUrl =
 const apiOrigin = apiUrl.replace(/\/api\/v\d+\/?$/i, "").replace(/\/$/, "");
 
 const nextConfig: NextConfig = {
+  output: 'standalone',
   outputFileTracingRoot: path.join(__dirname),
   // Allow cross-origin dev access (mobile/network devices)
   allowedDevOrigins: ['192.168.29.8', '172.17.240.1', '10.121.152.231', '10.255.222.231'],
