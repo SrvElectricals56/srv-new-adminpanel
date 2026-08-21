@@ -17,7 +17,7 @@ interface ReferralRecord {
   status: 'active' | 'inactive';
 }
 
-const INITIAL_CONFIG = { referrerBonus: 500, refereeBonus: 250, maxReferrals: 0, baseLinkUrl: 'https://srvelectricals.in/ref/' };
+const INITIAL_CONFIG = { referrerBonus: 20, refereeBonus: 20, maxReferrals: 0, baseLinkUrl: 'https://srvelectricals.in/ref/' };
 const numberInputValue = (value: number | null | undefined) => value === 0 || value === null || value === undefined ? '' : value;
 
 export default function Referrals({ role }: { role?: import('@/lib/types').AdminRole }) {

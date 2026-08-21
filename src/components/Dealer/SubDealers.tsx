@@ -1,12 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Plus, Search, Store, Users, MapPin, Phone, Trash2 } from 'lucide-react';
+import { Plus, Search, Store, Users, MapPin, Phone, Trash2, FileSpreadsheet } from 'lucide-react';
 import { dealerApi, electricianApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
 import type { AdminRole } from '@/lib/types';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 import AlertDialog from '@/components/Shared/AlertDialog';
+import ExportModal from '@/components/Shared/ExportModal';
 
 type SubDealer = {
   id: string;
@@ -62,6 +63,7 @@ export default function SubDealers({ role }: { role: AdminRole }) {
   const [savingElectrician, setSavingElectrician] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<SubDealer | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [showExport, setShowExport] = useState(false);
   const [alertDialog, setAlertDialog] = useState<{ show: boolean; title: string; message: string; type: 'error' | 'success' }>({ show: false, title: '', message: '', type: 'success' });
   const [electricianForm, setElectricianForm] = useState({
     name: '',
@@ -315,9 +317,13 @@ export default function SubDealers({ role }: { role: AdminRole }) {
         </div>
       )}
 
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800 }}>Sub Dealers</h1>
-        <p style={{ margin: '6px 0 0', color: C.muted }}>Unregistered dealer phone numbers are tracked as SRV Sub Dealers and treated as dealer-equivalent associations.</p>
+      <ExportModal show={showExport} onClose={() => setShowExport(false)} title="Sub Dealers" fileName="sub-dealers" getData={() => rows.map(row => ({ Name: row.name || 'SRV Sub Dealer', Role: 'Dealer', PhoneOrCode: row.identifier || row.phone || row.dealerCode || '', District: row.district || '', Pincode: row.pincode || '', Electricians: row.electricianCount, FirstSeen: date(row.firstSeenAt), LastSeen: date(row.lastSeenAt) }))} />
+      <div style={{ marginBottom: 20, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
+        <div>
+          <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800 }}>Sub Dealers</h1>
+          <p style={{ margin: '6px 0 0', color: C.muted }}>Unregistered dealer phone numbers are tracked as SRV Sub Dealers and treated as dealer-equivalent associations.</p>
+        </div>
+        <button onClick={() => setShowExport(true)} style={{ border: 0, borderRadius: 10, background: C.red, color: '#fff', padding: '10px 16px', display: 'inline-flex', alignItems: 'center', gap: 7, fontWeight: 800, cursor: 'pointer' }}><FileSpreadsheet size={16} /> Export</button>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 14, marginBottom: 18 }}>

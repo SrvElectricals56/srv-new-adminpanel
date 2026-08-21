@@ -38,6 +38,7 @@ const CATEGORIES_FALLBACK = ['Fan Box','Concealed Box','Modular Box','Junction B
 function ProductModal({ product, onClose, onEdit, canEdit }: { product: Product; onClose: () => void; onEdit: () => void; canEdit: boolean }) {
   const C = useThemePalette();
   const mouseDownInside = React.useRef(false);
+  const productImages = Array.from(new Set([...(product.images ?? []), product.image].filter(Boolean)));
   return (
     <div
       style={{ position: 'fixed', inset: 0, background: C.overlay, backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
@@ -54,9 +55,13 @@ function ProductModal({ product, onClose, onEdit, canEdit }: { product: Product;
           <button onClick={onClose} style={{ background: C.bg, border: 'none', borderRadius: 10, width: 32, height: 32, cursor: 'pointer', fontSize: 16 }}><X size={16} /></button>
         </div>
         <div style={{ padding: 24 }}>
-          <div style={{ textAlign: 'center', marginBottom: 20, background: C.bg, borderRadius: 16, padding: 20, minHeight: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {product.image ? (
-              <img src={normalizeImageUrl(product.image)} alt={product.name} style={{ width: 160, height: 160, objectFit: 'contain' }} onError={e => { const t = e.currentTarget; t.style.display = 'none'; t.parentElement!.innerHTML = '<svg width=\"48\" height=\"48\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z\"/><polyline points=\"3.27 6.96 12 12.01 20.73 6.96\"/><line x1=\"12\" y1=\"22.08\" x2=\"12\" y2=\"12\"/></svg>'; }} />
+          <div style={{ textAlign: 'center', marginBottom: 20, background: C.bg, borderRadius: 16, padding: 20, minHeight: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', overflowX: 'auto' }}>
+            {productImages.length ? (
+              <div style={{ display: 'flex', gap: 12, scrollSnapType: 'x mandatory' }}>
+                {productImages.map((image, index) => (
+                  <img key={`${image}-${index}`} src={normalizeImageUrl(image)} alt={`${product.name} ${index + 1}`} style={{ width: 180, height: 180, flexShrink: 0, objectFit: 'contain', scrollSnapAlign: 'center' }} />
+                ))}
+              </div>
             ) : (
               <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 160 }}><Box size={48} /></div>
             )}
@@ -110,8 +115,11 @@ function EditModal({ product, onClose, onSave, onDelete, categories, role, canDe
   const isSuperAdmin = role === 'super_admin';
   const [imageMode, setImageMode] = useState<'url' | 'file'>('url');
   const [imageUploading, setImageUploading] = useState(false);
-  const [form, setForm] = useState<Partial<Product>>(product ?? {
-    name: '', sub: '', category: categories[0] ?? 'Fan Box', image: '', points: 10, badge: '', price: '', mrp: '',
+  const [form, setForm] = useState<Partial<Product>>(product ? {
+    ...product,
+    images: Array.from(new Set([...(product.images ?? []), product.image].filter(Boolean))),
+  } : {
+    name: '', sub: '', category: categories[0] ?? 'Fan Box', image: '', images: [], points: 10, badge: '', price: '', mrp: '',
     stock: 0, totalScanned: 0, sku: '', description: '', isActive: true,
   });
   const categoryPickerRef = React.useRef<HTMLDivElement | null>(null);
@@ -134,15 +142,19 @@ function EditModal({ product, onClose, onSave, onDelete, categories, role, canDe
   }, [form.category]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
     setImageUploading(true);
     try {
-      const url = await productApi.uploadImage(file);
-      f('image', url);
+      const urls = await Promise.all(files.map(file => productApi.uploadImage(file)));
+      setForm(previous => {
+        const images = Array.from(new Set([...(previous.images ?? []), ...urls]));
+        return { ...previous, images, image: images[0] ?? '' };
+      });
     } catch {
       alert('Image upload failed. Please try again or use a URL instead.');
     } finally {
+      e.target.value = '';
       setImageUploading(false);
     }
   };
@@ -194,14 +206,14 @@ function EditModal({ product, onClose, onSave, onDelete, categories, role, canDe
               )}
             </div>
             <div><label style={labelStyle}>Badge</label><input style={inputStyle} value={form.badge ?? ''} onChange={e => f('badge', e.target.value)} placeholder="e.g. Popular, New, Hot" /></div>
-            <div style={{ gridColumn: '1/-1' }}><label style={labelStyle}>Product Image *</label>
+            <div style={{ gridColumn: '1/-1' }}><label style={labelStyle}>Product Images *</label>
               <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
                 <button type="button" onClick={() => setImageMode('url')} style={{ padding: '6px 12px', borderRadius: 6, border: `1.5px solid ${imageMode === 'url' ? C.red : C.border}`, background: imageMode === 'url' ? '#FFF0F0' : C.surface, color: imageMode === 'url' ? C.red : C.text, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Import from URL</button>
                 <button type="button" onClick={() => setImageMode('file')} style={{ padding: '6px 12px', borderRadius: 6, border: `1.5px solid ${imageMode === 'file' ? C.red : C.border}`, background: imageMode === 'file' ? '#FFF0F0' : C.surface, color: imageMode === 'file' ? C.red : C.text, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Browse Files</button>
               </div>
               {imageMode === 'url' ? (
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <input style={inputStyle} value={form.image ?? ''} onChange={e => f('image', e.target.value)} placeholder="https://example.com/image.jpg" />
+                  <input style={inputStyle} value={form.image ?? ''} onChange={e => setForm(previous => { const value = e.target.value; const rest = (previous.images ?? []).slice(1); return { ...previous, image: value, images: value ? [value, ...rest] : rest }; })} placeholder="https://example.com/image.jpg" />
                   {form.image && (
                     <div style={{ width: 42, height: 42, borderRadius: 8, overflow: 'hidden', flexShrink: 0, border: `1.5px solid ${C.border}` }}>
                       <img src={normalizeImageUrl(form.image)} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} onError={e => (e.currentTarget.style.display = 'none')} />
@@ -211,16 +223,21 @@ function EditModal({ product, onClose, onSave, onDelete, categories, role, canDe
               ) : (
                 <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                   <label style={{ flex: 1, display: 'flex', flexDirection: 'column', cursor: imageUploading ? 'not-allowed' : 'pointer' }}>
-                    <input type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} disabled={imageUploading} />
+                    <input type="file" accept="image/*" multiple onChange={handleFileChange} style={{ display: 'none' }} disabled={imageUploading} />
                     <div style={{ padding: '20px', border: `2px dashed ${C.border}`, borderRadius: 8, textAlign: 'center', background: C.bg, color: C.muted, fontSize: 13 }}>
-                      {imageUploading ? 'Uploading...' : form.image ? 'Click to change image' : 'Click to upload image'}
+                      {imageUploading ? 'Uploading images...' : 'Click to add one or more images'}
                     </div>
                   </label>
-                  {form.image && (
-                    <div style={{ width: 80, height: 80, borderRadius: 8, overflow: 'hidden', flexShrink: 0, border: `1.5px solid ${C.border}` }}>
-                      <img src={normalizeImageUrl(form.image)} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => (e.currentTarget.style.display = 'none')} />
+                </div>
+              )}
+              {(form.images ?? []).length > 0 && (
+                <div style={{ display: 'flex', gap: 8, overflowX: 'auto', marginTop: 10, paddingBottom: 4 }}>
+                  {(form.images ?? []).map((image, index) => (
+                    <div key={`${image}-${index}`} style={{ position: 'relative', width: 82, height: 82, borderRadius: 8, overflow: 'hidden', flexShrink: 0, border: `1.5px solid ${index === 0 ? C.red : C.border}` }}>
+                      <img src={normalizeImageUrl(image)} alt={`Preview ${index + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <button type="button" aria-label={`Remove image ${index + 1}`} onClick={() => setForm(previous => { const images = (previous.images ?? []).filter((_, imageIndex) => imageIndex !== index); return { ...previous, images, image: images[0] ?? '' }; })} style={{ position: 'absolute', top: 3, right: 3, width: 22, height: 22, border: 0, borderRadius: 11, background: 'rgba(15,23,42,.8)', color: 'white', cursor: 'pointer', lineHeight: '20px' }}>×</button>
                     </div>
-                  )}
+                  ))}
                 </div>
               )}
             </div>
@@ -278,6 +295,7 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
     category: String(p.category ?? 'Other'),
     subCategory: String(p.subCategory ?? p.sub_category ?? ''),
     image: normalizeImageUrl(String(p.image ?? p.imageUrl ?? '')),
+    images: Array.from(new Set((Array.isArray(p.images) ? p.images : [p.image ?? p.imageUrl]).map(value => normalizeImageUrl(String(value ?? ''))).filter(Boolean))),
     points: Number(p.points ?? p.pointsValue ?? 0),
     badge: String(p.badge ?? ''),
     price: typeof p.price === 'number' ? `Rs.${p.price}` : String(p.price ?? ''),

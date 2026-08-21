@@ -640,6 +640,7 @@ export const giftApi = {
   },
   updateOrderStatus: (id: string, status: string, extra?: { rejectionReason?: string; trackingNumber?: string; courierName?: string; deliveryNotes?: string; processedBy?: string }) =>
     request<any>(`/gifts/orders/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status, ...(extra ?? {}) }) }),
+  deleteOrder: (id: string) => request<void>(`/gifts/orders/${id}`, { method: 'DELETE' }),
 };
 
 // â”€â”€â”€ Product Orders â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

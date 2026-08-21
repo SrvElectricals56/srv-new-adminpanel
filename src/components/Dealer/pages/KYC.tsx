@@ -10,6 +10,7 @@ interface DealerKYC {
   id: string;
   dealerName: string;
   dealerCode: string;
+  phone: string;
   kycStatus: 'not_submitted' | 'pending' | 'verified' | 'rejected';
   aadharNumber?: string;
   panNumber?: string;
@@ -159,6 +160,7 @@ export default function KYCManagement() {
         id: d.id,
         dealerName: d.name,
         dealerCode: d.dealerCode,
+        phone: d.phone ?? '',
         kycStatus: d.kycStatus ?? 'not_submitted',
         aadharNumber: d.aadharNumber,
         panNumber: d.panNumber,
@@ -180,6 +182,7 @@ export default function KYCManagement() {
       !q ||
       d.dealerName.toLowerCase().includes(q) ||
       d.dealerCode.toLowerCase().includes(q) ||
+      d.phone.includes(q) ||
       d.aadharNumber?.toLowerCase().includes(q) ||
       d.panNumber?.toLowerCase().includes(q) ||
       d.gstNumber?.toLowerCase().includes(q);
@@ -296,7 +299,7 @@ export default function KYCManagement() {
         </div>
         <button onClick={() => setShowExport(true)} style={{ background: C.red, color: 'white', border: 'none', borderRadius: 10, padding: '10px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}><FileSpreadsheet size={14} /> Export</button>
       </div>
-      <ExportModal show={showExport} onClose={() => setShowExport(false)} title="Dealer KYC" fileName="dealer-kyc" getData={() => documents.map(d => ({ Dealer: d.dealerName, Code: d.dealerCode, KYCStatus: d.kycStatus, Aadhar: d.aadharNumber ?? '', PAN: d.panNumber ?? '', GST: d.gstNumber ?? '' }))} />
+      <ExportModal show={showExport} onClose={() => setShowExport(false)} title="Dealer KYC" fileName="dealer-kyc" getData={() => documents.map(d => ({ Dealer: d.dealerName, Phone: d.phone, Code: d.dealerCode, KYCStatus: d.kycStatus, Aadhar: d.aadharNumber ?? '', PAN: d.panNumber ?? '', GST: d.gstNumber ?? '' }))} />
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 24 }}>
         {stats.map((s, i) => (
@@ -328,7 +331,7 @@ export default function KYCManagement() {
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search by dealer, code, Aadhaar, PAN or GST..."
+            placeholder="Search by dealer, mobile number, code, Aadhaar, PAN or GST..."
             style={{ width: '100%', padding: '9px 12px 9px 38px', border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 13, background: C.surface, color: C.text, boxSizing: 'border-box' }}
           />
         </div>
@@ -359,7 +362,7 @@ export default function KYCManagement() {
                 const status = statusConfig[doc.kycStatus] ?? statusConfig['not_submitted'];
                 return (
                   <tr key={doc.id} style={{ borderBottom: `1px solid ${C.border}` }} onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = C.hoverRow} onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}>
-                    <td style={{ padding: '13px 16px' }}><div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{doc.dealerName}</div></td>
+                    <td style={{ padding: '13px 16px' }}><div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{doc.dealerName}</div><div style={{ fontSize: 11, color: C.muted, marginTop: 3 }}>{doc.phone || 'No mobile number'}</div></td>
                     <td style={{ padding: '13px 16px', fontSize: 12, color: C.muted, fontFamily: 'monospace' }}>{doc.dealerCode}</td>
                     <td style={{ padding: '13px 16px', textAlign: 'center' }}><DocThumb src={doc.aadharFrontImage} C={C} /></td>
                     <td style={{ padding: '13px 16px', textAlign: 'center' }}><DocThumb src={doc.panDocument} C={C} /></td>

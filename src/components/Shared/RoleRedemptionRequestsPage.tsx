@@ -13,6 +13,8 @@ type RedemptionRecord = {
   id: string;
   userId: string;
   userName?: string;
+  userPhone?: string | null;
+  userCode?: string | null;
   role: SupportedRole;
   type: string;
   points?: number;
@@ -57,6 +59,8 @@ export default function RoleRedemptionRequestsPage({
   const [loading, setLoading] = useState(true);
   const [showExport, setShowExport] = useState(false);
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'approved' | 'pending' | 'rejected'>('all');
+  const [summary, setSummary] = useState<Record<string, { count: number; amount: number }>>({});
   const [viewItem, setViewItem] = useState<RedemptionRecord | null>(null);
   const [submittingId, setSubmittingId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
@@ -72,6 +76,7 @@ export default function RoleRedemptionRequestsPage({
       const response = await redemptionApi.getAll({ role, limit: '500' });
       const data = Array.isArray(response) ? response : (response as { data?: RedemptionRecord[] }).data ?? [];
       setRows(data);
+      setSummary(Array.isArray(response) ? {} : (response as any).summary ?? {});
       setFeedback(null);
     } catch (error) {
       console.error(error);
@@ -92,23 +97,47 @@ export default function RoleRedemptionRequestsPage({
     () =>
       rows.filter((row) => {
         const query = search.toLowerCase();
-        return (
+        return (statusFilter === 'all' || row.status === statusFilter) && (
           (row.userName ?? '').toLowerCase().includes(query) ||
+          (row.userPhone ?? '').includes(query) ||
+          (row.userCode ?? '').toLowerCase().includes(query) ||
           (row.userId ?? '').toLowerCase().includes(query) ||
           (row.type ?? '').toLowerCase().includes(query) ||
           (row.rejectionReason ?? '').toLowerCase().includes(query)
         );
       }),
-    [rows, search],
+    [rows, search, statusFilter],
   );
 
   const totalApproved = rows
     .filter((row) => row.status === 'approved')
     .reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
-  const totalPending = rows
-    .filter((row) => row.status === 'pending')
-    .reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
   const rejectedCount = rows.filter((row) => row.status === 'rejected').length;
+  const exactPendingCount = summary.pending?.count ?? rows.filter((row) => row.status === 'pending').length;
+
+  const handleStatusChange = async (item: RedemptionRecord, nextStatus: 'approved' | 'pending' | 'rejected') => {
+    if (item.status === nextStatus) return;
+    let reason: string | undefined;
+    if (nextStatus === 'rejected') {
+      const entered = window.prompt('Enter the rejection reason:', item.rejectionReason ?? '');
+      if (entered === null) return;
+      reason = entered.trim();
+      if (!reason) {
+        setFeedback({ type: 'error', message: 'A rejection reason is required.' });
+        return;
+      }
+    }
+    setSubmittingId(item.id);
+    try {
+      await redemptionApi.updateStatus(item.id, nextStatus, reason);
+      setFeedback({ type: 'success', message: `Request moved to ${nextStatus}.` });
+      await loadData();
+    } catch (error) {
+      setFeedback({ type: 'error', message: error instanceof Error ? error.message : 'Failed to update request status.' });
+    } finally {
+      setSubmittingId(null);
+    }
+  };
 
   const closeRejectModal = () => {
     setRejectState({ open: false, item: null });
@@ -193,7 +222,7 @@ export default function RoleRedemptionRequestsPage({
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>
         {[
           { label: 'Total Approved', value: `₹${totalApproved.toLocaleString('en-IN')}`, color: '#065F46', bg: '#D1FAE5', Icon: DollarSign },
-          { label: 'Pending', value: `₹${totalPending.toLocaleString('en-IN')}`, color: '#92400E', bg: '#FEF3C7', Icon: Banknote },
+          { label: 'Pending Requests', value: String(exactPendingCount), color: '#92400E', bg: '#FEF3C7', Icon: Banknote },
           { label: 'Requests', value: String(rows.length), color: '#1D4ED8', bg: '#EFF6FF', Icon: CreditCard },
           { label: 'Rejected', value: String(rejectedCount), color: '#991B1B', bg: '#FEE2E2', Icon: TrendingUp },
         ].map((card) => (
@@ -230,9 +259,15 @@ export default function RoleRedemptionRequestsPage({
         <input
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search by user, type, or reason..."
+          placeholder="Search by user, phone, code, type, or reason..."
           style={{ ...inputStyle, flex: 1, minWidth: 220 }}
         />
+        <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as any)} style={{ ...inputStyle, width: 170 }}>
+          <option value="all">All Statuses</option>
+          <option value="approved">Approved</option>
+          <option value="pending">Pending</option>
+          <option value="rejected">Rejected</option>
+        </select>
         <button
           onClick={() => setShowExport(true)}
           style={{ background: C.red, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
@@ -275,6 +310,7 @@ export default function RoleRedemptionRequestsPage({
                     >
                       <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: C.text }}>
                         <div>{row.userName || row.userId?.slice(0, 8)}</div>
+                        <div style={{ fontSize: 11, color: C.muted, marginTop: 3 }}>{row.userPhone ? `+91 ${row.userPhone}` : 'No mobile number'}{row.userCode ? ` · ${row.userCode}` : ''}</div>
                         {row.rejectionReason && (
                           <div style={{ fontSize: 11, color: '#991B1B', marginTop: 4, fontWeight: 600 }}>
                             Reason: {row.rejectionReason}
@@ -293,6 +329,12 @@ export default function RoleRedemptionRequestsPage({
                         {row.requestedAt ? formatISTDate(row.requestedAt) : '—'}
                       </td>
                       <td style={{ padding: '12px 16px' }}>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                          <select value={['approved', 'pending', 'rejected'].includes(row.status) ? row.status : 'pending'} onChange={(event) => void handleStatusChange(row, event.target.value as any)} disabled={submittingId === row.id} aria-label={`Edit status for ${row.userName || row.userId}`} style={{ padding: '7px 9px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.surface, color: C.text, fontSize: 12, fontWeight: 700 }}>
+                            <option value="approved">Approved</option>
+                            <option value="pending">Pending</option>
+                            <option value="rejected">Rejected</option>
+                          </select>
                         {row.status === 'pending' ? (
                           <div style={{ display: 'flex', gap: 8 }}>
                             <button
@@ -327,6 +369,7 @@ export default function RoleRedemptionRequestsPage({
                             <Eye size={13} /> View
                           </button>
                         )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -356,6 +399,8 @@ export default function RoleRedemptionRequestsPage({
                   <div style={{ display: 'grid', gap: 8 }}>
                     {[
                       ['User', viewItem.userName || viewItem.userId],
+                      ['Phone', viewItem.userPhone ? `+91 ${viewItem.userPhone}` : '—'],
+                      ['User Code', viewItem.userCode || '—'],
                       ['Type', TYPE_LABELS[viewItem.type] ?? viewItem.type],
                       ['Points', Number(viewItem.points ?? 0).toLocaleString('en-IN')],
                       ['Amount', `₹${Number(viewItem.amount ?? 0).toLocaleString('en-IN')}`],

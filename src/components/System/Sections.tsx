@@ -783,7 +783,7 @@ export function Reports() {
     previous: (chartData[selectedMetric] ?? chartData.scans).map((v: number) => Math.max(0, v - Math.floor(v * 0.2))),
   };
 
-  const topProducts: any[] = [];
+  const topProducts: any[] = Array.isArray(scanStats?.topProducts) ? scanStats.topProducts : [];
   
   const handleExportClick = (format: 'pdf' | 'excel' | 'png') => {
     setExportFormat(format);
@@ -1132,7 +1132,9 @@ export function Reports() {
             <div style={{ fontSize: 16, fontWeight: 800, color: C.text }}>Top Scanned Products</div>
             <button onClick={() => handleExportClick('png')} style={{ padding: '6px 12px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.surface, color: C.muted, fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}><Image size={12} /> Export</button>
           </div>
-          {topProducts.map((p, i) => (
+          {topProducts.length === 0 ? (
+            <div style={{ padding: '28px 8px', textAlign: 'center', color: C.muted, fontSize: 13 }}>No scanned product data is available yet.</div>
+          ) : topProducts.map((p, i) => (
             <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
               <div style={{ width: 26, height: 26, borderRadius: 8, background: i === 0 ? warningBg : i === 1 ? neutralBg : C.accentSoft, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 900, color: i === 0 ? warningText : i === 1 ? neutralText : C.accentText, flexShrink: 0 }}>#{i + 1}</div>
               <img src={p.image} alt={p.name} style={{ width: 38, height: 38, objectFit: 'contain', borderRadius: 8, background: C.bg, flexShrink: 0 }} />
@@ -1140,7 +1142,7 @@ export function Reports() {
                 <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{p.name}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
                   <div style={{ flex: 1, height: 5, background: C.bg, borderRadius: 3, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${Math.min(100, (p.totalScanned / topProducts[0].totalScanned) * 100)}%`, background: `linear-gradient(90deg, ${C.red}, ${C.redDark})`, borderRadius: 3 }} />
+                    <div style={{ height: '100%', width: `${Math.min(100, (p.totalScanned / Math.max(1, topProducts[0].totalScanned)) * 100)}%`, background: `linear-gradient(90deg, ${C.red}, ${C.redDark})`, borderRadius: 3 }} />
                   </div>
                   <span style={{ fontSize: 11, fontWeight: 700, color: C.muted, whiteSpace: 'nowrap' }}>{p.totalScanned.toLocaleString('en-IN')}</span>
                 </div>

@@ -1,6 +1,6 @@
 ﻿'use client';
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, Bolt, Store, Eye, Check, X, Package, SlidersHorizontal, Search, User, FileSpreadsheet, Truck, Pencil } from 'lucide-react';
+import { ShoppingBag, Bolt, Store, Eye, Check, X, Package, SlidersHorizontal, Search, User, FileSpreadsheet, Truck, Trash2 } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { formatISTDateTime, formatISTDate, formatISTDateTimeFull } from '@/lib/dateIST';
 import { giftApi, redemptionApi } from '@/lib/api';
@@ -15,6 +15,7 @@ interface GiftOrder {
   type: 'electrician' | 'dealer' | 'customer' | 'counterboy';
   userName: string;
   userCode: string;
+  userPhone?: string;
   dealerName: string;
   giftName: string;
   giftImage: string;
@@ -71,6 +72,7 @@ function OrderDetailModal({ order, onClose, C }: { order: GiftOrder; onClose: ()
               { label: 'Type', value: order.type === 'electrician' ? 'Electrician' : order.type === 'dealer' ? 'Dealer' : order.type === 'customer' ? 'Customer' : 'Counterboy' },
               { label: order.type === 'electrician' ? 'Electrician' : order.type === 'dealer' ? 'Dealer' : order.type === 'customer' ? 'Customer' : 'Counterboy', value: order.userName },
               { label: 'Code', value: order.userCode },
+              { label: 'Mobile Number', value: order.userPhone ? `+91 ${order.userPhone}` : '—' },
               { label: 'Dealer', value: order.dealerName },
               { label: 'Ordered On', value: formatISTDate(order.orderedAt) },
               { label: 'Courier', value: order.courierName || '—' },
@@ -174,6 +176,7 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
   const [showFilterPopup, setShowFilterPopup] = useState(false);
   const [trackingOrder, setTrackingOrder] = useState<GiftOrder | null>(null);
   const [confirmState, setConfirmState] = useState<{ show: boolean; id: string; action: 'approve' | 'reject' }>({ show: false, id: '', action: 'approve' });
+  const [deleteTarget, setDeleteTarget] = useState<GiftOrder | null>(null);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
@@ -195,6 +198,7 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
         type: o.role ?? o.type ?? 'electrician',
         userName: o.userName ?? o.user_name ?? 'Unknown',
         userCode: o.userCode ?? o.user_code ?? '',
+        userPhone: o.userPhone ?? o.user_phone ?? '',
         dealerName: o.dealerName ?? o.dealer_name ?? '—',
         giftName: o.giftName ?? o.gift_name ?? 'Gift',
         giftImage: o.giftImage ?? o.gift_image ?? '',
@@ -221,7 +225,7 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
   useEffect(() => { setPage(1); }, [tab, filterStatus]);
 
   const filtered = orders.filter(o =>
-    (search === '' || o.userName.toLowerCase().includes(search.toLowerCase()) || o.giftName.toLowerCase().includes(search.toLowerCase()) || o.dealerName.toLowerCase().includes(search.toLowerCase()))
+    (search === '' || o.userName.toLowerCase().includes(search.toLowerCase()) || (o.userPhone ?? '').includes(search) || o.userCode.toLowerCase().includes(search.toLowerCase()) || o.giftName.toLowerCase().includes(search.toLowerCase()) || o.dealerName.toLowerCase().includes(search.toLowerCase()))
   );
 
   const confirmAction = async () => {
@@ -250,9 +254,10 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
       <ConfirmDialog show={confirmState.show} title={confirmState.action === 'approve' ? 'Approve Order' : 'Reject Order'} message={`Are you sure you want to ${confirmState.action} this gift order?`} onConfirm={confirmAction} onCancel={() => setConfirmState({ show: false, id: '', action: 'approve' })} type={confirmState.action === 'approve' ? 'success' : 'danger'} />
+      <ConfirmDialog show={deleteTarget !== null} title="Delete Gift Order" message={`Delete the gift order for ${deleteTarget?.userName ?? 'this user'}?`} onConfirm={async () => { if (!deleteTarget) return; await giftApi.deleteOrder(deleteTarget.id); setDeleteTarget(null); await loadOrders(); }} onCancel={() => setDeleteTarget(null)} type="danger" />
       {selectedOrder && <OrderDetailModal order={selectedOrder} onClose={() => setSelectedOrder(null)} C={C} />}
       {trackingOrder && <TrackingModal order={trackingOrder} onClose={() => setTrackingOrder(null)} onSave={(status, data) => saveTracking(trackingOrder, status, data)} C={C} />}
-      <ExportModal show={showExport} onClose={() => setShowExport(false)} title={`${tab.charAt(0).toUpperCase() + tab.slice(1)} Gift Orders`} fileName={`gift-orders-${tab}`} getData={() => filtered.map(o => ({ ID: o.id, Type: o.type, Name: o.userName, Code: o.userCode, Dealer: o.dealerName, Gift: o.giftName, Points: o.pointsUsed, Date: o.orderedAt, Status: o.status, Courier: o.courierName, TrackingID: o.trackingNumber }))} />
+      <ExportModal show={showExport} onClose={() => setShowExport(false)} title={`${tab.charAt(0).toUpperCase() + tab.slice(1)} Gift Orders`} fileName={`gift-orders-${tab}`} getData={() => filtered.map(o => ({ ID: o.id, Type: o.type, Name: o.userName, Phone: o.userPhone ?? '', Code: o.userCode, Dealer: o.dealerName, Gift: o.giftName, Points: o.pointsUsed, Date: o.orderedAt, Status: o.status, Courier: o.courierName, TrackingID: o.trackingNumber }))} />
 
       {/* Header */}
       <div style={{ background: 'linear-gradient(135deg, #7C3AED, #5B21B6)', borderRadius: 18, padding: '22px 28px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 8px 24px rgba(124,58,237,0.25)' }}>
@@ -291,7 +296,7 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
       <div style={{ background: C.card, borderRadius: 14, padding: '12px 16px', border: `1px solid ${C.border}`, marginBottom: 16, display: 'flex', gap: 10, alignItems: 'center', position: 'relative' }}>
         <div style={{ position: 'relative', flex: 1 }}>
           <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: C.muted, pointerEvents: 'none' }} />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, gift, dealer..." style={{ ...inputStyle, paddingLeft: 32, width: '100%', boxSizing: 'border-box' }} />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, mobile, code, gift, dealer..." style={{ ...inputStyle, paddingLeft: 32, width: '100%', boxSizing: 'border-box' }} />
         </div>
         {activeFilters > 0 && (
           <button onClick={() => setFilterStatus('all')} style={{ padding: '8px 12px', borderRadius: 8, border: `1px solid ${C.red}`, background: '#FFF0F0', color: C.red, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>Clear</button>
@@ -359,7 +364,7 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
                   </td>
                   <td style={{ padding: '14px 16px' }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{order.userName}</div>
-                    <div style={{ fontSize: 11, color: C.muted }}>{order.userCode}</div>
+                    <div style={{ fontSize: 11, color: C.muted }}>{order.userPhone ? `+91 ${order.userPhone} · ` : ''}{order.userCode}</div>
                   </td>
                   <td style={{ padding: '14px 16px' }}>
                     <img src={order.giftImage} alt={order.giftName} style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 8, border: `1px solid ${C.border}` }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
@@ -390,6 +395,7 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
                           <button onClick={() => setConfirmState({ show: true, id: order.id, action: 'reject' })} title="Reject" style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 7, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={14} /></button>
                         </>
                       )}
+                      {canEdit && <button onClick={() => setDeleteTarget(order)} title="Delete order" style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 7, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Trash2 size={14} /></button>}
                     </div>
                   </td>
                 </tr>

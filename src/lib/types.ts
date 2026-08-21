@@ -38,6 +38,11 @@ export interface Electrician {
   status: UserStatus;
   dealerId: string;
   dealerName: string;
+  dealerPhone?: string | null;
+  dealerCode?: string | null;
+  fallbackDealerName?: string | null;
+  fallbackDealerPhone?: string | null;
+  fallbackDealerCode?: string | null;
   bankLinked: boolean;
   upiId?: string;
   upiQrCodeImage?: string | null;
@@ -142,6 +147,7 @@ export interface Product {
   category: string;
   subCategory?: string;
   image: string;
+  images?: string[];
   points: number;
   badge: string;
   price: string;

@@ -12,9 +12,10 @@ interface ExportModalProps {
   fileName: string;
   onExcelExport?: () => Promise<void> | void;
   onExportComplete?: (format: 'excel' | 'csv' | 'pdf' | 'zip') => Promise<void> | void;
+  isDataLoading?: boolean;
 }
 
-export default function ExportModal({ show, onClose, title, getData, fileName, onExcelExport, onExportComplete }: ExportModalProps) {
+export default function ExportModal({ show, onClose, title, getData, fileName, onExcelExport, onExportComplete, isDataLoading = false }: ExportModalProps) {
   const C = useThemePalette();
   const [exporting, setExporting] = useState<string | null>(null);
   const mouseDownInside = React.useRef(false);
@@ -134,18 +135,23 @@ export default function ExportModal({ show, onClose, title, getData, fileName, o
         {/* Options */}
         <div style={{ padding: '20px 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           {opts.map(opt => (
+            (() => {
+              const waitingForRows = isDataLoading && opt.key !== 'excel';
+              return (
             <button
               key={opt.key}
               onClick={() => handleExport(opt.key as any)}
-              disabled={exporting !== null}
-              style={{ background: exporting === opt.key ? opt.bg : C.surface, border: `2px solid ${exporting === opt.key ? opt.bdr : C.border}`, borderRadius: 14, padding: '16px', cursor: exporting ? 'not-allowed' : 'pointer', textAlign: 'left', transition: 'all 0.2s', opacity: exporting && exporting !== opt.key ? 0.5 : 1 }}
+              disabled={exporting !== null || waitingForRows}
+              style={{ background: exporting === opt.key ? opt.bg : C.surface, border: `2px solid ${exporting === opt.key ? opt.bdr : C.border}`, borderRadius: 14, padding: '16px', cursor: exporting || waitingForRows ? 'not-allowed' : 'pointer', textAlign: 'left', transition: 'all 0.2s', opacity: waitingForRows || (exporting && exporting !== opt.key) ? 0.5 : 1 }}
               onMouseEnter={e => { if (!exporting) { (e.currentTarget as HTMLButtonElement).style.background = opt.bg; (e.currentTarget as HTMLButtonElement).style.borderColor = opt.bdr; } }}
               onMouseLeave={e => { if (!exporting) { (e.currentTarget as HTMLButtonElement).style.background = C.surface; (e.currentTarget as HTMLButtonElement).style.borderColor = C.border; } }}
             >
               <div style={{ marginBottom: 8 }}>{exporting === opt.key ? <RefreshCw size={24} /> : icons[opt.key as keyof typeof icons]}</div>
               <div style={{ fontSize: 14, fontWeight: 800, color: exporting === opt.key ? opt.color : C.text }}>{exporting === opt.key ? 'Exporting...' : opt.label}</div>
-              <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{opt.desc}</div>
+              <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{waitingForRows ? 'Preparing rows...' : opt.desc}</div>
             </button>
+              );
+            })()
           ))}
         </div>
 

@@ -77,14 +77,10 @@ async function decodeQrImage(file: File): Promise<string> {
   // Try multiple sizes. A single aggressive resize loses the QR modules when
   // the code occupies only a small part of a product/label photo.
   const longestSide = Math.max(image.naturalWidth, image.naturalHeight);
-  const targetSizes = [...new Set([
-    Math.min(longestSide, 900),
-    Math.min(longestSide, 1600),
-    Math.min(longestSide, 2800),
-  ])];
+  const targetSizes = [...new Set([900, 1600, 2800])];
 
   for (const targetSize of targetSizes) {
-    const scale = Math.min(1, targetSize / longestSide);
+    const scale = Math.min(3, targetSize / longestSide);
     canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
     canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -95,6 +91,30 @@ async function decodeQrImage(file: File): Promise<string> {
       inversionAttempts: 'attemptBoth',
     });
     if (decoded?.data) return decoded.data;
+
+    // Phone photos often contain a clear but small QR surrounded by packaging.
+    // Decode overlapping crops so the QR occupies enough pixels for jsQR.
+    const cropCanvas = document.createElement('canvas');
+    const cropContext = cropCanvas.getContext('2d', { willReadFrequently: true });
+    if (!cropContext) continue;
+    for (const cropRatio of [0.72, 0.5]) {
+      const cropWidth = Math.max(128, Math.round(canvas.width * cropRatio));
+      const cropHeight = Math.max(128, Math.round(canvas.height * cropRatio));
+      const outputScale = Math.min(3, 1400 / Math.max(cropWidth, cropHeight));
+      cropCanvas.width = Math.round(cropWidth * outputScale);
+      cropCanvas.height = Math.round(cropHeight * outputScale);
+      for (const yRatio of [0, 0.5, 1]) {
+        for (const xRatio of [0, 0.5, 1]) {
+          const sx = Math.max(0, Math.round((canvas.width - cropWidth) * xRatio));
+          const sy = Math.max(0, Math.round((canvas.height - cropHeight) * yRatio));
+          cropContext.clearRect(0, 0, cropCanvas.width, cropCanvas.height);
+          cropContext.drawImage(canvas, sx, sy, cropWidth, cropHeight, 0, 0, cropCanvas.width, cropCanvas.height);
+          const cropData = cropContext.getImageData(0, 0, cropCanvas.width, cropCanvas.height);
+          const cropDecoded = jsQR(cropData.data, cropData.width, cropData.height, { inversionAttempts: 'attemptBoth' });
+          if (cropDecoded?.data) return cropDecoded.data;
+        }
+      }
+    }
   }
 
   throw new Error('No QR code found in this image. Please upload a clear, well-lit image with the full QR visible.');

@@ -207,7 +207,9 @@ function ViewModal({
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 22 }}>
             {[
               { label: 'City', value: el.city }, { label: 'District', value: el.district },
-              { label: 'State', value: el.state }, { label: 'Dealer', value: el.dealerName },
+              { label: 'State', value: el.state }, { label: 'Dealer', value: el.dealerName || el.fallbackDealerName || 'SRV Dealer' },
+              { label: 'Dealer Mobile', value: el.dealerPhone || el.fallbackDealerPhone || '—' },
+              { label: 'Dealer Code', value: el.dealerCode || el.fallbackDealerCode || '—' },
               { label: 'Email', value: el.email || '—' },
               { label: 'Electrician Code', value: el.electricianCode },
               { label: 'Joined', value: formatISTDate(el.joinedDate) },
@@ -640,6 +642,8 @@ export default function Electricians({ role }: ElectriciansProps) {
       setData(rawElecs.map((e: any) => ({
         ...e,
         dealerName: e.dealerName ?? e.dealer?.name ?? e.fallbackDealerName ?? '—',
+        dealerPhone: e.dealerPhone ?? e.dealer?.phone ?? e.fallbackDealerPhone ?? null,
+        dealerCode: e.dealerCode ?? e.dealer?.dealerCode ?? e.fallbackDealerCode ?? null,
         recentActivity: e.recentActivity ?? e.lastActivityAt ?? 'N/A',
       })));
     } catch (err: any) {

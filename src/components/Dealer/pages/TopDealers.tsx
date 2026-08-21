@@ -190,14 +190,10 @@ export default function TopDealers() {
                   <div style={{ height: '100%', width: `${pct}%`, background: `linear-gradient(90deg, ${rankColor}, ${rankColor}99)`, borderRadius: 3, transition: 'width 0.8s ease' }} />
                 </div>
               </div>
-              <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <div style={{ fontSize: 18, fontWeight: 900, color: rankColor }}>{displayVal}</div>
-                <div style={{ fontSize: 10, color: C.muted }}>Electricians</div>
-              </div>
               <div style={{ display: 'flex', gap: 12, flexShrink: 0 }}>
                 <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{d.electricianCount}</div>
-                  <div style={{ fontSize: 10, color: C.muted }}>Total</div>
+                  <div style={{ fontSize: 18, fontWeight: 900, color: rankColor }}>{displayVal}</div>
+                  <div style={{ fontSize: 10, color: C.muted }}>Electricians</div>
                 </div>
               </div>
             </div>

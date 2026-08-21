@@ -6,7 +6,7 @@ import { useThemePalette } from '@/lib/theme';
 import { formatISTDate, formatISTDateTime } from '@/lib/dateIST';
 
 type OrderStatus = 'pending' | 'approved' | 'out_for_delivery' | 'shipped' | 'delivered' | 'rejected' | 'cancelled' | 'returned' | 'refunded';
-type DeliveryFilter = 'all' | 'pending_queue' | 'payment_paid' | OrderStatus;
+type DeliveryFilter = 'all' | 'pending_queue' | 'payment_paid' | 'refund_requested' | OrderStatus;
 
 type DeliveryOrder = {
   id: string;
@@ -59,7 +59,7 @@ function timeline(order: DeliveryOrder) {
     { label: 'Payment Done', value: order.paidAt ? safeDate(order.paidAt) : (order.paymentStatus || 'pending'), done: order.paymentStatus === 'paid' },
     { label: 'Confirmed', value: stopped ? (order.rejectionReason || order.deliveryNotes || 'Stopped by admin') : 'Ready for packing', done: !stopped && ['pending', 'approved', 'out_for_delivery', 'shipped', 'delivered'].includes(order.status) },
     { label: 'Dispatched', value: order.dispatchedAt ? safeDate(order.dispatchedAt) : (order.trackingNumber || 'Awaiting courier'), done: ['out_for_delivery', 'shipped', 'delivered'].includes(order.status) },
-    { label: stopped ? 'Refund / Return' : 'Delivery', value: stopped ? (order.refundMessage || order.deliveryNotes || 'Customer notified') : (order.deliveredAt ? safeDate(order.deliveredAt) : `Expected ${safeDate(order.estimatedDeliveryAt)}`), done: stopped || order.status === 'delivered' },
+    { label: order.refundStatus === 'pending' ? 'Refund Requested' : stopped ? 'Refund / Return' : 'Delivery', value: stopped ? (order.refundMessage || order.deliveryNotes || 'Customer notified') : (order.deliveredAt ? safeDate(order.deliveredAt) : `Expected ${safeDate(order.estimatedDeliveryAt)}`), done: stopped || order.status === 'delivered' },
   ];
 }
 
@@ -124,18 +124,20 @@ export default function DeliveryTracker({ role }: { role?: import('@/lib/types')
     const q = search.trim().toLowerCase();
     const matchesSearch = !q || [order.id, order.userName, order.userPhone, order.productName, order.trackingNumber, order.courierName].filter(Boolean).some((v) => String(v).toLowerCase().includes(q));
     const matchesStatus = status === 'all'
-      || (status === 'pending_queue' && ['pending', 'approved'].includes(order.status))
+      || (status === 'pending_queue' && order.status === 'pending')
       || (status === 'payment_paid' && order.paymentStatus === 'paid')
+      || (status === 'refund_requested' && order.refundStatus === 'pending')
       || order.status === status;
     return matchesSearch && matchesStatus;
   }), [orders, search, status]);
 
   const stats = useMemo(() => ({
-    pending: orders.filter(o => o.status === 'pending' || o.status === 'approved').length,
+    pending: orders.filter(o => o.status === 'pending').length,
     paymentDone: orders.filter(o => o.paymentStatus === 'paid').length,
     dispatched: orders.filter(o => o.status === 'shipped').length,
     delivered: orders.filter(o => o.status === 'delivered').length,
     rejected: orders.filter(o => o.status === 'rejected').length,
+    refundRequested: orders.filter(o => o.refundStatus === 'pending').length,
   }), [orders]);
 
   const dispatchedOrders = useMemo(
@@ -210,13 +212,14 @@ export default function DeliveryTracker({ role }: { role?: import('@/lib/types')
         </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(150px, 1fr))', gap: 12, marginBottom: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, minmax(140px, 1fr))', gap: 12, marginBottom: 16 }}>
         {[
           ['Pending', stats.pending, Clock3, '#F59E0B', 'pending_queue'],
           ['Payment Done', stats.paymentDone, CreditCard, '#059669', 'payment_paid'],
           ['Dispatched', stats.dispatched, Truck, '#4F46E5', 'shipped'],
           ['Delivered', stats.delivered, CheckCircle2, '#16A34A', 'delivered'],
           ['Rejected', stats.rejected, XCircle, '#DC2626', 'rejected'],
+          ['Refund Requests', stats.refundRequested, RefreshCw, '#BE123C', 'refund_requested'],
         ].map(([label, value, Icon, color, filterValue]: any) => (
           <button type="button" onClick={() => handleSummaryCardClick(filterValue)} key={label} style={{ textAlign: 'left', background: C.card, border: `2px solid ${status === filterValue ? color : C.border}`, borderRadius: 16, padding: 16, cursor: 'pointer', boxShadow: status === filterValue ? `0 0 0 3px ${color}20` : 'none' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -231,17 +234,18 @@ export default function DeliveryTracker({ role }: { role?: import('@/lib/types')
       <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 14, display: 'flex', gap: 10, alignItems: 'center', marginBottom: 16 }}>
         <div style={{ position: 'relative', flex: 1 }}>
           <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: C.muted }} />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search order, customer, product, tracking..." style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px 10px 36px', border: `1.5px solid ${C.border}`, borderRadius: 10, background: C.inputBg, color: C.text, outline: 'none' }} />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search order, customer, mobile, product, tracking..." style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px 10px 36px', border: `1.5px solid ${C.border}`, borderRadius: 10, background: C.inputBg, color: C.text, outline: 'none' }} />
         </div>
         <select value={status} onChange={e => setStatus(e.target.value as any)} style={{ padding: '10px 12px', border: `1.5px solid ${C.border}`, borderRadius: 10, background: C.inputBg, color: C.text, minWidth: 180 }}>
           <option value="all">All Delivery Status</option>
-          <option value="pending_queue">Pending (including confirmed)</option>
+          <option value="pending_queue">Pending Only</option>
           <option value="payment_paid">Payment Done</option>
           <option value="pending">Pending Dispatch</option>
           <option value="approved">Order Confirmed</option>
           <option value="shipped">Dispatched</option>
           <option value="delivered">Delivered</option>
           <option value="rejected">Rejected / Refund</option>
+          <option value="refund_requested">Refund Requested</option>
         </select>
         <span style={{ color: C.muted, fontSize: 13, whiteSpace: 'nowrap' }}>{filtered.length} orders</span>
       </div>
@@ -257,7 +261,7 @@ export default function DeliveryTracker({ role }: { role?: import('@/lib/types')
                 {order.productImage ? <img src={order.productImage} alt={order.productName} style={{ width: 54, height: 54, borderRadius: 12, objectFit: 'cover', border: `1px solid ${C.border}` }} /> : <PackageCheck size={38} color={C.muted} />}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 15, fontWeight: 900, color: C.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{order.productName}</div>
-                  <div style={{ fontSize: 12, color: C.muted }}>{order.userName} • Qty {order.quantity} • {order.source === 'gift' ? `${Number(order.pointsUsed ?? order.total).toLocaleString('en-IN')} pts` : `₹${order.total}`}</div>
+                  <div style={{ fontSize: 12, color: C.muted }}>{order.userName}{order.userPhone ? ` • +91 ${order.userPhone}` : ''} • Qty {order.quantity} • {order.source === 'gift' ? `${Number(order.pointsUsed ?? order.total).toLocaleString('en-IN')} pts` : `₹${order.total}`}</div>
                 </div>
                 <span style={{ background: statusStyle.bg, color: statusStyle.color, borderRadius: 999, padding: '5px 10px', fontSize: 11, fontWeight: 900 }}>{statusStyle.label}</span>
               </div>
@@ -314,6 +318,7 @@ export default function DeliveryTracker({ role }: { role?: import('@/lib/types')
           <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, width: 520, maxWidth: '95vw', padding: 24 }} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: 18, fontWeight: 900, color: C.text, marginBottom: 6 }}>Manage Delivery #{selected.id.slice(0, 8)}</div>
             <div style={{ color: C.muted, fontSize: 13, marginBottom: 18 }}>{selected.productName} • {selected.source === 'gift' ? 'Gift redemption' : 'Product order'} • {formatISTDateTime(selected.orderedAt)}</div>
+            <div style={{ background: C.bg, borderRadius: 10, padding: 10, marginBottom: 12, color: C.text, fontSize: 13 }}><strong>User:</strong> {selected.userName} · <strong>Mobile:</strong> {selected.userPhone ? `+91 ${selected.userPhone}` : 'Not available'}</div>
             {(selected.courierName || selected.trackingNumber) && (
               <div style={{ background: C.bg, borderRadius: 12, padding: 12, marginBottom: 12, color: C.text, fontSize: 13 }}>
                 <div><strong>Courier:</strong> {selected.courierName || 'Not assigned'}</div>
