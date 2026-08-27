@@ -17,6 +17,7 @@ interface ElectricianHubProps {
   role: AdminRole;
   defaultPage?: string;
   onSubPageChange?: (subPage: string, label: string) => void;
+  badges?: { finance?: number; kyc?: number };
 }
 
 const subPages = [
@@ -30,7 +31,7 @@ const subPages = [
   { id: 'bank', label: 'Bank Linked', Icon: Landmark, description: 'Bank & UPI details' },
 ];
 
-export default function ElectricianHub({ role, defaultPage, onSubPageChange }: ElectricianHubProps) {
+export default function ElectricianHub({ role, defaultPage, onSubPageChange, badges = {} }: ElectricianHubProps) {
   const C = useThemePalette();
   const initialPage =
     defaultPage && subPages.some((page) => page.id === defaultPage) ? defaultPage : 'electricians';
@@ -74,6 +75,7 @@ export default function ElectricianHub({ role, defaultPage, onSubPageChange }: E
           {subPages.map(page => {
             const isActive = activePage === page.id;
             const PageIcon = page.Icon;
+            const badge = Math.max(0, Number(badges[page.id as keyof typeof badges] ?? 0));
             return (
               <button
                 key={page.id}
@@ -82,6 +84,7 @@ export default function ElectricianHub({ role, defaultPage, onSubPageChange }: E
               >
                 <PageIcon size={16} />
                 {page.label}
+                {badge > 0 && <span style={{ minWidth: 18, height: 18, padding: '0 5px', borderRadius: 9, background: '#EF4444', color: 'white', fontSize: 10, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{badge > 99 ? '99+' : badge}</span>}
               </button>
             );
           })}

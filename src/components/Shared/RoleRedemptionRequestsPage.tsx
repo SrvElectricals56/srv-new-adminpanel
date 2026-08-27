@@ -109,10 +109,10 @@ export default function RoleRedemptionRequestsPage({
     [rows, search, statusFilter],
   );
 
-  const totalApproved = rows
+  const totalApproved = Number(summary.approved?.amount ?? rows
     .filter((row) => row.status === 'approved')
-    .reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
-  const rejectedCount = rows.filter((row) => row.status === 'rejected').length;
+    .reduce((sum, row) => sum + Number(row.amount ?? 0), 0));
+  const rejectedCount = summary.rejected?.count ?? rows.filter((row) => row.status === 'rejected').length;
   const exactPendingCount = summary.pending?.count ?? rows.filter((row) => row.status === 'pending').length;
 
   const handleStatusChange = async (item: RedemptionRecord, nextStatus: 'approved' | 'pending' | 'rejected') => {

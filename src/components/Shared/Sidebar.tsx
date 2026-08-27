@@ -116,9 +116,10 @@ interface SidebarProps {
   role?: string;
   adminName?: string;
   lockedCollapsed?: boolean;
+  badges?: Record<string, number>;
 }
 
-export default function Sidebar({ active, onNavigate, onPreload, onCollapseChange, role, adminName, lockedCollapsed = false }: SidebarProps) {
+export default function Sidebar({ active, onNavigate, onPreload, onCollapseChange, role, adminName, lockedCollapsed = false, badges = {} }: SidebarProps) {
   const P = useThemePalette();
   const [collapsed, setCollapsed] = useState(false);
   const effectiveCollapsed = collapsed || lockedCollapsed;
@@ -260,6 +261,7 @@ export default function Sidebar({ active, onNavigate, onPreload, onCollapseChang
             {visibleItems.map((item) => {
               const isActive = active === item.id;
               const { Icon } = item;
+              const badge = Math.max(0, Number(badges[item.id] ?? 0));
               return (
                 <button
                   key={item.id}
@@ -284,12 +286,34 @@ export default function Sidebar({ active, onNavigate, onPreload, onCollapseChang
                     transition: 'all 0.18s ease',
                     boxShadow: isActive ? '0 4px 14px rgba(29,78,216,0.35)' : 'none',
                     whiteSpace: 'nowrap',
+                    position: 'relative',
                   }}
 onMouseEnter={e => { onPreload?.(item.id); if (!isActive) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.07)'; }}
 onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
                 >
                   <Icon size={18} style={{ flexShrink: 0 }} />
                   {!effectiveCollapsed && <span>{item.label}</span>}
+                  {badge > 0 && (
+                    <span style={{
+                      marginLeft: effectiveCollapsed ? 0 : 'auto',
+                      position: effectiveCollapsed ? 'absolute' : 'static',
+                      top: effectiveCollapsed ? 3 : undefined,
+                      right: effectiveCollapsed ? 3 : undefined,
+                      minWidth: 18,
+                      height: 18,
+                      padding: '0 5px',
+                      borderRadius: 9,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: '#EF4444',
+                      color: '#FFFFFF',
+                      fontSize: 10,
+                      fontWeight: 800,
+                      border: '2px solid rgba(15,23,42,0.9)',
+                      lineHeight: 1,
+                    }}>{badge > 99 ? '99+' : badge}</span>
+                  )}
                 </button>
               );
             })}

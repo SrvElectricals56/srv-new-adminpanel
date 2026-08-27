@@ -18,6 +18,7 @@ interface DealerHubProps {
   role: AdminRole;
   defaultPage?: string;
   onSubPageChange?: (subPage: string, label: string) => void;
+  badges?: { approvals?: number; kyc?: number; finance?: number };
 }
 
 const subPages = [
@@ -32,7 +33,7 @@ const subPages = [
   { id: 'bank', label: 'Bank Linked', Icon: Landmark, description: 'Bank & UPI details' },
 ];
 
-export default function DealerHub({ role, defaultPage, onSubPageChange }: DealerHubProps) {
+export default function DealerHub({ role, defaultPage, onSubPageChange, badges = {} }: DealerHubProps) {
   const C = useThemePalette();
   const [activePage, setActivePage] = useState(defaultPage || 'dealers');
 
@@ -75,6 +76,7 @@ export default function DealerHub({ role, defaultPage, onSubPageChange }: Dealer
           {subPages.map(page => {
             const isActive = activePage === page.id;
             const PageIcon = page.Icon;
+            const badge = Math.max(0, Number(badges[page.id as keyof typeof badges] ?? 0));
             return (
               <button
                 key={page.id}
@@ -107,6 +109,7 @@ export default function DealerHub({ role, defaultPage, onSubPageChange }: Dealer
               >
                 <PageIcon size={16} />
                 {page.label}
+                {badge > 0 && <span style={{ minWidth: 18, height: 18, padding: '0 5px', borderRadius: 9, background: '#EF4444', color: 'white', fontSize: 10, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{badge > 99 ? '99+' : badge}</span>}
               </button>
             );
           })}

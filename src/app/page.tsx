@@ -278,6 +278,7 @@ export default function Home() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState('');
   const [routeLoading, setRouteLoading] = useState(false);
+  const [pendingNotifications, setPendingNotifications] = useState<Record<string, number>>({});
   const [crudAlert, setCrudAlert] = useState<{ show: boolean; title: string; message: string; type: 'success' | 'info' }>({
     show: false,
     title: '',
@@ -302,6 +303,31 @@ export default function Home() {
     window.addEventListener('resize', updateViewport);
     return () => window.removeEventListener('resize', updateViewport);
   }, []);
+
+  useEffect(() => {
+    if (!loggedIn || role === 'staff') {
+      setPendingNotifications({});
+      return;
+    }
+    let cancelled = false;
+    const refreshPendingNotifications = async () => {
+      try {
+        const result = await import('@/lib/api').then((module) => module.analyticsApi.getDashboard());
+        if (!cancelled) setPendingNotifications(result?.notifications ?? {});
+      } catch {
+        // Keep the last successful badge counts during a temporary API failure.
+      }
+    };
+    void refreshPendingNotifications();
+    const interval = window.setInterval(() => { void refreshPendingNotifications(); }, 60_000);
+    const onVisibility = () => { if (document.visibilityState === 'visible') void refreshPendingNotifications(); };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [loggedIn, role]);
 
   useEffect(() => {
     const onCrudSuccess = (event: Event) => {
@@ -654,8 +680,8 @@ export default function Home() {
     switch (active) {
       case 'dashboard': return <Dashboard role={role} adminName={adminName} onNavigate={handleNavigate} />;
       case 'pro-active-inactive': return <ProActiveInactiveHub />;
-      case 'electricians': return <ElectricianHub role={role} defaultPage={electricianSubPage} onSubPageChange={(sp) => { showRouteLoader(); setElectricianSubPage(sp); }} />;
-      case 'dealers': return <DealerHub role={role} defaultPage={dealerSubPage} onSubPageChange={(sp) => { showRouteLoader(); setDealerSubPage(sp); }} />;
+      case 'electricians': return <ElectricianHub role={role} defaultPage={electricianSubPage} badges={{ finance: pendingNotifications.pendingElectricianRedemptions, kyc: pendingNotifications.pendingElectricianKyc }} onSubPageChange={(sp) => { showRouteLoader(); setElectricianSubPage(sp); }} />;
+      case 'dealers': return <DealerHub role={role} defaultPage={dealerSubPage} badges={{ approvals: pendingNotifications.pendingDealerApprovals, kyc: pendingNotifications.pendingDealerKyc, finance: pendingNotifications.pendingDealerRedemptions }} onSubPageChange={(sp) => { showRouteLoader(); setDealerSubPage(sp); }} />;
       case 'sub-dealers': return <SubDealers role={role} />;
       case 'app-users': return <AppUserHub key={`app-users-${appUserSubPage ?? 'users'}`} role={role} defaultPage={appUserSubPage} onSubPageChange={(sp) => { showRouteLoader(); setAppUserSubPage(sp); }} />;
       case 'counterboys': return <CounterBoyHub key={`counterboys-${counterBoySubPage ?? 'counterboys'}`} role={role} defaultPage={counterBoySubPage} onSubPageChange={(sp) => { showRouteLoader(); setCounterBoySubPage(sp); }} />;
@@ -1189,7 +1215,23 @@ export default function Home() {
         </div>
       )}
 
-      <Sidebar active={active} onNavigate={handleNavigate} onPreload={(id) => { void preloadPageChunk(id); }} onCollapseChange={setSidebarCollapsed} role={role} adminName={adminName} lockedCollapsed={autoCollapsedSidebar} />
+      <Sidebar
+        active={active}
+        onNavigate={handleNavigate}
+        onPreload={(id) => { void preloadPageChunk(id); }}
+        onCollapseChange={setSidebarCollapsed}
+        role={role}
+        adminName={adminName}
+        lockedCollapsed={autoCollapsedSidebar}
+        badges={{
+          electricians: Number(pendingNotifications.pendingElectricianRedemptions ?? 0) + Number(pendingNotifications.pendingElectricianKyc ?? 0),
+          dealers: Number(pendingNotifications.pendingDealerRedemptions ?? 0) + Number(pendingNotifications.pendingDealerKyc ?? 0) + Number(pendingNotifications.pendingDealerApprovals ?? 0),
+          'gift-orders': Number(pendingNotifications.pendingGiftOrders ?? 0),
+          'product-orders': Number(pendingNotifications.pendingProductOrders ?? 0),
+          'delivery-tracker': Number(pendingNotifications.pendingProductOrders ?? 0),
+          'enquiry-support': Number(pendingNotifications.openEnquiries ?? 0),
+        }}
+      />
       {(isPending || routeLoading) && <SrvLogoLoader overlay label={`Opening ${PAGE_LABELS[active]?.title ?? 'section'}...`} />}
       <div style={{ 
         marginLeft: effectiveSidebarCollapsed ? 72 : 260, 

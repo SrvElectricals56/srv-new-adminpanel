@@ -237,24 +237,21 @@ export default function QRCodes({ role }: QRCodesProps) {
     if (!qr || regenerating) return;
     setRegenerating(true);
     try {
-      const result = await qrCodeApi.regenerate(qr.id);
-      const replacementCode = result.codes?.[0]?.code;
+      const result = await qrCodeApi.reverseUsage(qr.id);
       setSelectedQR(null);
       setRegenerateConfirm(null);
       await Promise.all([loadQRCodes(currentPage), loadStats()]);
       setRegenerateAlert({
         show: true,
-        title: 'Replacement QR Generated',
-        message: replacementCode
-          ? `New active QR: ${replacementCode}. The used QR and its scan history were preserved.`
-          : result.message,
+        title: 'QR Reversed and Reactivated',
+        message: `${result.qrCode} is reusable again. ${result.pointsDeducted} awarded points were rolled back from the original scanner.`,
         type: 'success',
       });
     } catch (error) {
       setRegenerateAlert({
         show: true,
-        title: 'QR Regeneration Failed',
-        message: error instanceof Error ? error.message : 'Unable to regenerate this QR code.',
+        title: 'QR Reversal Failed',
+        message: error instanceof Error ? error.message : 'Unable to reverse this QR code.',
         type: 'error',
       });
     } finally {
@@ -781,7 +778,7 @@ export default function QRCodes({ role }: QRCodesProps) {
                   }}
                 >
                   <RefreshCw size={16} />
-                  Regenerate
+                  Reverse & Reuse
                 </button>
               )}
               <button
@@ -858,11 +855,11 @@ export default function QRCodes({ role }: QRCodesProps) {
       />
       <ConfirmDialog
         show={Boolean(regenerateConfirm)}
-        title="Regenerate Used QR"
-        message="A new active QR with the same product and points will be created. The used QR and its scan history will remain unchanged."
+        title="Reverse Used QR"
+        message="This will deduct the awarded points from the original scanner, remove that scan, and make this exact QR code reusable. Continue?"
         onConfirm={() => { void confirmRegenerate(); }}
         onCancel={() => setRegenerateConfirm(null)}
-        confirmText={regenerating ? 'Generating...' : 'Generate Replacement'}
+        confirmText={regenerating ? 'Reversing...' : 'Reverse & Reuse'}
         type="warning"
       />
       <AlertDialog

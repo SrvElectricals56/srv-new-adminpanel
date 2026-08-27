@@ -152,7 +152,7 @@ function ViewModal({
               { label: 'Town', value: dealer.town }, { label: 'District', value: dealer.district },
               { label: 'State', value: dealer.state }, { label: 'Phone', value: dealer.phone },
               { label: 'Email', value: dealer.email || '—' }, { label: 'GST Number', value: dealer.gstNumber },
-              { label: 'Pincode', value: dealer.pincode || '—' }, { label: 'Joined', value: formatISTDate(dealer.joinedDate) },
+              { label: 'Pincode', value: dealer.pincode || '—' }, { label: 'App Joined', value: dealer.appInstalled && dealer.firstAppLoginAt ? formatISTDate(dealer.firstAppLoginAt) : '—' },
             ].map((d, i) => (
               <div key={i} style={{ background: C.bg, borderRadius: 10, padding: '10px 14px' }}>
                 <div style={{ fontSize: 11, color: C.muted, marginBottom: 2, textTransform: 'uppercase', fontWeight: 600 }}>{d.label}</div>
@@ -674,7 +674,7 @@ export default function Dealers({ role }: DealersProps) {
           DealerBonus: d.bonusPoints ?? 0,
           GSTNumber: d.gstNumber ?? '',
           BankLinked: d.bankLinked ? 'Yes' : 'No',
-          JoinedDate: formatISTDate(d.joinedDate),
+          AppJoinedDate: d.appInstalled && d.firstAppLoginAt ? formatISTDate(d.firstAppLoginAt) : '',
         }))}
       />
 

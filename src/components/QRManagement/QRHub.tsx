@@ -77,6 +77,7 @@ export default function QRHub({ role }: QRHubProps) {
   const [detailsUsedOnly, setDetailsUsedOnly] = useState(false);
   const [editState, setEditState] = useState<EditState | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; batchId: string | null }>({ show: false, batchId: null });
+  const [reverseConfirm, setReverseConfirm] = useState<any | null>(null);
   const [showExport, setShowExport] = useState(false);
   const [exportTitle, setExportTitle] = useState('QR Hub');
   const [exportFileName, setExportFileName] = useState('qr-hub');
@@ -389,6 +390,22 @@ export default function QRHub({ role }: QRHubProps) {
       setAlertDialog({ show: true, title: 'Batch Details Failed', message: err.message || 'Unable to load batch details.', type: 'error' });
     } finally {
       setDetailsLoading(false);
+    }
+  };
+
+  const confirmReverseUsage = async () => {
+    const qr = reverseConfirm;
+    if (!qr || !selectedBatch) return;
+    setSaving(true);
+    try {
+      const result = await qrCodeApi.reverseUsage(qr.id);
+      setReverseConfirm(null);
+      await Promise.all([loadHub(currentPage, searchTerm), openDetails(selectedBatch, detailsUsedOnly)]);
+      setAlertDialog({ show: true, title: 'QR Reversed and Reactivated', message: `${result.qrCode} is reusable again. ${result.pointsDeducted} awarded points were rolled back.`, type: 'success' });
+    } catch (error: any) {
+      setAlertDialog({ show: true, title: 'QR Reversal Failed', message: error?.message || 'Unable to reverse this QR code.', type: 'error' });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -818,7 +835,7 @@ export default function QRHub({ role }: QRHubProps) {
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ background: C.bg }}>
-                      {['QR ID', 'Status', 'Generated Date', 'Used By'].map(head => (
+                      {['QR ID', 'Status', 'Generated Date', 'Used By', 'Action'].map(head => (
                         <th key={head} style={{ padding: '12px 14px', textAlign: 'left', fontSize: 11, color: C.muted, textTransform: 'uppercase' }}>{head}</th>
                       ))}
                     </tr>
@@ -833,11 +850,16 @@ export default function QRHub({ role }: QRHubProps) {
                           {getRedeemerLabel(qr) || qr.firstScan?.userName || '-'}
                           {qr.firstScan?.scannedAt && <div style={{ marginTop: 3 }}>{formatISTDateTime(qr.firstScan.scannedAt)}</div>}
                         </td>
+                        <td style={{ padding: '12px 14px' }}>
+                          {qr.isScanned && role !== 'staff' ? (
+                            <button onClick={() => setReverseConfirm(qr)} disabled={saving} style={{ padding: '7px 10px', borderRadius: 8, border: 'none', background: '#FEF3C7', color: '#B45309', cursor: saving ? 'wait' : 'pointer', fontSize: 11, fontWeight: 800 }}>Reverse & Reuse</button>
+                          ) : '—'}
+                        </td>
                       </tr>
                     ))}
                     {!batchQrs.length && (
                       <tr>
-                        <td colSpan={4} style={{ padding: 30, textAlign: 'center', color: C.muted }}>No QR codes found in this batch.</td>
+                        <td colSpan={5} style={{ padding: 30, textAlign: 'center', color: C.muted }}>No QR codes found in this batch.</td>
                       </tr>
                     )}
                   </tbody>
@@ -901,6 +923,15 @@ export default function QRHub({ role }: QRHubProps) {
         onCancel={() => setDeleteConfirm({ show: false, batchId: null })}
         confirmText="Delete"
         type="danger"
+      />
+      <ConfirmDialog
+        show={Boolean(reverseConfirm)}
+        title="Reverse Used QR"
+        message="This deducts the awarded points from the original scanner, removes that scan, and makes this exact QR code reusable. Continue?"
+        onConfirm={() => { void confirmReverseUsage(); }}
+        onCancel={() => setReverseConfirm(null)}
+        confirmText={saving ? 'Reversing...' : 'Reverse & Reuse'}
+        type="warning"
       />
 
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>

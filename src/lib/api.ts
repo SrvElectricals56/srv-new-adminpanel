@@ -447,6 +447,11 @@ export const qrCodeApi = {
       `/qr-codes/${encodeURIComponent(id)}/regenerate`,
       { method: 'POST' },
     ),
+  reverseUsage: (id: string) =>
+    request<{ message: string; qrCode: string; pointsDeducted: number; scannerId: string }>(
+      `/qr-codes/${encodeURIComponent(id)}/reverse-usage`,
+      { method: 'POST' },
+    ),
   downloadBatchExcel: async (batchId: string) => {
     const path = `/qr-codes/batches/${encodeURIComponent(batchId)}/export-excel`;
 

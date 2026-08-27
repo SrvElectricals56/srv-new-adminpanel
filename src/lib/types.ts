@@ -35,6 +35,8 @@ export interface Electrician {
   totalPoints: number;
   totalScans: number;
   joinedDate: string;
+  appInstalled?: boolean;
+  firstAppLoginAt?: string | null;
   status: UserStatus;
   dealerId: string;
   dealerName: string;
@@ -80,6 +82,8 @@ export interface Dealer {
   electricianCount: number;
   status: UserStatus;
   joinedDate: string;
+  appInstalled?: boolean;
+  firstAppLoginAt?: string | null;
   gstNumber: string;
   bankLinked: boolean;
   upiId?: string;

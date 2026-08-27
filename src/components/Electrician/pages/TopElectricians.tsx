@@ -220,8 +220,8 @@ export default function TopElectricians() {
               {/* Extra stats */}
               <div style={{ display: 'flex', gap: 12, flexShrink: 0 }}>
                 <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{e.periodScans}</div>
-                  <div style={{ fontSize: 10, color: C.muted }}>Scans</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{e.totalScans}</div>
+                  <div style={{ fontSize: 10, color: C.muted }}>Total Scans</div>
                 </div>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: 12, fontWeight: 700, color: '#10B981' }}>₹{e.walletBalance.toLocaleString('en-IN')}</div>

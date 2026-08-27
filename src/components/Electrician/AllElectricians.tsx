@@ -212,7 +212,7 @@ function ViewModal({
               { label: 'Dealer Code', value: el.dealerCode || el.fallbackDealerCode || '—' },
               { label: 'Email', value: el.email || '—' },
               { label: 'Electrician Code', value: el.electricianCode },
-              { label: 'Joined', value: formatISTDate(el.joinedDate) },
+              { label: 'App Joined', value: el.appInstalled && el.firstAppLoginAt ? formatISTDate(el.firstAppLoginAt) : '—' },
               { label: 'Category', value: 'Electrician' },
               { label: 'UPI ID', value: el.upiId || '—' },
               { label: 'Total Redemptions', value: el.totalRedemptions },
@@ -486,10 +486,7 @@ function EditModal({ el, onClose, onSave, dealers = [] }: { el: Electrician | nu
                     type="number"
                     min="0"
                     value={form.totalPoints ?? ''}
-                    onChange={e => {
-                      const value = e.target.value === '' ? undefined : +e.target.value;
-                      setForm(current => ({ ...current, totalPoints: value, walletBalance: value }));
-                    }}
+                    onChange={e => f('totalPoints', e.target.value === '' ? undefined : +e.target.value)}
                     placeholder="0"
                   />
                 </div>
@@ -500,10 +497,7 @@ function EditModal({ el, onClose, onSave, dealers = [] }: { el: Electrician | nu
                     type="number"
                     min="0"
                     value={form.walletBalance ?? ''}
-                    onChange={e => {
-                      const value = e.target.value === '' ? undefined : +e.target.value;
-                      setForm(current => ({ ...current, walletBalance: value, totalPoints: value }));
-                    }}
+                    onChange={e => f('walletBalance', e.target.value === '' ? undefined : +e.target.value)}
                     placeholder="0"
                   />
                 </div>
@@ -853,7 +847,7 @@ export default function Electricians({ role }: ElectriciansProps) {
           WalletBalance: e.walletBalance,
           TotalScans: e.totalScans,
           BankLinked: e.bankLinked ? 'Yes' : 'No',
-          JoinedDate: formatISTDate(e.joinedDate),
+          AppJoinedDate: e.appInstalled && e.firstAppLoginAt ? formatISTDate(e.firstAppLoginAt) : '',
         }))}
       />
 
