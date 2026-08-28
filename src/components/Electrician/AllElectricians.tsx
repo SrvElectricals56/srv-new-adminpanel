@@ -548,6 +548,19 @@ export default function Electricians({ role }: ElectriciansProps) {
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'week' | 'month' | 'custom'>('all');
   const [customDateRange, setCustomDateRange] = useState<{ from: string; to: string }>({ from: '', to: '' });
 
+  const handleAppStatusChange = (next: string) => {
+    setFilterAppInstalled(next);
+    if (next !== 'installed') {
+      setDateFilter('all');
+      setCustomDateRange({ from: '', to: '' });
+    }
+  };
+
+  const handleInstallDateChange = (next: typeof dateFilter) => {
+    setDateFilter(next);
+    if (next !== 'all') setFilterAppInstalled('installed');
+  };
+
   // ── Tier counts (fetched separately for accurate totals across all pages) ──
   const [tierCounts, setTierCounts] = useState<{ Silver: number; Gold: number; Platinum: number; Diamond: number }>({ Silver: 0, Gold: 0, Platinum: 0, Diamond: 0 });
   const [installationStats, setInstallationStats] = useState({ total: 0, installed: 0, notInstalled: 0 });
@@ -616,6 +629,8 @@ export default function Electricians({ role }: ElectriciansProps) {
 
       // Date filter → convert to dateFrom / dateTo
       if (dateFilter !== 'all') {
+        params.dateField = 'installed';
+        params.appInstalled = 'true';
         if (dateFilter !== 'custom') {
           const range = getISTDatePresetRange(dateFilter);
           params.dateFrom = range.from;
@@ -897,7 +912,7 @@ export default function Electricians({ role }: ElectriciansProps) {
           { label: 'App Installed', value: installationStats.installed, filter: 'installed', color: '#047857', bg: '#D1FAE5' },
           { label: 'Not Installed', value: installationStats.notInstalled, filter: 'not_installed', color: '#B45309', bg: '#FEF3C7' },
         ].map(item => (
-          <button key={item.filter} onClick={() => setFilterAppInstalled(item.filter)} style={{ background: C.card, borderRadius: 14, padding: '14px 18px', border: `1px solid ${filterAppInstalled === item.filter ? item.color : C.border}`, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left' }}>
+          <button key={item.filter} onClick={() => handleAppStatusChange(item.filter)} style={{ background: C.card, borderRadius: 14, padding: '14px 18px', border: `1px solid ${filterAppInstalled === item.filter ? item.color : C.border}`, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left' }}>
             <span style={{ width: 38, height: 38, borderRadius: 10, background: item.bg, color: item.color, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><Smartphone size={19} /></span>
             <span><strong style={{ display: 'block', fontSize: 21, color: C.text }}>{item.value}</strong><span style={{ fontSize: 12, fontWeight: 700, color: item.color }}>{item.label}</span></span>
           </button>
@@ -930,7 +945,7 @@ export default function Electricians({ role }: ElectriciansProps) {
 
         <select
           value={filterAppInstalled}
-          onChange={e => setFilterAppInstalled(e.target.value)}
+          onChange={e => handleAppStatusChange(e.target.value)}
           style={{ padding: '9px 12px', borderRadius: 10, border: `1px solid ${filterAppInstalled !== 'all' ? C.red : C.border}`, background: C.bg, color: C.text, fontSize: 13, cursor: 'pointer', minWidth: 150, flexShrink: 0 }}
         >
           <option value="all">All App Status</option>
@@ -941,9 +956,9 @@ export default function Electricians({ role }: ElectriciansProps) {
         {/* Date Filter */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <Calendar size={14} style={{ color: dateFilter !== 'all' ? C.red : C.muted }} />
-          <select value={dateFilter} onChange={e => setDateFilter(e.target.value as any)}
+          <select value={dateFilter} aria-label="App install date" title="Filter by first app login date" onChange={e => handleInstallDateChange(e.target.value as typeof dateFilter)}
             style={{ padding: '9px 12px', border: `1.5px solid ${dateFilter !== 'all' ? C.red : C.border}`, borderRadius: 8, fontSize: 13, outline: 'none', background: C.surface, color: C.text, cursor: 'pointer', minWidth: 120 }}>
-            <option value="all">All Time</option>
+            <option value="all">Install Date: All Time</option>
             <option value="today">Today</option>
             <option value="yesterday">Yesterday</option>
             <option value="week">This Week</option>
@@ -1026,7 +1041,7 @@ export default function Electricians({ role }: ElectriciansProps) {
                           options={f.options.map(([value, label]) => ({ value, label }))}
                           onChange={(next) => { f.set(next); if (f.label === 'State') setFilterCity('all'); }} />
                       ) : (
-                        <select value={f.value} onChange={e => f.set(e.target.value)}
+                        <select value={f.value} onChange={e => f.label === 'App Status' ? handleAppStatusChange(e.target.value) : f.set(e.target.value)}
                           style={{ width: '100%', padding: '9px 12px', border: `1.5px solid ${f.value !== 'all' ? C.red : C.border}`, borderRadius: 10, fontSize: 13, outline: 'none', background: C.inputBg, color: C.text, cursor: 'pointer' }}>
                           {f.options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                         </select>

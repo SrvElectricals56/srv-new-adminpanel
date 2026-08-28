@@ -416,6 +416,19 @@ export default function Dealers({ role }: DealersProps) {
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'week' | 'month' | 'custom'>('all');
   const [customDateRange, setCustomDateRange] = useState<{ from: string; to: string }>({ from: '', to: '' });
 
+  const handleAppStatusChange = (next: string) => {
+    setFilterAppInstalled(next);
+    if (next !== 'installed') {
+      setDateFilter('all');
+      setCustomDateRange({ from: '', to: '' });
+    }
+  };
+
+  const handleInstallDateChange = (next: typeof dateFilter) => {
+    setDateFilter(next);
+    if (next !== 'all') setFilterAppInstalled('installed');
+  };
+
   // ── Stats (fetched separately for accurate totals across all pages) ──
   const [dealerStats, setDealerStats] = useState({ total: 0, active: 0, pending: 0, inactive: 0, installed: 0, notInstalled: 0 });
   const [allStates, setAllStates] = useState<string[]>([]);
@@ -467,6 +480,8 @@ export default function Dealers({ role }: DealersProps) {
 
       // Date filter → convert to dateFrom / dateTo
       if (dateFilter !== 'all') {
+        params.dateField = 'installed';
+        params.appInstalled = 'true';
         if (dateFilter !== 'custom') {
           const range = getISTDatePresetRange(dateFilter);
           params.dateFrom = range.from;
@@ -699,7 +714,7 @@ export default function Dealers({ role }: DealersProps) {
           { label: 'App Installed', value: dealerStats.installed, Icon: Smartphone, color: '#047857', bg: '#D1FAE5', appFilter: 'installed' },
           { label: 'Not Installed', value: dealerStats.notInstalled, Icon: Smartphone, color: '#B45309', bg: '#FEF3C7', appFilter: 'not_installed' },
         ].map((s, i) => (
-          <div key={i} onClick={() => s.appFilter && setFilterAppInstalled(s.appFilter)} style={{ background: C.card, borderRadius: 14, padding: '16px 18px', border: `1px solid ${s.appFilter && filterAppInstalled === s.appFilter ? s.color : C.border}`, display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', cursor: s.appFilter ? 'pointer' : 'default' }}>
+          <div key={i} onClick={() => s.appFilter && handleAppStatusChange(s.appFilter)} style={{ background: C.card, borderRadius: 14, padding: '16px 18px', border: `1px solid ${s.appFilter && filterAppInstalled === s.appFilter ? s.color : C.border}`, display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', cursor: s.appFilter ? 'pointer' : 'default' }}>
             <div style={{ width: 42, height: 42, borderRadius: 12, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.color }}><s.Icon size={20} /></div>
             <div><div style={{ fontSize: 22, fontWeight: 800, color: C.text }}>{s.value}</div><div style={{ fontSize: 12, color: s.color, fontWeight: 700 }}>{s.label}</div></div>
           </div>
@@ -712,7 +727,7 @@ export default function Dealers({ role }: DealersProps) {
 
         <select
           value={filterAppInstalled}
-          onChange={e => setFilterAppInstalled(e.target.value)}
+          onChange={e => handleAppStatusChange(e.target.value)}
           style={{ padding: '9px 12px', borderRadius: 10, border: `1px solid ${filterAppInstalled !== 'all' ? C.red : C.border}`, background: C.bg, color: C.text, fontSize: 13, cursor: 'pointer', minWidth: 150, flexShrink: 0 }}
         >
           <option value="all">All App Status</option>
@@ -723,9 +738,9 @@ export default function Dealers({ role }: DealersProps) {
         {/* Date Filter */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <Calendar size={14} style={{ color: dateFilter !== 'all' ? C.red : C.muted }} />
-          <select value={dateFilter} onChange={e => setDateFilter(e.target.value as any)}
+          <select value={dateFilter} aria-label="App install date" title="Filter by first app login date" onChange={e => handleInstallDateChange(e.target.value as typeof dateFilter)}
             style={{ padding: '9px 12px', border: `1.5px solid ${dateFilter !== 'all' ? C.red : C.border}`, borderRadius: 8, fontSize: 13, outline: 'none', background: C.surface, color: C.text, cursor: 'pointer', minWidth: 120 }}>
-            <option value="all">All Time</option>
+            <option value="all">Install Date: All Time</option>
             <option value="today">Today</option>
             <option value="yesterday">Yesterday</option>
             <option value="week">This Week</option>
@@ -797,7 +812,7 @@ export default function Dealers({ role }: DealersProps) {
                           options={f.options.map(([value, label]) => ({ value, label }))}
                           onChange={(next) => { f.set(next); if (f.label === 'State') setFilterCity('all'); }} />
                       ) : (
-                        <select value={f.value} onChange={e => f.set(e.target.value)}
+                        <select value={f.value} onChange={e => f.label === 'App Status' ? handleAppStatusChange(e.target.value) : f.set(e.target.value)}
                           style={{ width: '100%', padding: '9px 12px', border: `1.5px solid ${f.value !== 'all' ? C.red : C.border}`, borderRadius: 10, fontSize: 13, outline: 'none', background: C.inputBg, color: C.text, cursor: 'pointer' }}>
                           {f.options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                         </select>
