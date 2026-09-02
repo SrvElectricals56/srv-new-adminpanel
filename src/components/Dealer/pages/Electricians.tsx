@@ -528,10 +528,20 @@ export default function AssociatedElectricians() {
     return counts;
   }, [electricians]);
   const dealerNames = Object.keys(dealerCounts).sort((a, b) => a.localeCompare(b));
-  const visibleDealers = dealerNames.filter(dealer => dealer.toLowerCase().includes(dealerSearchQuery));
+  const visibleDealers = dealerNames.filter(dealer => {
+    if (!dealerSearchQuery) return true;
+    if (dealer.toLowerCase().includes(dealerSearchQuery)) return true;
+    return electricians.some(e =>
+      e.dealerName === dealer &&
+      (
+        (e.dealerPhone ?? '').includes(dealerSearchQuery) ||
+        (e.dealerCode ?? '').toLowerCase().includes(dealerSearchQuery)
+      )
+    );
+  });
 
   const filtered = electricians.filter(e =>
-    (!dealerSearchQuery || e.dealerName.toLowerCase().includes(dealerSearchQuery) || e.name.toLowerCase().includes(dealerSearchQuery) || e.phone.includes(dealerSearchQuery) || e.electricianCode.toLowerCase().includes(dealerSearchQuery)) &&
+    (!dealerSearchQuery || e.dealerName.toLowerCase().includes(dealerSearchQuery) || (e.dealerPhone ?? '').includes(dealerSearchQuery) || (e.dealerCode ?? '').toLowerCase().includes(dealerSearchQuery) || e.name.toLowerCase().includes(dealerSearchQuery) || e.phone.includes(dealerSearchQuery) || e.electricianCode.toLowerCase().includes(dealerSearchQuery)) &&
     (filterDealer === 'all' || e.dealerName === filterDealer) &&
     (filterStatus === 'all' || e.status === filterStatus)
   );
@@ -793,7 +803,13 @@ export default function AssociatedElectricians() {
                 </tr>
               );
             })}
-            {filtered.length === 0 && (
+            {loading ? (
+              <tr>
+                <td colSpan={8} style={{ padding: '32px 16px', textAlign: 'center', fontSize: 13, color: C.muted }}>
+                  Loading associated electricians...
+                </td>
+              </tr>
+            ) : filtered.length === 0 && (
               <tr>
                 <td colSpan={8} style={{ padding: '24px 16px', textAlign: 'center', fontSize: 13, color: C.muted }}>
                   No electricians found for the current search/filter.

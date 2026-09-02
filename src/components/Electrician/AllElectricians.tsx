@@ -550,15 +550,10 @@ export default function Electricians({ role }: ElectriciansProps) {
 
   const handleAppStatusChange = (next: string) => {
     setFilterAppInstalled(next);
-    if (next !== 'installed') {
-      setDateFilter('all');
-      setCustomDateRange({ from: '', to: '' });
-    }
   };
 
   const handleInstallDateChange = (next: typeof dateFilter) => {
     setDateFilter(next);
-    if (next !== 'all') setFilterAppInstalled('installed');
   };
 
   // ── Tier counts (fetched separately for accurate totals across all pages) ──
@@ -629,8 +624,10 @@ export default function Electricians({ role }: ElectriciansProps) {
 
       // Date filter → convert to dateFrom / dateTo
       if (dateFilter !== 'all') {
-        params.dateField = 'installed';
-        params.appInstalled = 'true';
+        // Installed accounts are filtered by their first app login. Accounts
+        // without an install timestamp use their joined date, otherwise every
+        // "Not Installed" date range would necessarily be empty.
+        params.dateField = filterAppInstalled === 'installed' ? 'installed' : 'joined';
         if (dateFilter !== 'custom') {
           const range = getISTDatePresetRange(dateFilter);
           params.dateFrom = range.from;
@@ -956,9 +953,9 @@ export default function Electricians({ role }: ElectriciansProps) {
         {/* Date Filter */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <Calendar size={14} style={{ color: dateFilter !== 'all' ? C.red : C.muted }} />
-          <select value={dateFilter} aria-label="App install date" title="Filter by first app login date" onChange={e => handleInstallDateChange(e.target.value as typeof dateFilter)}
+          <select value={dateFilter} aria-label="Account date" title={filterAppInstalled === 'installed' ? 'Filter by first app login date' : 'Filter by account joined date'} onChange={e => handleInstallDateChange(e.target.value as typeof dateFilter)}
             style={{ padding: '9px 12px', border: `1.5px solid ${dateFilter !== 'all' ? C.red : C.border}`, borderRadius: 8, fontSize: 13, outline: 'none', background: C.surface, color: C.text, cursor: 'pointer', minWidth: 120 }}>
-            <option value="all">Install Date: All Time</option>
+            <option value="all">{filterAppInstalled === 'installed' ? 'Install Date' : 'Joined Date'}: All Time</option>
             <option value="today">Today</option>
             <option value="yesterday">Yesterday</option>
             <option value="week">This Week</option>

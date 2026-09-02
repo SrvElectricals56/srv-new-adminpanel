@@ -90,6 +90,8 @@ export default function TopElectricians() {
           PeriodPoints: e.periodPoints,
           PeriodScans: e.periodScans,
           PeriodRedemptions: e.periodRedemptions,
+          TotalPoints: e.totalPoints,
+          TotalScans: e.totalScans,
           WalletBalance: e.walletBalance,
         }))}
       />
@@ -219,6 +221,10 @@ export default function TopElectricians() {
               </div>
               {/* Extra stats */}
               <div style={{ display: 'flex', gap: 12, flexShrink: 0 }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#F59E0B' }}>{Number(e.totalPoints ?? 0).toLocaleString('en-IN')}</div>
+                  <div style={{ fontSize: 10, color: C.muted }}>Total Points</div>
+                </div>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{e.totalScans}</div>
                   <div style={{ fontSize: 10, color: C.muted }}>Total Scans</div>

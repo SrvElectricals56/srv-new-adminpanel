@@ -1227,7 +1227,7 @@ export default function Home() {
           electricians: Number(pendingNotifications.pendingElectricianRedemptions ?? 0) + Number(pendingNotifications.pendingElectricianKyc ?? 0),
           dealers: Number(pendingNotifications.pendingDealerRedemptions ?? 0) + Number(pendingNotifications.pendingDealerKyc ?? 0) + Number(pendingNotifications.pendingDealerApprovals ?? 0),
           'gift-orders': Number(pendingNotifications.pendingGiftOrders ?? 0),
-          'product-orders': Number(pendingNotifications.pendingProductOrders ?? 0),
+          'product-orders': Number(pendingNotifications.actionableProductOrders ?? pendingNotifications.pendingProductOrders ?? 0),
           'delivery-tracker': Number(pendingNotifications.pendingProductOrders ?? 0),
           'enquiry-support': Number(pendingNotifications.openEnquiries ?? 0),
         }}
