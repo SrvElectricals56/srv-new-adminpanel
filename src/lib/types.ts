@@ -2,6 +2,7 @@ export type UserRole = 'dealer' | 'electrician' | 'user' | 'counterboy';
 export type AdminRole = 'super_admin' | 'admin' | 'staff';
 export type MemberTier = 'Silver' | 'Gold' | 'Platinum' | 'Diamond';
 export type UserStatus = 'active' | 'pending' | 'inactive' | 'suspended';
+export type ElectricianActivityStatus = 'proactive' | 'active' | 'inactive';
 export type ScanMode = 'single' | 'multi';
 
 export interface RolePermissions {
@@ -38,6 +39,9 @@ export interface Electrician {
   appInstalled?: boolean;
   firstAppLoginAt?: string | null;
   status: UserStatus;
+  activityStatus?: ElectricianActivityStatus;
+  lastScanAt?: string | null;
+  scansLast7Days?: number;
   dealerId: string;
   dealerName: string;
   dealerPhone?: string | null;
