@@ -99,8 +99,9 @@ function OrderDetailModal({ order, onClose, C }: { order: GiftOrder; onClose: ()
   );
 }
 
-function TrackingModal({ order, onClose, onSave, C }: { order: GiftOrder; onClose: () => void; onSave: (status: OrderStatus, data: { trackingNumber?: string; courierName?: string; deliveryNotes?: string; rejectionReason?: string }) => Promise<void>; C: any }) {
-  const [status, setStatus] = useState<OrderStatus>(order.status === 'pending' ? 'shipped' : order.status);
+function TrackingModal({ order, onClose, onSave, C }: { order: GiftOrder; onClose: () => void; onSave: (status: OrderStatus, data: { shippingAddress?: string; trackingNumber?: string; courierName?: string; deliveryNotes?: string; rejectionReason?: string }) => Promise<void>; C: any }) {
+  const [status, setStatus] = useState<OrderStatus>(order.status === 'pending' ? 'approved' : order.status);
+  const [shippingAddress, setShippingAddress] = useState(order.shippingAddress ?? '');
   const [trackingNumber, setTrackingNumber] = useState(order.trackingNumber ?? '');
   const [courierName, setCourierName] = useState(order.courierName ?? '');
   const [deliveryNotes, setDeliveryNotes] = useState(order.deliveryNotes ?? '');
@@ -131,6 +132,11 @@ function TrackingModal({ order, onClose, onSave, C }: { order: GiftOrder; onClos
           {status !== 'rejected' ? (
             <>
               <div>
+                <label style={{ fontSize: 12, fontWeight: 800, color: C.muted, textTransform: 'uppercase' }}>Shipping Address {status === 'approved' ? '(Required)' : ''}</label>
+                <textarea value={shippingAddress} onChange={e => setShippingAddress(e.target.value)} placeholder="Enter the complete delivery address" style={{ ...inputStyle, marginTop: 6, minHeight: 86, resize: 'vertical' }} />
+                {status === 'approved' && !shippingAddress.trim() && <div style={{ marginTop: 5, color: '#B91C1C', fontSize: 11, fontWeight: 700 }}>Address is required before approval.</div>}
+              </div>
+              <div>
                 <label style={{ fontSize: 12, fontWeight: 800, color: C.muted, textTransform: 'uppercase' }}>Courier Name</label>
                 <input value={courierName} onChange={e => setCourierName(e.target.value)} placeholder="e.g. Delhivery, DTDC, Blue Dart" style={{ ...inputStyle, marginTop: 6 }} />
               </div>
@@ -152,7 +158,7 @@ function TrackingModal({ order, onClose, onSave, C }: { order: GiftOrder; onClos
         </div>
         <div style={{ padding: '0 22px 22px', display: 'flex', gap: 10 }}>
           <button onClick={onClose} style={{ flex: 1, padding: '11px', borderRadius: 11, border: `1px solid ${C.border}`, background: C.bg, color: C.muted, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
-          <button disabled={saving} onClick={async () => { setSaving(true); try { await onSave(status, { trackingNumber, courierName, deliveryNotes, rejectionReason }); onClose(); } finally { setSaving(false); } }} style={{ flex: 1, padding: '11px', borderRadius: 11, border: 'none', background: 'linear-gradient(135deg, #7C3AED, #5B21B6)', color: 'white', fontSize: 13, fontWeight: 800, cursor: saving ? 'wait' : 'pointer' }}>
+          <button disabled={saving || (status === 'approved' && !shippingAddress.trim())} onClick={async () => { setSaving(true); try { await onSave(status, { shippingAddress, trackingNumber, courierName, deliveryNotes, rejectionReason }); onClose(); } finally { setSaving(false); } }} style={{ flex: 1, padding: '11px', borderRadius: 11, border: 'none', background: 'linear-gradient(135deg, #7C3AED, #5B21B6)', color: 'white', fontSize: 13, fontWeight: 800, cursor: saving || (status === 'approved' && !shippingAddress.trim()) ? 'not-allowed' : 'pointer', opacity: status === 'approved' && !shippingAddress.trim() ? 0.55 : 1 }}>
             {saving ? 'Saving...' : 'Save Tracking'}
           </button>
         </div>
@@ -238,8 +244,9 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
     setConfirmState({ show: false, id: '', action: 'approve' });
   };
 
-  const saveTracking = async (order: GiftOrder, status: OrderStatus, data: { trackingNumber?: string; courierName?: string; deliveryNotes?: string; rejectionReason?: string }) => {
+  const saveTracking = async (order: GiftOrder, status: OrderStatus, data: { shippingAddress?: string; trackingNumber?: string; courierName?: string; deliveryNotes?: string; rejectionReason?: string }) => {
     await giftApi.updateOrderStatus(order.id, status, {
+      shippingAddress: data.shippingAddress?.trim() || undefined,
       trackingNumber: data.trackingNumber?.trim() || undefined,
       courierName: data.courierName?.trim() || undefined,
       deliveryNotes: data.deliveryNotes?.trim() || undefined,
@@ -391,7 +398,7 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
                       )}
                       {canEdit && order.status === 'pending' && (
                         <>
-                          <button onClick={() => setConfirmState({ show: true, id: order.id, action: 'approve' })} title="Approve" style={{ background: '#D1FAE5', color: '#065F46', border: 'none', borderRadius: 7, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Check size={14} /></button>
+                          <button onClick={() => setTrackingOrder(order)} title="Approve and enter shipping address" style={{ background: '#D1FAE5', color: '#065F46', border: 'none', borderRadius: 7, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Check size={14} /></button>
                           <button onClick={() => setConfirmState({ show: true, id: order.id, action: 'reject' })} title="Reject" style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 7, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={14} /></button>
                         </>
                       )}

@@ -644,7 +644,7 @@ export const giftApi = {
     const q = params ? '?' + new URLSearchParams(params).toString() : '';
     return request<{ data: any[]; total: number; page: number; limit: number; totalPages: number }>(`/gifts/orders${q}`);
   },
-  updateOrderStatus: (id: string, status: string, extra?: { rejectionReason?: string; trackingNumber?: string; courierName?: string; deliveryNotes?: string; processedBy?: string }) =>
+  updateOrderStatus: (id: string, status: string, extra?: { shippingAddress?: string; rejectionReason?: string; trackingNumber?: string; courierName?: string; deliveryNotes?: string; processedBy?: string }) =>
     request<any>(`/gifts/orders/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status, ...(extra ?? {}) }) }),
   deleteOrder: (id: string) => request<void>(`/gifts/orders/${id}`, { method: 'DELETE' }),
 };

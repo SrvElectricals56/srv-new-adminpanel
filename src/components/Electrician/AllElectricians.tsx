@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { FileSpreadsheet, Plus, Users, Star, ScanLine, Wallet, Trash2, SlidersHorizontal, Calendar, Medal, Award, Trophy, Gem, Smartphone } from 'lucide-react';
 import { electricianApi, dealerApi } from '@/lib/api';
-import type { Electrician, MemberTier, UserStatus, AdminRole } from '@/lib/types';
+import type { Electrician, ElectricianActivityStatus, MemberTier, UserStatus, AdminRole } from '@/lib/types';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
 import { useAppContext } from '@/lib/appContext';
 import { useThemePalette } from '@/lib/theme';
@@ -35,6 +35,12 @@ const STATUS_CONFIG: Record<string, { bg: string; color: string; label: string }
   suspended: { bg: '#FEE2E2', color: '#7F1D1D', label: 'Suspended' },
 };
 
+const ACTIVITY_STATUS_CONFIG: Record<ElectricianActivityStatus, { bg: string; color: string; label: string }> = {
+  proactive: { bg: '#DBEAFE', color: '#1D4ED8', label: 'Proactive' },
+  active: { bg: '#D1FAE5', color: '#065F46', label: 'Active' },
+  inactive: { bg: '#F1F5F9', color: '#475569', label: 'Inactive' },
+};
+
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Failed to update password';
 }
@@ -55,7 +61,8 @@ function ViewModal({
   const C = useThemePalette();
   const mouseDownInside = React.useRef(false);
   const tier = TIER_CONFIG[el.tier];
-  const status = STATUS_CONFIG[el.status];
+  const accountStatus = STATUS_CONFIG[el.status] ?? STATUS_CONFIG.inactive;
+  const activityStatus = ACTIVITY_STATUS_CONFIG[el.activityStatus ?? 'inactive'];
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [savingPassword, setSavingPassword] = useState(false);
@@ -143,7 +150,8 @@ function ViewModal({
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
             <span style={{ background: tier.bg, color: tier.color, fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20 }}>{el.tier}</span>
-            <span style={{ background: status.bg, color: status.color, fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20 }}>{status.label}</span>
+            <span style={{ background: activityStatus.bg, color: activityStatus.color, fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20 }}>Activity: {activityStatus.label}</span>
+            <span style={{ background: accountStatus.bg, color: accountStatus.color, fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20 }}>Account: {accountStatus.label}</span>
             <span style={{ background: '#EFF6FF', color: '#1D4ED8', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20 }}>Electrician</span>
             {el.bankLinked && <span style={{ background: '#D1FAE5', color: '#065F46', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20 }}>Bank Linked</span>}
           </div>
@@ -216,7 +224,8 @@ function ViewModal({
               { label: 'Category', value: 'Electrician' },
               { label: 'UPI ID', value: el.upiId || '—' },
               { label: 'Total Redemptions', value: el.totalRedemptions },
-              { label: 'Last Active', value: el.recentActivity || '—' },
+              { label: 'Last Scan', value: el.lastScanAt ? formatISTDateTime(el.lastScanAt) : 'Never' },
+              { label: 'Scans (Last 7 Days)', value: el.scansLast7Days ?? 0 },
             ].map((d, i) => (
               <div key={i} style={{ background: C.bg, borderRadius: 10, padding: '10px 14px' }}>
                 <div style={{ fontSize: 11, color: C.muted, marginBottom: 2, textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.04em' }}>{d.label}</div>
@@ -538,6 +547,7 @@ export default function Electricians({ role }: ElectriciansProps) {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filterTier, setFilterTier] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [filterActivityStatus, setFilterActivityStatus] = useState('all');
   const [filterState, setFilterState] = useState('all');
   const [filterCity, setFilterCity] = useState('all');
   const [filterCategory, setFilterCategory] = useState('all');
@@ -547,6 +557,14 @@ export default function Electricians({ role }: ElectriciansProps) {
   const [filterAppInstalled, setFilterAppInstalled] = useState('all');
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'week' | 'month' | 'custom'>('all');
   const [customDateRange, setCustomDateRange] = useState<{ from: string; to: string }>({ from: '', to: '' });
+
+  const handleAppStatusChange = (next: string) => {
+    setFilterAppInstalled(next);
+  };
+
+  const handleInstallDateChange = (next: typeof dateFilter) => {
+    setDateFilter(next);
+  };
 
   // ── Tier counts (fetched separately for accurate totals across all pages) ──
   const [tierCounts, setTierCounts] = useState<{ Silver: number; Gold: number; Platinum: number; Diamond: number }>({ Silver: 0, Gold: 0, Platinum: 0, Diamond: 0 });
@@ -607,6 +625,7 @@ export default function Electricians({ role }: ElectriciansProps) {
       if (debouncedSearch) params.search = debouncedSearch;
       if (filterTier !== 'all') params.tier = filterTier;
       if (filterStatus !== 'all') params.status = filterStatus;
+      if (filterActivityStatus !== 'all') params.activityStatus = filterActivityStatus;
       if (filterState !== 'all') params.state = filterState;
       if (filterCity !== 'all') params.city = filterCity;
       if (filterCategory !== 'all') params.subCategory = filterCategory;
@@ -616,6 +635,10 @@ export default function Electricians({ role }: ElectriciansProps) {
 
       // Date filter → convert to dateFrom / dateTo
       if (dateFilter !== 'all') {
+        // Installed accounts are filtered by their first app login. Accounts
+        // without an install timestamp use their joined date, otherwise every
+        // "Not Installed" date range would necessarily be empty.
+        params.dateField = filterAppInstalled === 'installed' ? 'installed' : 'joined';
         if (dateFilter !== 'custom') {
           const range = getISTDatePresetRange(dateFilter);
           params.dateFrom = range.from;
@@ -646,7 +669,7 @@ export default function Electricians({ role }: ElectriciansProps) {
     } finally {
       setLoading(false);
     }
-  }, [debouncedSearch, filterTier, filterStatus, filterState, filterCity, filterCategory, filterBank, filterWelcomeBonus, filterAppInstalled, dateFilter, customDateRange]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, filterTier, filterStatus, filterActivityStatus, filterState, filterCity, filterCategory, filterBank, filterWelcomeBonus, filterAppInstalled, dateFilter, customDateRange]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadOne = async (id: string, mode: 'view' | 'edit') => {
     try {
@@ -663,7 +686,7 @@ export default function Electricians({ role }: ElectriciansProps) {
   useEffect(() => {
     setCurrentPage(1);
     loadData(1);
-  }, [debouncedSearch, filterTier, filterStatus, filterState, filterCity, filterCategory, filterBank, filterWelcomeBonus, filterAppInstalled, dateFilter, customDateRange]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, filterTier, filterStatus, filterActivityStatus, filterState, filterCity, filterCategory, filterBank, filterWelcomeBonus, filterAppInstalled, dateFilter, customDateRange]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Initial load
   useEffect(() => { loadTierCounts(); void loadDealerOptions(); }, [loadDealerOptions]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -841,7 +864,10 @@ export default function Electricians({ role }: ElectriciansProps) {
           District: e.district,
           State: e.state,
           Tier: e.tier,
-          Status: e.status,
+          ActivityStatus: e.activityStatus ?? 'inactive',
+          AccountStatus: e.status,
+          LastScanAt: e.lastScanAt ? formatISTDateTime(e.lastScanAt) : 'Never',
+          ScansLast7Days: e.scansLast7Days ?? 0,
           Dealer: e.dealerName ?? '',
           TotalPoints: e.totalPoints,
           WalletBalance: e.walletBalance,
@@ -897,7 +923,7 @@ export default function Electricians({ role }: ElectriciansProps) {
           { label: 'App Installed', value: installationStats.installed, filter: 'installed', color: '#047857', bg: '#D1FAE5' },
           { label: 'Not Installed', value: installationStats.notInstalled, filter: 'not_installed', color: '#B45309', bg: '#FEF3C7' },
         ].map(item => (
-          <button key={item.filter} onClick={() => setFilterAppInstalled(item.filter)} style={{ background: C.card, borderRadius: 14, padding: '14px 18px', border: `1px solid ${filterAppInstalled === item.filter ? item.color : C.border}`, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left' }}>
+          <button key={item.filter} onClick={() => handleAppStatusChange(item.filter)} style={{ background: C.card, borderRadius: 14, padding: '14px 18px', border: `1px solid ${filterAppInstalled === item.filter ? item.color : C.border}`, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left' }}>
             <span style={{ width: 38, height: 38, borderRadius: 10, background: item.bg, color: item.color, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><Smartphone size={19} /></span>
             <span><strong style={{ display: 'block', fontSize: 21, color: C.text }}>{item.value}</strong><span style={{ fontSize: 12, fontWeight: 700, color: item.color }}>{item.label}</span></span>
           </button>
@@ -930,7 +956,7 @@ export default function Electricians({ role }: ElectriciansProps) {
 
         <select
           value={filterAppInstalled}
-          onChange={e => setFilterAppInstalled(e.target.value)}
+          onChange={e => handleAppStatusChange(e.target.value)}
           style={{ padding: '9px 12px', borderRadius: 10, border: `1px solid ${filterAppInstalled !== 'all' ? C.red : C.border}`, background: C.bg, color: C.text, fontSize: 13, cursor: 'pointer', minWidth: 150, flexShrink: 0 }}
         >
           <option value="all">All App Status</option>
@@ -938,12 +964,24 @@ export default function Electricians({ role }: ElectriciansProps) {
           <option value="not_installed">Not Installed</option>
         </select>
 
+        <select
+          value={filterActivityStatus}
+          onChange={e => setFilterActivityStatus(e.target.value)}
+          title="Based on QR scan recency"
+          style={{ padding: '9px 12px', borderRadius: 10, border: `1px solid ${filterActivityStatus !== 'all' ? C.red : C.border}`, background: C.bg, color: C.text, fontSize: 13, cursor: 'pointer', minWidth: 155, flexShrink: 0 }}
+        >
+          <option value="all">All Activity</option>
+          <option value="proactive">Proactive (0–7d)</option>
+          <option value="active">Active (8–30d)</option>
+          <option value="inactive">Inactive (&gt;30d)</option>
+        </select>
+
         {/* Date Filter */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <Calendar size={14} style={{ color: dateFilter !== 'all' ? C.red : C.muted }} />
-          <select value={dateFilter} onChange={e => setDateFilter(e.target.value as any)}
+          <select value={dateFilter} aria-label="Account date" title={filterAppInstalled === 'installed' ? 'Filter by first app login date' : 'Filter by account joined date'} onChange={e => handleInstallDateChange(e.target.value as typeof dateFilter)}
             style={{ padding: '9px 12px', border: `1.5px solid ${dateFilter !== 'all' ? C.red : C.border}`, borderRadius: 8, fontSize: 13, outline: 'none', background: C.surface, color: C.text, cursor: 'pointer', minWidth: 120 }}>
-            <option value="all">All Time</option>
+            <option value="all">{filterAppInstalled === 'installed' ? 'Install Date' : 'Joined Date'}: All Time</option>
             <option value="today">Today</option>
             <option value="yesterday">Yesterday</option>
             <option value="week">This Week</option>
@@ -963,8 +1001,8 @@ export default function Electricians({ role }: ElectriciansProps) {
         )}
 
         {/* Active filter count badge */}
-        {(filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all' || filterWelcomeBonus !== 'all' || filterElectricianGroup !== 'all' || filterAppInstalled !== 'all' || dateFilter !== 'all') && (
-          <button onClick={() => { setFilterTier('all'); setFilterStatus('all'); setFilterState('all'); setFilterCity('all'); setFilterCategory('all'); setFilterBank('all'); setFilterWelcomeBonus('all'); setFilterElectricianGroup('all'); setFilterAppInstalled('all'); setDateFilter('all'); setCustomDateRange({ from: '', to: '' }); }}
+        {(filterTier !== 'all' || filterStatus !== 'all' || filterActivityStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all' || filterWelcomeBonus !== 'all' || filterElectricianGroup !== 'all' || filterAppInstalled !== 'all' || dateFilter !== 'all') && (
+          <button onClick={() => { setFilterTier('all'); setFilterStatus('all'); setFilterActivityStatus('all'); setFilterState('all'); setFilterCity('all'); setFilterCategory('all'); setFilterBank('all'); setFilterWelcomeBonus('all'); setFilterElectricianGroup('all'); setFilterAppInstalled('all'); setDateFilter('all'); setCustomDateRange({ from: '', to: '' }); }}
             style={{ padding: '8px 12px', borderRadius: 8, border: `1px solid ${C.red}`, background: '#FFF0F0', color: C.red, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4 }}>
             Clear Filters
           </button>
@@ -975,16 +1013,16 @@ export default function Electricians({ role }: ElectriciansProps) {
           <button
             onClick={() => setShowFilterPopup(p => !p)}
             style={{
-              width: 38, height: 38, borderRadius: 10, border: `1.5px solid ${showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all' || filterWelcomeBonus !== 'all' || filterElectricianGroup !== 'all' || filterAppInstalled !== 'all') ? C.red : C.border}`,
-              background: showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all' || filterWelcomeBonus !== 'all' || filterElectricianGroup !== 'all' || filterAppInstalled !== 'all') ? '#FFF0F0' : C.card,
-              color: showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all' || filterWelcomeBonus !== 'all' || filterElectricianGroup !== 'all' || filterAppInstalled !== 'all') ? C.red : C.muted,
+              width: 38, height: 38, borderRadius: 10, border: `1.5px solid ${showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterActivityStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all' || filterWelcomeBonus !== 'all' || filterElectricianGroup !== 'all' || filterAppInstalled !== 'all') ? C.red : C.border}`,
+              background: showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterActivityStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all' || filterWelcomeBonus !== 'all' || filterElectricianGroup !== 'all' || filterAppInstalled !== 'all') ? '#FFF0F0' : C.card,
+              color: showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterActivityStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all' || filterWelcomeBonus !== 'all' || filterElectricianGroup !== 'all' || filterAppInstalled !== 'all') ? C.red : C.muted,
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative',
             }}
           >
             <SlidersHorizontal size={17} />
-            {(filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all' || filterWelcomeBonus !== 'all' || filterElectricianGroup !== 'all' || filterAppInstalled !== 'all') && (
+            {(filterTier !== 'all' || filterStatus !== 'all' || filterActivityStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all' || filterWelcomeBonus !== 'all' || filterElectricianGroup !== 'all' || filterAppInstalled !== 'all') && (
               <span style={{ position: 'absolute', top: -5, right: -5, width: 16, height: 16, borderRadius: '50%', background: C.red, color: 'white', fontSize: 9, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {[filterTier, filterStatus, filterState, filterCity, filterCategory, filterBank, filterWelcomeBonus, filterElectricianGroup, filterAppInstalled].filter(f => f !== 'all').length}
+                {[filterTier, filterStatus, filterActivityStatus, filterState, filterCity, filterCategory, filterBank, filterWelcomeBonus, filterElectricianGroup, filterAppInstalled].filter(f => f !== 'all').length}
               </span>
             )}
           </button>
@@ -1010,7 +1048,8 @@ export default function Electricians({ role }: ElectriciansProps) {
                 <div style={{ padding: '20px 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                   {[
                     { label: 'Tier', value: filterTier, set: setFilterTier, options: [['all','All Tiers'],['Silver','Silver'],['Gold','Gold'],['Platinum','Platinum'],['Diamond','Diamond']] },
-                    { label: 'Status', value: filterStatus, set: setFilterStatus, options: [['all','All Status'],['active','Active'],['pending','Pending'],['inactive','Inactive']] },
+                    { label: 'Activity', value: filterActivityStatus, set: setFilterActivityStatus, options: [['all','All Activity'],['proactive','Proactive (0–7 days)'],['active','Active (8–30 days)'],['inactive','Inactive (over 30 days)']] },
+                    { label: 'Account Access', value: filterStatus, set: setFilterStatus, options: [['all','All Accounts'],['active','Active'],['pending','Pending'],['inactive','Inactive'],['suspended','Suspended']] },
                     { label: 'State', value: filterState, set: setFilterState, options: [['all','All States'], ...uniqueStates.filter(s => s !== 'all').map(s => [s, s])] },
                     { label: 'City', value: filterCity, set: setFilterCity, options: [['all','All Cities'], ...uniqueCities.filter(c => c !== 'all').map(c => [c, c])] },
                     { label: 'Category', value: filterCategory, set: setFilterCategory, options: [['all','All Categories'], ...uniqueCategories.filter(c => c !== 'all').map(c => [c, c])] },
@@ -1026,7 +1065,7 @@ export default function Electricians({ role }: ElectriciansProps) {
                           options={f.options.map(([value, label]) => ({ value, label }))}
                           onChange={(next) => { f.set(next); if (f.label === 'State') setFilterCity('all'); }} />
                       ) : (
-                        <select value={f.value} onChange={e => f.set(e.target.value)}
+                        <select value={f.value} onChange={e => f.label === 'App Status' ? handleAppStatusChange(e.target.value) : f.set(e.target.value)}
                           style={{ width: '100%', padding: '9px 12px', border: `1.5px solid ${f.value !== 'all' ? C.red : C.border}`, borderRadius: 10, fontSize: 13, outline: 'none', background: C.inputBg, color: C.text, cursor: 'pointer' }}>
                           {f.options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                         </select>
@@ -1036,7 +1075,7 @@ export default function Electricians({ role }: ElectriciansProps) {
                 </div>
                 {/* Footer */}
                 <div style={{ padding: '16px 24px', borderTop: `1px solid ${C.border}`, display: 'flex', gap: 10 }}>
-                  <button onClick={() => { setFilterTier('all'); setFilterStatus('all'); setFilterState('all'); setFilterCity('all'); setFilterCategory('all'); setFilterBank('all'); setFilterWelcomeBonus('all'); setFilterElectricianGroup('all'); setFilterAppInstalled('all'); setDateFilter('all'); setCustomDateRange({ from: '', to: '' }); }}
+                  <button onClick={() => { setFilterTier('all'); setFilterStatus('all'); setFilterActivityStatus('all'); setFilterState('all'); setFilterCity('all'); setFilterCategory('all'); setFilterBank('all'); setFilterWelcomeBonus('all'); setFilterElectricianGroup('all'); setFilterAppInstalled('all'); setDateFilter('all'); setCustomDateRange({ from: '', to: '' }); }}
                     style={{ flex: 1, padding: '10px', borderRadius: 10, border: `1px solid ${C.border}`, background: C.bg, color: C.muted, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                     Reset All
                   </button>
@@ -1073,7 +1112,7 @@ export default function Electricians({ role }: ElectriciansProps) {
             </div>
           ) : filtered.map((e) => {
             const tier = TIER_CONFIG[e.tier] ?? TIER_CONFIG['Silver'];
-            const status = STATUS_CONFIG[e.status] ?? STATUS_CONFIG['inactive'];
+            const activityStatus = ACTIVITY_STATUS_CONFIG[e.activityStatus ?? 'inactive'];
             return (
               <div
                 key={e.id}
@@ -1093,7 +1132,7 @@ export default function Electricians({ role }: ElectriciansProps) {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
                     <span style={{ background: tier.bg, color: tier.color, fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20 }}>{e.tier}</span>
-                    <span style={{ background: status.bg, color: status.color, fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20 }}>{status.label}</span>
+                    <span title="Scan activity status" style={{ background: activityStatus.bg, color: activityStatus.color, fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20 }}>{activityStatus.label}</span>
                   </div>
                 </div>
                 <div style={{ fontSize: 12, color: C.muted, marginBottom: 8 }}>{e.city}, {e.state}</div>
@@ -1129,7 +1168,7 @@ export default function Electricians({ role }: ElectriciansProps) {
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 1120 }}>
           <thead>
             <tr style={{ background: C.surface, borderBottom: `1px solid ${C.border}` }}>
-              {['Electrician','Mobile Number','Location','Tier','Points','Scans','Wallet','Status','App Installed','Actions'].map(h => (
+              {['Electrician','Mobile Number','Location','Tier','Points','Scans','Wallet','Activity','App Installed','Actions'].map(h => (
                 <th
                   key={h}
                   style={{
@@ -1153,7 +1192,7 @@ export default function Electricians({ role }: ElectriciansProps) {
           <tbody>
             {filtered.map((e) => {
               const tier = TIER_CONFIG[e.tier] ?? TIER_CONFIG['Silver'];
-              const status = STATUS_CONFIG[e.status] ?? STATUS_CONFIG['inactive'];
+              const activityStatus = ACTIVITY_STATUS_CONFIG[e.activityStatus ?? 'inactive'];
               return (
                 <tr key={e.id} onClick={event => { if (!(event.target as HTMLElement).closest('button,select,input,a')) void loadOne(e.id, 'view'); }} style={{ borderBottom: `1px solid ${C.border}`, transition: 'background 0.12s', cursor: 'pointer' }}
                   onMouseEnter={ev => (ev.currentTarget as HTMLTableRowElement).style.background = C.hoverRow}
@@ -1178,7 +1217,7 @@ export default function Electricians({ role }: ElectriciansProps) {
                   <td style={{ padding: '13px 14px', fontSize: 13, color: C.muted }}>{e.totalScans}</td>
                   <td style={{ padding: '13px 14px', fontSize: 13, fontWeight: 700, color: '#10B981' }}>₹{e.walletBalance}</td>
                   <td style={{ padding: '13px 14px' }}>
-                    <span style={{ background: status.bg, color: status.color, fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20 }}>{status.label}</span>
+                    <span title="Scan activity status" style={{ background: activityStatus.bg, color: activityStatus.color, fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20 }}>{activityStatus.label}</span>
                   </td>
                   <td style={{ padding: '13px 14px' }}>
                     <span style={{
