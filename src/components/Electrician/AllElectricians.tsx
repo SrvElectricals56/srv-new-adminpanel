@@ -215,9 +215,15 @@ function ViewModal({
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 22 }}>
             {[
               { label: 'City', value: el.city }, { label: 'District', value: el.district },
-              { label: 'State', value: el.state }, { label: 'Dealer', value: el.dealerName || el.fallbackDealerName || 'SRV Dealer' },
-              { label: 'Dealer Mobile', value: el.dealerPhone || el.fallbackDealerPhone || '—' },
-              { label: 'Dealer Code', value: el.dealerCode || el.fallbackDealerCode || '—' },
+              { label: 'State', value: el.state },
+              {
+                label: 'Dealer Details',
+                value: [
+                  el.dealerName || el.fallbackDealerName || 'SRV Dealer',
+                  `Mobile: ${el.dealerPhone || el.fallbackDealerPhone || '—'}`,
+                  `Code: ${el.dealerCode || el.fallbackDealerCode || '—'}`,
+                ].join(' • '),
+              },
               { label: 'Email', value: el.email || '—' },
               { label: 'Electrician Code', value: el.electricianCode },
               { label: 'App Joined', value: el.appInstalled && el.firstAppLoginAt ? formatISTDate(el.firstAppLoginAt) : '—' },
@@ -674,7 +680,14 @@ export default function Electricians({ role }: ElectriciansProps) {
   const loadOne = async (id: string, mode: 'view' | 'edit') => {
     try {
       const electrician = await electricianApi.getOne(id);
-      if (mode === 'view') setViewing(electrician);
+      if (mode === 'view') {
+        setViewing({
+          ...electrician,
+          dealerName: electrician.dealerName ?? electrician.dealer?.name ?? electrician.fallbackDealerName ?? 'SRV Dealer',
+          dealerPhone: electrician.dealerPhone ?? electrician.dealer?.phone ?? electrician.fallbackDealerPhone ?? null,
+          dealerCode: electrician.dealerCode ?? electrician.dealer?.dealerCode ?? electrician.fallbackDealerCode ?? null,
+        });
+      }
       else setEditing(electrician);
     } catch (err) {
       console.error('Failed to load electrician details:', err);

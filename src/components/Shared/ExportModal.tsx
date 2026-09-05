@@ -11,11 +11,12 @@ interface ExportModalProps {
   getData: () => object[];
   fileName: string;
   onExcelExport?: () => Promise<void> | void;
+  onPrepareExportData?: (format: 'csv' | 'pdf' | 'zip') => Promise<object[]>;
   onExportComplete?: (format: 'excel' | 'csv' | 'pdf' | 'zip') => Promise<void> | void;
   isDataLoading?: boolean;
 }
 
-export default function ExportModal({ show, onClose, title, getData, fileName, onExcelExport, onExportComplete, isDataLoading = false }: ExportModalProps) {
+export default function ExportModal({ show, onClose, title, getData, fileName, onExcelExport, onPrepareExportData, onExportComplete, isDataLoading = false }: ExportModalProps) {
   const C = useThemePalette();
   const [exporting, setExporting] = useState<string | null>(null);
   const mouseDownInside = React.useRef(false);
@@ -23,12 +24,15 @@ export default function ExportModal({ show, onClose, title, getData, fileName, o
   if (!show) return null;
 
   const handleExport = async (format: 'excel' | 'csv' | 'pdf' | 'zip') => {
-    const rows = getData();
-    if (format !== 'excel' && !rows.length) return;
-    if (format === 'excel' && !onExcelExport && !rows.length) return;
+    let rows = getData();
     setExporting(format);
 
     try {
+      if (format !== 'excel' && onPrepareExportData) {
+        rows = await onPrepareExportData(format);
+      }
+      if (format !== 'excel' && !rows.length) return;
+      if (format === 'excel' && !onExcelExport && !rows.length) return;
       const dateTag = new Date().toISOString().slice(0, 10);
       const name = `${fileName}-${dateTag}`;
       const keys = rows.length ? Object.keys(rows[0]) : [];
