@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import React, { useState, useEffect } from 'react';
 import { ShoppingBag, Bolt, Store, Eye, Check, X, Package, SlidersHorizontal, Search, User, FileSpreadsheet, Truck, Trash2 } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
@@ -49,12 +49,12 @@ function OrderDetailModal({ order, onClose, C }: { order: GiftOrder; onClose: ()
       onMouseUp={() => { if (!mouseDownInside.current) onClose(); }}
     >
       <div
-        style={{ background: C.card, borderRadius: 20, width: 520, maxWidth: '95vw', boxShadow: '0 25px 70px rgba(0,0,0,0.25)', border: `1px solid ${C.border}` }}
+        style={{ background: C.card, borderRadius: 20, width: 620, maxWidth: '100%', maxHeight: '90dvh', overflowY: 'auto', overflowWrap: 'anywhere', boxShadow: '0 25px 70px rgba(0,0,0,0.25)', border: `1px solid ${C.border}` }}
         onMouseDown={e => { e.stopPropagation(); mouseDownInside.current = true; }}
         onMouseUp={e => e.stopPropagation()}
       >
         <div style={{ padding: '20px 24px', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ fontSize: 17, fontWeight: 800, color: C.text }}>Order #{order.id} Details</div>
+          <div style={{ fontSize: 17, fontWeight: 800, color: C.text }}>Gift Order Details</div>
           <button onClick={onClose} style={{ background: C.bg, border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontSize: 16, color: C.muted }}>✕</button>
         </div>
         <div style={{ padding: 24 }}>
@@ -66,10 +66,8 @@ function OrderDetailModal({ order, onClose, C }: { order: GiftOrder; onClose: ()
               <span style={{ background: s.bg, color: s.color, fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, display: 'inline-block', marginTop: 6 }}>{s.label}</span>
             </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: 10 }}>
             {[
-              { label: 'Order ID', value: `#${order.id}` },
-              { label: 'Type', value: order.type === 'electrician' ? 'Electrician' : order.type === 'dealer' ? 'Dealer' : order.type === 'customer' ? 'Customer' : 'Counterboy' },
               { label: order.type === 'electrician' ? 'Electrician' : order.type === 'dealer' ? 'Dealer' : order.type === 'customer' ? 'Customer' : 'Counterboy', value: order.userName },
               { label: 'Code', value: order.userCode },
               { label: 'Mobile Number', value: order.userPhone ? `+91 ${order.userPhone}` : '—' },
@@ -264,7 +262,7 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
       <ConfirmDialog show={deleteTarget !== null} title="Delete Gift Order" message={`Delete the gift order for ${deleteTarget?.userName ?? 'this user'}?`} onConfirm={async () => { if (!deleteTarget) return; await giftApi.deleteOrder(deleteTarget.id); setDeleteTarget(null); await loadOrders(); }} onCancel={() => setDeleteTarget(null)} type="danger" />
       {selectedOrder && <OrderDetailModal order={selectedOrder} onClose={() => setSelectedOrder(null)} C={C} />}
       {trackingOrder && <TrackingModal order={trackingOrder} onClose={() => setTrackingOrder(null)} onSave={(status, data) => saveTracking(trackingOrder, status, data)} C={C} />}
-      <ExportModal show={showExport} onClose={() => setShowExport(false)} title={`${tab.charAt(0).toUpperCase() + tab.slice(1)} Gift Orders`} fileName={`gift-orders-${tab}`} getData={() => filtered.map(o => ({ ID: o.id, Type: o.type, Name: o.userName, Phone: o.userPhone ?? '', Code: o.userCode, Dealer: o.dealerName, Gift: o.giftName, Points: o.pointsUsed, Date: o.orderedAt, Status: o.status, Courier: o.courierName, TrackingID: o.trackingNumber }))} />
+      <ExportModal show={showExport} onClose={() => setShowExport(false)} title={`${tab.charAt(0).toUpperCase() + tab.slice(1)} Gift Orders`} fileName={`gift-orders-${tab}`} getData={() => filtered.map(o => ({ Name: o.userName, Phone: o.userPhone ?? '', Code: o.userCode, Dealer: o.dealerName, Gift: o.giftName, Points: o.pointsUsed, Date: o.orderedAt, Status: o.status, Courier: o.courierName, TrackingID: o.trackingNumber }))} />
 
       {/* Header */}
       <div style={{ background: 'linear-gradient(135deg, #7C3AED, #5B21B6)', borderRadius: 18, padding: '22px 28px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 8px 24px rgba(124,58,237,0.25)' }}>
@@ -350,7 +348,7 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: C.bg, borderBottom: `2px solid ${C.border}` }}>
-              {['ID', 'Type', 'Name', 'Image', 'Gift Item', 'Dealer', 'Points', 'Date', 'Status', 'Action'].map(h => (
+              {['Mobile Number', 'Name', 'Image', 'Gift Item', 'Dealer', 'Points', 'Date', 'Status', 'Action'].map(h => (
                 <th key={h} style={{ padding: '14px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
               ))}
             </tr>
@@ -362,13 +360,7 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
                 <tr key={order.id} onClick={event => { if (!(event.target as HTMLElement).closest('button,select,input,a,textarea')) setSelectedOrder(order); }} style={{ borderBottom: `1px solid ${C.border}`, transition: 'background 0.2s', cursor: 'pointer' }}
                   onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = C.bg}
                   onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}>
-                  <td style={{ padding: '14px 16px', fontSize: 13, fontWeight: 800, color: C.muted }}>{order.id}</td>
-                  <td style={{ padding: '14px 16px' }}>
-                    <span style={{ background: order.type === 'electrician' ? '#FFF0F0' : order.type === 'dealer' ? '#EFF6FF' : order.type === 'customer' ? '#F0FDF4' : '#FDF4FF', color: order.type === 'electrician' ? '#C2410C' : order.type === 'dealer' ? '#1D4ED8' : order.type === 'customer' ? '#15803D' : '#7C3AED', fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, display: 'flex', alignItems: 'center', gap: 4, width: 'fit-content' }}>
-                      {order.type === 'electrician' ? <Bolt size={11} /> : order.type === 'dealer' ? <Store size={11} /> : order.type === 'customer' ? <User size={11} /> : <Package size={11} />}
-                      {order.type === 'electrician' ? 'Electrician' : order.type === 'dealer' ? 'Dealer' : order.type === 'customer' ? 'Customer' : 'Counterboy'}
-                    </span>
-                  </td>
+                  <td style={{ padding: '14px 16px', fontSize: 13, color: C.text, whiteSpace: 'nowrap' }}>{order.userPhone || '—'}</td>
                   <td style={{ padding: '14px 16px' }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{order.userName}</div>
                     <div style={{ fontSize: 11, color: C.muted }}>{order.userPhone ? `+91 ${order.userPhone} · ` : ''}{order.userCode}</div>
@@ -409,7 +401,7 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
               );
             })}
             {filtered.length === 0 && (
-              <tr><td colSpan={10} style={{ padding: '60px 20px', textAlign: 'center', color: C.muted }}>
+              <tr><td colSpan={9} style={{ padding: '60px 20px', textAlign: 'center', color: C.muted }}>
                 <ShoppingBag size={40} style={{ margin: '0 auto 12px', opacity: 0.3 }} />
                 <div style={{ fontSize: 14, fontWeight: 600 }}>No orders found</div>
               </td></tr>

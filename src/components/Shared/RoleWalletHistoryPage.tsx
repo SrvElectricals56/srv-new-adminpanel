@@ -26,6 +26,8 @@ type RedemptionRecord = {
   id: string;
   userId: string;
   userName?: string;
+  userPhone?: string;
+  userCode?: string;
   type: string;
   points?: number;
   amount?: number;
@@ -180,34 +182,20 @@ export default function RoleWalletHistoryPage({
           linkedRedemption: r,
           description: '',
           userName: r.userName,
-          userPhone: '',
-          userCode: '',
+          userPhone: r.userPhone,
+          userCode: r.userCode,
         });
       }
-
-      const allUserIds = Array.from(new Set([
-        ...enrichedWalletRows.map((r) => String(r.userId ?? '').trim()).filter(Boolean),
-        ...syntheticRows.map((r) => String(r.userId ?? '').trim()).filter(Boolean),
-      ]));
-
-      const userEntries = await Promise.all(
-        allUserIds.map(async (userId) => {
-          try { return [userId, await fetchUserMeta(userId)] as const; }
-          catch { return [userId, FALLBACK_USER_META] as const; }
-        }),
-      );
-      const userMap = new Map(userEntries);
 
       const allRows = [...enrichedWalletRows, ...syntheticRows].sort(
         (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       );
-
-      setTransactions(
-        allRows.map((row) => ({
-          ...row,
-          ...(userMap.get(String(row.userId ?? '').trim()) ?? FALLBACK_USER_META),
-        })),
-      );
+      setTransactions(allRows.map(row => ({
+        ...row,
+        userName: row.userName || 'Unknown user',
+        userPhone: row.userPhone || '—',
+        userCode: row.userCode || '—',
+      })));
       setFeedback(null);
     } catch (error) {
       setFeedback({ type: 'error', message: error instanceof Error ? error.message : 'Failed to load wallet history.' });

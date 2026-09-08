@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Banknote, Check, CreditCard, DollarSign, Eye, FileSpreadsheet, TrendingUp, X } from 'lucide-react';
 import ExportModal from '@/components/Shared/ExportModal';
 import { redemptionApi } from '@/lib/api';
@@ -60,6 +60,12 @@ export default function RoleRedemptionRequestsPage({
   const [showExport, setShowExport] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'approved' | 'pending' | 'rejected'>('all');
+  const [dateRange, setDateRange] = useState('all');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [query, setQuery] = useState('');
+  const requestId = useRef(0);
+  useEffect(() => { const timer = setTimeout(() => { setPage(1); setQuery(search.trim()); }, 300); return () => clearTimeout(timer); }, [search]);
   const [summary, setSummary] = useState<Record<string, { count: number; amount: number }>>({});
   const [viewItem, setViewItem] = useState<RedemptionRecord | null>(null);
   const [submittingId, setSubmittingId] = useState<string | null>(null);
@@ -71,43 +77,44 @@ export default function RoleRedemptionRequestsPage({
   const [rejectReason, setRejectReason] = useState('');
 
   const loadData = useCallback(async () => {
+    const currentRequest = ++requestId.current;
     setLoading(true);
     try {
-      const response = await redemptionApi.getAll({ role, limit: '500' });
+      const params: Record<string, string> = { role, limit: '50', page: String(page) };
+      if (statusFilter !== 'all') params.status = statusFilter;
+      if (query) params.search = query;
+      if (dateRange !== 'all') {
+        const now = new Date(Date.now() + 330 * 60 * 1000);
+        params.to = now.toISOString().slice(0, 10);
+        if (dateRange === 'weekly') now.setUTCDate(now.getUTCDate() - 6);
+        if (dateRange === 'monthly') now.setUTCDate(1);
+        params.from = now.toISOString().slice(0, 10);
+      }
+      const response = await redemptionApi.getAll(params);
+      if (currentRequest !== requestId.current) return;
       const data = Array.isArray(response) ? response : (response as { data?: RedemptionRecord[] }).data ?? [];
       setRows(data);
+      setTotal(Array.isArray(response) ? data.length : Number((response as any).total ?? data.length));
+      setViewItem(current => current ? data.find((row: RedemptionRecord) => row.id === current.id) ?? current : null);
       setSummary(Array.isArray(response) ? {} : (response as any).summary ?? {});
       setFeedback(null);
     } catch (error) {
+      if (currentRequest !== requestId.current) return;
       console.error(error);
       setFeedback({
         type: 'error',
         message: error instanceof Error ? error.message : 'Failed to load redemption requests.',
       });
     } finally {
-      setLoading(false);
+      if (currentRequest === requestId.current) setLoading(false);
     }
-  }, [role]);
+  }, [role, page, statusFilter, dateRange, query]);
 
   useEffect(() => {
     void loadData();
   }, [loadData]);
 
-  const filtered = useMemo(
-    () =>
-      rows.filter((row) => {
-        const query = search.toLowerCase();
-        return (statusFilter === 'all' || row.status === statusFilter) && (
-          (row.userName ?? '').toLowerCase().includes(query) ||
-          (row.userPhone ?? '').includes(query) ||
-          (row.userCode ?? '').toLowerCase().includes(query) ||
-          (row.userId ?? '').toLowerCase().includes(query) ||
-          (row.type ?? '').toLowerCase().includes(query) ||
-          (row.rejectionReason ?? '').toLowerCase().includes(query)
-        );
-      }),
-    [rows, search, statusFilter],
-  );
+  const filtered = rows;
 
   const totalApproved = Number(summary.approved?.amount ?? rows
     .filter((row) => row.status === 'approved')
@@ -129,9 +136,10 @@ export default function RoleRedemptionRequestsPage({
     }
     setSubmittingId(item.id);
     try {
-      await redemptionApi.updateStatus(item.id, nextStatus, reason);
-      setFeedback({ type: 'success', message: `Request moved to ${nextStatus}.` });
+      const updated = await redemptionApi.updateStatus(item.id, nextStatus, reason);
+      setViewItem(current => current?.id === item.id ? { ...current, ...updated, status: nextStatus } : current);
       await loadData();
+      setFeedback({ type: 'success', message: `Request moved to ${nextStatus}.` });
     } catch (error) {
       setFeedback({ type: 'error', message: error instanceof Error ? error.message : 'Failed to update request status.' });
     } finally {
@@ -205,25 +213,33 @@ export default function RoleRedemptionRequestsPage({
         onClose={() => setShowExport(false)}
         title={exportTitle}
         fileName={exportFileName}
-        getData={() =>
-          rows.map((row) => ({
-            UserId: row.userId,
-            UserName: row.userName,
-            Type: row.type,
-            Points: row.points ?? 0,
-            Amount: row.amount ?? 0,
-            Status: row.status,
-            RejectionReason: row.rejectionReason ?? '',
-            Date: row.requestedAt,
-          }))
-        }
+        getData={async () => {
+          const params: Record<string, string> = { role, limit: '500' };
+          if (statusFilter !== 'all') params.status = statusFilter;
+          if (query) params.search = query;
+          if (dateRange !== 'all') {
+            const now = new Date(Date.now() + 330 * 60 * 1000);
+            params.to = now.toISOString().slice(0, 10);
+            if (dateRange === 'weekly') now.setUTCDate(now.getUTCDate() - 6);
+            if (dateRange === 'monthly') now.setUTCDate(1);
+            params.from = now.toISOString().slice(0, 10);
+          }
+          const exported: RedemptionRecord[] = [];
+          let pages = 1;
+          for (let current = 1; current <= pages; current++) {
+            const response = await redemptionApi.getAll({ ...params, page: String(current) });
+            exported.push(...(Array.isArray(response) ? response : response.data ?? []));
+            pages = Array.isArray(response) ? 1 : Math.ceil(response.total / 500);
+          }
+          return exported.map(row => ({ UserName: row.userName, Phone: row.userPhone, Code: row.userCode, Type: row.type, Points: row.points, Amount: row.amount, Status: row.status, Date: row.requestedAt }));
+        }}
       />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14, marginBottom: 20 }}>
         {[
-          { label: 'Total Approved', value: `₹${totalApproved.toLocaleString('en-IN')}`, color: '#065F46', bg: '#D1FAE5', Icon: DollarSign },
+          { label: `Approved Amount (${summary.approved?.count ?? 0} requests)`, value: `₹${totalApproved.toLocaleString('en-IN')}`, color: '#065F46', bg: '#D1FAE5', Icon: DollarSign },
           { label: 'Pending Requests', value: String(exactPendingCount), color: '#92400E', bg: '#FEF3C7', Icon: Banknote },
-          { label: 'Requests', value: String(rows.length), color: '#1D4ED8', bg: '#EFF6FF', Icon: CreditCard },
+          { label: 'Requests', value: String(total), color: '#1D4ED8', bg: '#EFF6FF', Icon: CreditCard },
           { label: 'Rejected', value: String(rejectedCount), color: '#991B1B', bg: '#FEE2E2', Icon: TrendingUp },
         ].map((card) => (
           <div key={card.label} style={{ background: C.card, borderRadius: 14, padding: '16px 18px', border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -262,11 +278,14 @@ export default function RoleRedemptionRequestsPage({
           placeholder="Search by user, phone, code, type, or reason..."
           style={{ ...inputStyle, flex: 1, minWidth: 220 }}
         />
-        <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as any)} style={{ ...inputStyle, width: 170 }}>
+        <select value={statusFilter} onChange={(event) => { setPage(1); setStatusFilter(event.target.value as any); }} style={{ ...inputStyle, width: 170 }}>
           <option value="all">All Statuses</option>
           <option value="approved">Approved</option>
           <option value="pending">Pending</option>
           <option value="rejected">Rejected</option>
+        </select>
+        <select aria-label="Redemption date range" value={dateRange} onChange={event => { setPage(1); setDateRange(event.target.value); }} style={{ ...inputStyle, width: 170 }}>
+          <option value="all">All Dates</option><option value="today">Today</option><option value="weekly">Weekly (7 days)</option><option value="monthly">Monthly</option>
         </select>
         <button
           onClick={() => setShowExport(true)}
@@ -274,10 +293,10 @@ export default function RoleRedemptionRequestsPage({
         >
           <FileSpreadsheet size={14} /> Export
         </button>
-        <span style={{ fontSize: 13, color: C.muted, marginLeft: 'auto' }}>{filtered.length} results</span>
+        <span style={{ fontSize: 13, color: C.muted, marginLeft: 'auto' }}>{total} results</span>
       </div>
 
-      <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
+      <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, overflowX: 'auto' }}>
         {loading ? (
           <div style={{ padding: '40px', textAlign: 'center', color: C.muted }}>Loading...</div>
         ) : (
@@ -380,6 +399,11 @@ export default function RoleRedemptionRequestsPage({
         )}
       </div>
 
+      <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', alignItems: 'center', padding: 16 }}>
+        <button disabled={loading || page === 1} onClick={() => setPage(value => value - 1)} style={{ ...inputStyle, width: 'auto' }}>Previous</button>
+        <span>Page {page} of {Math.max(1, Math.ceil(total / 50))}</span>
+        <button disabled={loading || page * 50 >= total} onClick={() => setPage(value => value + 1)} style={{ ...inputStyle, width: 'auto' }}>Next</button>
+      </div>
       {viewItem && (
         <div style={{ position: 'fixed', inset: 0, background: C.overlay, backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={() => setViewItem(null)}>
           <div style={{ background: C.card, borderRadius: 18, width: 'min(920px, 96vw)', maxHeight: '88vh', boxShadow: '0 25px 70px rgba(0,0,0,0.2)', border: `1px solid ${C.border}`, overflow: 'hidden', display: 'flex', flexDirection: 'column' }} onClick={(event) => event.stopPropagation()}>
@@ -393,6 +417,12 @@ export default function RoleRedemptionRequestsPage({
               </button>
             </div>
             <div style={{ padding: 22, overflowY: 'auto' }}>
+              <label style={{ display: 'block', marginBottom: 16, color: C.text }}>Status
+                <select aria-label="Redemption status" value={viewItem.status} disabled={submittingId === viewItem.id} onChange={event => void handleStatusChange(viewItem, event.target.value as 'pending' | 'approved' | 'rejected')} style={{ ...inputStyle, marginTop: 6 }}>
+                  <option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option>
+                </select>
+              </label>
+              {feedback && <div role="status" style={{ color: feedback.type === 'error' ? '#991B1B' : '#065F46', marginBottom: 12 }}>{feedback.message}</div>}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
                 <div style={{ background: C.bg, borderRadius: 14, padding: 16, border: `1px solid ${C.border}` }}>
                   <div style={{ fontSize: 12, fontWeight: 800, color: C.muted, textTransform: 'uppercase', marginBottom: 12 }}>Request Overview</div>

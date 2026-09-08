@@ -6,6 +6,7 @@ import { useThemePalette } from '@/lib/theme';
 import type { MemberTier } from '@/lib/types';
 import ExportModal from '@/components/Shared/ExportModal';
 import { I } from '@/lib/iconMap';
+import AssociatedElectricians from './Electricians';
 
 type Range = 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom';
 
@@ -20,6 +21,8 @@ const RANK_COLORS = ['#F59E0B', '#94A3B8', '#CD7F32', '#6B7280'];
 
 export default function TopDealers() {
   const C = useThemePalette();
+  const [associatedSearch, setAssociatedSearch] = useState('');
+  const [showAssociated, setShowAssociated] = useState(false);
   const [topList, setTopList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState<Range>('monthly');
@@ -69,6 +72,11 @@ export default function TopDealers() {
 
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1100 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 18 }}>
+        <input value={associatedSearch} onChange={e => setAssociatedSearch(e.target.value)} placeholder="Dealer name, phone number or code" style={{ ...inputStyle, flex: '1 0 240px' }} onKeyDown={e => { if (e.key === 'Enter') setShowAssociated(true); }} />
+        <button onClick={() => setShowAssociated(value => !value)} style={inputStyle}>{showAssociated ? 'Hide Electricians' : 'Find Associated Electricians'}</button>
+      </div>
+      {showAssociated && <AssociatedElectricians initialSearch={associatedSearch} />}
       <ExportModal
         show={showExport}
         onClose={() => setShowExport(false)}

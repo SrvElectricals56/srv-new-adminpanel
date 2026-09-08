@@ -8,7 +8,7 @@ interface ExportModalProps {
   show: boolean;
   onClose: () => void;
   title: string;
-  getData: () => object[];
+  getData: () => object[] | Promise<object[]>;
   fileName: string;
   onExcelExport?: () => Promise<void> | void;
   onExportComplete?: (format: 'excel' | 'csv' | 'pdf' | 'zip') => Promise<void> | void;
@@ -23,12 +23,11 @@ export default function ExportModal({ show, onClose, title, getData, fileName, o
   if (!show) return null;
 
   const handleExport = async (format: 'excel' | 'csv' | 'pdf' | 'zip') => {
-    const rows = getData();
-    if (format !== 'excel' && !rows.length) return;
-    if (format === 'excel' && !onExcelExport && !rows.length) return;
     setExporting(format);
 
     try {
+      const rows = format === 'excel' && onExcelExport ? [] : await getData();
+      if (!rows.length && !(format === 'excel' && onExcelExport)) return;
       const dateTag = new Date().toISOString().slice(0, 10);
       const name = `${fileName}-${dateTag}`;
       const keys = rows.length ? Object.keys(rows[0]) : [];

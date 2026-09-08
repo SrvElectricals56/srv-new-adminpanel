@@ -77,13 +77,15 @@ async function decodeQrImage(file: File): Promise<string> {
   // Try multiple sizes. A single aggressive resize loses the QR modules when
   // the code occupies only a small part of a product/label photo.
   const longestSide = Math.max(image.naturalWidth, image.naturalHeight);
-  const targetSizes = [...new Set([900, 1600, 2800])];
+  const targetSizes = [...new Set([Math.min(longestSide, 2000), 900, 1600, 2800])];
 
   for (const targetSize of targetSizes) {
     const scale = Math.min(3, targetSize / longestSide);
     canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
     canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.imageSmoothingEnabled = false;
     ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
 
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -107,7 +109,9 @@ async function decodeQrImage(file: File): Promise<string> {
         for (const xRatio of [0, 0.5, 1]) {
           const sx = Math.max(0, Math.round((canvas.width - cropWidth) * xRatio));
           const sy = Math.max(0, Math.round((canvas.height - cropHeight) * yRatio));
-          cropContext.clearRect(0, 0, cropCanvas.width, cropCanvas.height);
+          cropContext.fillStyle = '#fff';
+          cropContext.fillRect(0, 0, cropCanvas.width, cropCanvas.height);
+          cropContext.imageSmoothingEnabled = false;
           cropContext.drawImage(canvas, sx, sy, cropWidth, cropHeight, 0, 0, cropCanvas.width, cropCanvas.height);
           const cropData = cropContext.getImageData(0, 0, cropCanvas.width, cropCanvas.height);
           const cropDecoded = jsQR(cropData.data, cropData.width, cropData.height, { inversionAttempts: 'attemptBoth' });

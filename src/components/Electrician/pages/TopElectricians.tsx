@@ -7,8 +7,9 @@ import type { MemberTier } from '@/lib/types';
 import ExportModal from '@/components/Shared/ExportModal';
 import { I } from '@/lib/iconMap';
 
-type Range = 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom';
-type SortBy = 'points' | 'scans' | 'redemptions';
+type Range = 'all' | 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom';
+type SortBy = 'points' | 'wallet' | 'scans';
+const SORT_LABELS = { points: 'Total Points Scan', wallet: 'Wallet', scans: 'Scans' };
 
 const TIER_CONFIG: Record<MemberTier, { color: string; bg: string; icon: string }> = {
   Silver:   { color: '#475569', bg: '#F1F5F9', icon: '' },
@@ -21,7 +22,7 @@ const RANK_COLORS = ['#F59E0B', '#94A3B8', '#CD7F32', '#6B7280'];
 
 export default function TopElectricians() {
   const C = useThemePalette();
-  const [range, setRange] = useState<Range>('monthly');
+  const [range, setRange] = useState<Range>('all');
   const [sortBy, setSortBy] = useState<SortBy>('points');
   const [resultLimit, setResultLimit] = useState<20 | 100>(20);
   const [fromDate, setFromDate] = useState('2024-01-01');
@@ -34,6 +35,7 @@ export default function TopElectricians() {
     const now = new Date();
     const end = now.toISOString().split('T')[0];
     let start: string;
+    if (range === 'all') return { from: 'all', to: end };
     if (range === 'custom') {
       start = fromDate;
     } else {
@@ -59,11 +61,11 @@ export default function TopElectricians() {
   const maxVal = topList[0]
     ? sortBy === 'points' ? topList[0].periodPoints
     : sortBy === 'scans' ? topList[0].periodScans
-    : topList[0].periodRedemptions
+    : Number(topList[0].walletBalance ?? 0)
     : 1;
 
   const rangeLabels: Record<Range, string> = {
-    weekly: 'This Week', monthly: 'This Month',
+    all: 'All Time', weekly: 'This Week', monthly: 'This Month',
     quarterly: 'This Quarter', yearly: 'This Year', custom: 'Custom Range',
   };
 
@@ -102,7 +104,7 @@ export default function TopElectricians() {
             <Medal size={26} /> Top Electricians
           </div>
           <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 4 }}>
-            {rangeLabels[range]} — Top {resultLimit} performers by {sortBy}
+            {rangeLabels[range]} — Top {resultLimit} performers by {SORT_LABELS[sortBy]}
           </div>
         </div>
         <button
@@ -117,10 +119,10 @@ export default function TopElectricians() {
       <div style={{ background: C.card, borderRadius: 14, padding: '16px 20px', border: `1px solid ${C.border}`, marginBottom: 24, display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
         {/* Range tabs */}
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {(['weekly', 'monthly', 'quarterly', 'yearly', 'custom'] as Range[]).map(r => (
+          {(['all', 'weekly', 'monthly', 'quarterly', 'yearly', 'custom'] as Range[]).map(r => (
             <button key={r} onClick={() => setRange(r)}
               style={{ padding: '7px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, background: range === r ? '#F59E0B' : C.bg, color: range === r ? 'white' : C.muted, transition: 'all 0.2s' }}>
-              {r === 'weekly' ? 'Weekly' : r === 'monthly' ? 'Monthly' : r === 'quarterly' ? 'Quarterly' : r === 'yearly' ? 'Yearly' : 'Custom'}
+              {r === 'all' ? 'All Time' : r === 'weekly' ? 'Weekly' : r === 'monthly' ? 'Monthly' : r === 'quarterly' ? 'Quarterly' : r === 'yearly' ? 'Yearly' : 'Custom'}
             </button>
           ))}
         </div>
@@ -142,10 +144,10 @@ export default function TopElectricians() {
 
         {/* Sort by */}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
-          {(['points', 'scans', 'redemptions'] as SortBy[]).map(s => (
+          {(['points', 'wallet', 'scans'] as SortBy[]).map(s => (
             <button key={s} onClick={() => setSortBy(s)}
               style={{ padding: '7px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, background: sortBy === s ? C.red : C.bg, color: sortBy === s ? 'white' : C.muted, transition: 'all 0.2s', textTransform: 'capitalize' }}>
-              {s}
+              {SORT_LABELS[s]}
             </button>
           ))}
         </div>
@@ -157,7 +159,7 @@ export default function TopElectricians() {
           {[topList[1], topList[0], topList[2]].map((e, i) => {
             const rank = i === 1 ? 1 : i === 0 ? 2 : 3;
             const tier = TIER_CONFIG[e.tier as MemberTier] ?? TIER_CONFIG['Silver'];
-            const val = sortBy === 'points' ? e.periodPoints : sortBy === 'scans' ? e.periodScans : e.periodRedemptions;
+            const val = sortBy === 'points' ? e.periodPoints : sortBy === 'scans' ? e.periodScans : Number(e.walletBalance ?? 0);
             const podiumH = rank === 1 ? 90 : rank === 2 ? 70 : 55;
             return (
               <div key={e.id} style={{ background: C.card, borderRadius: 16, padding: '20px 16px', border: `2px solid ${rank === 1 ? '#F59E0B' : C.border}`, textAlign: 'center', boxShadow: rank === 1 ? '0 8px 24px rgba(245,158,11,0.2)' : '0 2px 8px rgba(0,0,0,0.04)', position: 'relative' }}>
@@ -168,7 +170,7 @@ export default function TopElectricians() {
                 <div style={{ fontSize: 14, fontWeight: 800, color: C.text, marginBottom: 2 }}>{e.name}</div>
                 <div style={{ fontSize: 11, color: C.muted, marginBottom: 8 }}>{e.city} • {e.tier}</div>
                 <div style={{ fontSize: 22, fontWeight: 900, color: RANK_COLORS[rank - 1] }}>{val.toLocaleString('en-IN')}</div>
-                <div style={{ fontSize: 11, color: C.muted, textTransform: 'capitalize' }}>{sortBy}</div>
+                <div style={{ fontSize: 11, color: C.muted, textTransform: 'capitalize' }}>{SORT_LABELS[sortBy]}</div>
                 {/* Podium bar */}
                 <div style={{ height: podiumH, background: `linear-gradient(180deg, ${RANK_COLORS[rank - 1]}33, ${RANK_COLORS[rank - 1]}11)`, borderRadius: 8, marginTop: 12, border: `1px solid ${RANK_COLORS[rank - 1]}44`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>
                   #{rank}
@@ -187,8 +189,8 @@ export default function TopElectricians() {
         </div>
         {topList.map((e, idx) => {
           const tier = TIER_CONFIG[e.tier as MemberTier] ?? TIER_CONFIG['Silver'];
-          const val = sortBy === 'points' ? e.periodPoints : sortBy === 'scans' ? e.periodScans : e.periodRedemptions;
-          const pct = Math.round((val / maxVal) * 100);
+          const val = sortBy === 'points' ? e.periodPoints : sortBy === 'scans' ? e.periodScans : Number(e.walletBalance ?? 0);
+          const pct = maxVal > 0 ? Math.round((val / maxVal) * 100) : 0;
           const rankColor = idx < 3 ? RANK_COLORS[idx] : C.muted;
           return (
             <div key={e.id} style={{ padding: '14px 20px', borderBottom: idx < topList.length - 1 ? `1px solid ${C.border}` : 'none', display: 'flex', alignItems: 'center', gap: 14, transition: 'background 0.2s' }}
@@ -217,7 +219,7 @@ export default function TopElectricians() {
               {/* Stats */}
               <div style={{ textAlign: 'right', flexShrink: 0 }}>
                 <div style={{ fontSize: 18, fontWeight: 900, color: rankColor }}>{val.toLocaleString('en-IN')}</div>
-                <div style={{ fontSize: 10, color: C.muted, textTransform: 'capitalize' }}>{sortBy}</div>
+                <div style={{ fontSize: 10, color: C.muted, textTransform: 'capitalize' }}>{SORT_LABELS[sortBy]}</div>
               </div>
               {/* Extra stats */}
               <div style={{ display: 'flex', gap: 12, flexShrink: 0 }}>
@@ -230,7 +232,7 @@ export default function TopElectricians() {
                   <div style={{ fontSize: 10, color: C.muted }}>Total Scans</div>
                 </div>
                 <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: '#10B981' }}>₹{e.walletBalance.toLocaleString('en-IN')}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#10B981' }}>₹{Number(e.walletBalance ?? 0).toLocaleString('en-IN')}</div>
                   <div style={{ fontSize: 10, color: C.muted }}>Wallet</div>
                 </div>
               </div>

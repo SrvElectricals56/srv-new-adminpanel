@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { FileSpreadsheet, Plus, Users, Star, ScanLine, Wallet, Trash2, SlidersHorizontal, Calendar, Medal, Award, Trophy, Gem, Smartphone } from 'lucide-react';
 import { electricianApi, dealerApi } from '@/lib/api';
@@ -932,7 +932,7 @@ export default function Electricians({ role }: ElectriciansProps) {
 
       {/* Filters */}
       <div style={{ background: C.card, borderRadius: 14, padding: '14px 18px', border: `1px solid ${C.border}`, marginBottom: 16, display: 'flex', gap: 10, alignItems: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', position: 'relative' }}>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, phone, city, code, dealer..." style={{ ...inputStyle, flex: '0 1 320px', maxWidth: 320 }} onFocus={e => (e.target as HTMLInputElement).style.borderColor = C.red} onBlur={e => (e.target as HTMLInputElement).style.borderColor = C.border} />
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, phone, city, code, dealer..." style={{ ...inputStyle, flex: '1 0 280px', minWidth: 'min(280px, 100%)', maxWidth: '100%' }} onFocus={e => (e.target as HTMLInputElement).style.borderColor = C.red} onBlur={e => (e.target as HTMLInputElement).style.borderColor = C.border} />
 
         <select
           value={filterWelcomeBonus}

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import { useMemo, useState, useEffect } from 'react';
 import { Users, Award, Eye, FileSpreadsheet, Plus, IdCard, Phone, MapPin, Building2, Wallet, ScanLine, Star, Pencil } from 'lucide-react';
 import { electricianApi, dealerApi } from '@/lib/api';
@@ -94,6 +94,9 @@ function ViewModal({ electrician, onClose }: { electrician: Electrician; onClose
     { label: 'Electrician Code', value: electrician.electricianCode, Icon: IdCard },
     { label: 'Phone', value: electrician.phone, Icon: Phone },
     { label: 'Dealer', value: electrician.dealerName, Icon: Building2 },
+    { label: 'Dealer Phone', value: electrician.dealerPhone || '—', Icon: Phone },
+    { label: 'Dealer Code', value: electrician.dealerCode || '—', Icon: IdCard },
+    { label: 'App Status', value: electrician.appInstalled ? 'App Installed' : 'App Not Installed', Icon: Phone },
     { label: 'Location', value: `${electrician.city}, ${electrician.district}, ${electrician.state}`, Icon: MapPin },
     { label: 'Sub Category', value: electrician.subCategory, Icon: Star },
     { label: 'Total Scans', value: electrician.totalScans.toLocaleString('en-IN'), Icon: ScanLine },
@@ -470,7 +473,7 @@ function EditModal({
   );
 }
 
-export default function AssociatedElectricians() {
+export default function AssociatedElectricians({ initialSearch = '' }: { initialSearch?: string }) {
   const C = useThemePalette();
   const [electricians, setElectricians] = useState<Electrician[]>([]);
   const [dealers, setDealers] = useState<{id: string; name: string}[]>([]);
@@ -512,7 +515,9 @@ export default function AssociatedElectricians() {
   const [filterDealer, setFilterDealer] = useState('all');
   const [filterStatus, setFilterStatus] = useState<'all' | UserStatus>('all');
   const [showExport, setShowExport] = useState(false);
-  const [dealerSearch, setDealerSearch] = useState('');
+  const [dealerSearch, setDealerSearch] = useState(initialSearch);
+  const [filterInstall, setFilterInstall] = useState('all');
+  useEffect(() => setDealerSearch(initialSearch), [initialSearch]);
   const [viewing, setViewing] = useState<Electrician | null>(null);
   const [editing, setEditing] = useState<Electrician | null>(null);
   const [showAdd, setShowAdd] = useState(false);
@@ -543,7 +548,8 @@ export default function AssociatedElectricians() {
   const filtered = electricians.filter(e =>
     (!dealerSearchQuery || e.dealerName.toLowerCase().includes(dealerSearchQuery) || (e.dealerPhone ?? '').includes(dealerSearchQuery) || (e.dealerCode ?? '').toLowerCase().includes(dealerSearchQuery) || e.name.toLowerCase().includes(dealerSearchQuery) || e.phone.includes(dealerSearchQuery) || e.electricianCode.toLowerCase().includes(dealerSearchQuery)) &&
     (filterDealer === 'all' || e.dealerName === filterDealer) &&
-    (filterStatus === 'all' || e.status === filterStatus)
+    (filterStatus === 'all' || e.status === filterStatus) &&
+    (filterInstall === 'all' || Boolean(e.appInstalled) === (filterInstall === 'installed'))
   );
 
   const selectedDealerCount = filterDealer === 'all' ? filtered.length : filtered.filter(e => e.dealerName === filterDealer).length;
@@ -553,7 +559,8 @@ export default function AssociatedElectricians() {
     dealer,
     electricians: electricians.filter(e =>
       e.dealerName === dealer &&
-      (filterStatus === 'all' || e.status === filterStatus)
+      (filterStatus === 'all' || e.status === filterStatus) &&
+    (filterInstall === 'all' || Boolean(e.appInstalled) === (filterInstall === 'installed'))
     ),
   })).filter(group => group.electricians.length > 0);
 
@@ -675,6 +682,9 @@ export default function AssociatedElectricians() {
           placeholder="Search dealer, electrician, phone, code..."
           style={{ padding: '9px 12px', border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 13.5, outline: 'none', background: C.surface, color: C.text, boxSizing: 'border-box', minWidth: 240, flex: 1 }}
         />
+        <select aria-label="App installation" value={filterInstall} onChange={e => setFilterInstall(e.target.value)} style={{ padding: '9px 12px', border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, background: C.surface }}>
+          <option value="all">All App Statuses</option><option value="installed">App Installed</option><option value="not_installed">App Not Installed</option>
+        </select>
         <SearchableSelect
           value={filterDealer}
           placeholder={`All Dealers (${electricians.length})`}
@@ -784,7 +794,7 @@ export default function AssociatedElectricians() {
                     </div>
                   </td>
                   <td style={{ padding: '13px 16px', fontSize: 12, color: C.muted }}>{e.electricianCode}</td>
-                  <td style={{ padding: '13px 16px', fontSize: 12, color: C.muted }}>{e.phone}</td>
+                  <td style={{ padding: '13px 16px', fontSize: 12, color: C.muted }}>{e.phone}<div style={{ fontSize: 11, marginTop: 4 }}>{e.appInstalled ? 'App Installed' : 'App Not Installed'}</div></td>
                   <td style={{ padding: '13px 16px' }}><span style={{ background: tier.bg, color: tier.color, fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20 }}>{tier.icon} {e.tier}</span></td>
                   <td style={{ padding: '13px 16px', fontSize: 13, fontWeight: 700, color: '#F59E0B' }}>{e.totalPoints}</td>
                   <td style={{ padding: '13px 16px' }}><span style={{ background: status.bg, color: status.color, fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20 }}>{status.label}</span></td>

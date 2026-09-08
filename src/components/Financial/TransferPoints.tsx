@@ -23,6 +23,7 @@ interface Transfer {
   date: string;
   reason: string;
   status: 'pending' | 'completed' | 'reversed';
+  canReverse?: boolean;
 }
 
 const REASON_OPTIONS = [
@@ -95,6 +96,7 @@ export default function TransferPoints({ role }: { role?: import('@/lib/types').
         date: t.date ?? t.createdAt ?? t.created_at ?? new Date().toISOString(),
         reason: t.reason ?? t.description ?? '',
         status: t.status ?? 'completed',
+        canReverse: t.canReverse ?? false,
       })));
     } catch (err) {
       console.error('Failed to load transfers:', err);
@@ -147,7 +149,7 @@ export default function TransferPoints({ role }: { role?: import('@/lib/types').
       await loadTransfers();
     } catch (err) {
       console.error('Failed to reverse transfer:', err);
-      setAlertDialog({ show: true, title: 'Error', message: 'Failed to reverse transfer. Please try again.', type: 'error' });
+      setAlertDialog({ show: true, title: 'Error', message: err instanceof Error ? err.message : 'Unable to reverse this transfer.', type: 'error' });
     }
     setReverseId(null);
   };
@@ -360,7 +362,7 @@ export default function TransferPoints({ role }: { role?: import('@/lib/types').
                       {canEdit && <button onClick={() => openEdit(t)} title="Edit" style={{ width: 30, height: 30, borderRadius: 7, border: 'none', background: '#EFF6FF', color: '#1D4ED8', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Pencil size={13} />
                       </button>}
-                      {canDelete && t.status === 'completed' && (
+                      {canDelete && t.status === 'completed' && t.canReverse && (
                         <button onClick={() => setReverseId(t.id)} title="Reverse" style={{ width: 30, height: 30, borderRadius: 7, border: 'none', background: 'rgba(239,68,68,0.12)', color: '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           <RotateCcw size={13} />
                         </button>
