@@ -557,11 +557,7 @@ export default function AssociatedElectricians({ initialSearch = '' }: { initial
 
   const searchedDealerGroups = visibleDealers.map(dealer => ({
     dealer,
-    electricians: electricians.filter(e =>
-      e.dealerName === dealer &&
-      (filterStatus === 'all' || e.status === filterStatus) &&
-    (filterInstall === 'all' || Boolean(e.appInstalled) === (filterInstall === 'installed'))
-    ),
+    electricians: filtered.filter(e => e.dealerName === dealer),
   })).filter(group => group.electricians.length > 0);
 
   const exportRows = filterDealer === 'all'
@@ -747,6 +743,7 @@ export default function AssociatedElectricians({ initialSearch = '' }: { initial
                         </div>
                         <div style={{ fontSize: 11, color: C.muted, marginTop: 3 }}>{e.electricianCode}</div>
                         <div style={{ fontSize: 12, color: C.muted, marginTop: 3 }}>{e.phone}</div>
+                        <div style={{ fontSize: 11, color: e.appInstalled ? '#059669' : C.muted, marginTop: 3 }}>{e.appInstalled ? 'App Installed' : 'App Not Installed'}</div>
                       </div>
                       <button onClick={() => setViewing(e)} style={{ background: '#EFF6FF', color: C.red, border: 'none', borderRadius: 8, padding: '6px 8px', cursor: 'pointer' }}>
                         <Eye size={14} />
