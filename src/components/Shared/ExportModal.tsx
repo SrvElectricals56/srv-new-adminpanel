@@ -18,16 +18,18 @@ interface ExportModalProps {
 export default function ExportModal({ show, onClose, title, getData, fileName, onExcelExport, onExportComplete, isDataLoading = false }: ExportModalProps) {
   const C = useThemePalette();
   const [exporting, setExporting] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
   const mouseDownInside = React.useRef(false);
 
   if (!show) return null;
 
   const handleExport = async (format: 'excel' | 'csv' | 'pdf' | 'zip') => {
     setExporting(format);
+    setExportError(null);
 
     try {
       const rows = format === 'excel' && onExcelExport ? [] : await getData();
-      if (!rows.length && !(format === 'excel' && onExcelExport)) return;
+      if (!rows.length && !(format === 'excel' && onExcelExport)) throw new Error('No records to export for the selected filters.');
       const dateTag = new Date().toISOString().slice(0, 10);
       const name = `${fileName}-${dateTag}`;
       const keys = rows.length ? Object.keys(rows[0]) : [];
@@ -85,11 +87,13 @@ export default function ExportModal({ show, onClose, title, getData, fileName, o
         document.body.appendChild(a); a.click(); document.body.removeChild(a);
       }
       await onExportComplete?.(format);
+      onClose();
     } catch (err) {
       console.error('Export error:', err);
+      setExportError(err instanceof Error ? err.message : 'Export failed. Please try again.');
+    } finally {
+      setExporting(null);
     }
-    setExporting(null);
-    onClose();
   };
 
   const icons = {
@@ -156,6 +160,7 @@ export default function ExportModal({ show, onClose, title, getData, fileName, o
 
         {/* Footer */}
         <div style={{ padding: '0 24px 20px' }}>
+          {exportError && <p role="alert" style={{ color: '#B91C1C', fontSize: 13, marginBottom: 12 }}>{exportError}</p>}
           <button onClick={onClose} style={{ width: '100%', padding: '10px', borderRadius: 10, border: `1px solid ${C.border}`, background: C.bg, color: C.muted, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
             Cancel
           </button>
