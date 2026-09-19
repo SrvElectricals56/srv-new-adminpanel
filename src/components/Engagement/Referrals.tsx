@@ -127,7 +127,7 @@ export default function Referrals({ role }: { role?: import('@/lib/types').Admin
           {[
             { label: 'Total Referrals', value: stats.total, bg: 'rgba(255,255,255,0.15)', color: '#fff' },
             { label: 'Successful', value: stats.successful, bg: 'rgba(99,102,241,0.3)', color: '#C7D2FE' },
-            { label: 'Bonus Given', value: `${stats.bonusGiven.toLocaleString()} pts`, bg: 'rgba(34,197,94,0.2)', color: '#86EFAC' },
+            { label: 'Bonus Given', value: String(stats.bonusGiven), bg: 'rgba(34,197,94,0.2)', color: '#86EFAC' },
             { label: 'Conversion', value: stats.conversionRate, bg: 'rgba(245,158,11,0.25)', color: '#FCD34D' },
           ].map(s => (
             <div key={s.label} style={{ background: s.bg, borderRadius: 10, padding: '10px 18px', textAlign: 'center', minWidth: 72 }}>

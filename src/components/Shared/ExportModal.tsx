@@ -8,7 +8,7 @@ interface ExportModalProps {
   show: boolean;
   onClose: () => void;
   title: string;
-  getData: () => object[];
+  getData: () => object[] | Promise<object[]>;
   fileName: string;
   onExcelExport?: () => Promise<void> | void;
   onPrepareExportData?: (format: 'csv' | 'pdf' | 'zip') => Promise<object[]>;
@@ -19,20 +19,18 @@ interface ExportModalProps {
 export default function ExportModal({ show, onClose, title, getData, fileName, onExcelExport, onPrepareExportData, onExportComplete, isDataLoading = false }: ExportModalProps) {
   const C = useThemePalette();
   const [exporting, setExporting] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
   const mouseDownInside = React.useRef(false);
 
   if (!show) return null;
 
   const handleExport = async (format: 'excel' | 'csv' | 'pdf' | 'zip') => {
-    let rows = getData();
     setExporting(format);
+    setExportError(null);
 
     try {
-      if (format !== 'excel' && onPrepareExportData) {
-        rows = await onPrepareExportData(format);
-      }
-      if (format !== 'excel' && !rows.length) return;
-      if (format === 'excel' && !onExcelExport && !rows.length) return;
+      const rows = format === 'excel' && onExcelExport ? [] : await getData();
+      if (!rows.length && !(format === 'excel' && onExcelExport)) throw new Error('No records to export for the selected filters.');
       const dateTag = new Date().toISOString().slice(0, 10);
       const name = `${fileName}-${dateTag}`;
       const keys = rows.length ? Object.keys(rows[0]) : [];
@@ -90,11 +88,13 @@ export default function ExportModal({ show, onClose, title, getData, fileName, o
         document.body.appendChild(a); a.click(); document.body.removeChild(a);
       }
       await onExportComplete?.(format);
+      onClose();
     } catch (err) {
       console.error('Export error:', err);
+      setExportError(err instanceof Error ? err.message : 'Export failed. Please try again.');
+    } finally {
+      setExporting(null);
     }
-    setExporting(null);
-    onClose();
   };
 
   const icons = {
@@ -161,6 +161,7 @@ export default function ExportModal({ show, onClose, title, getData, fileName, o
 
         {/* Footer */}
         <div style={{ padding: '0 24px 20px' }}>
+          {exportError && <p role="alert" style={{ color: '#B91C1C', fontSize: 13, marginBottom: 12 }}>{exportError}</p>}
           <button onClick={onClose} style={{ width: '100%', padding: '10px', borderRadius: 10, border: `1px solid ${C.border}`, background: C.bg, color: C.muted, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
             Cancel
           </button>

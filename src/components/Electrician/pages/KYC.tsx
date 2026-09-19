@@ -209,8 +209,8 @@ export default function ElectricianKYC() {
       type: 'success',
       onConfirm: async () => {
         try {
-          await electricianApi.update(doc.id, { kycStatus: 'verified', kycRejectionReason: null });
-          setDocuments(prev => prev.map(d => d.id === doc.id ? { ...d, kycStatus: 'verified', kycRejectionReason: undefined } : d));
+          const updated = await electricianApi.update(doc.id, { kycStatus: 'verified', kycRejectionReason: null });
+          setDocuments(prev => prev.map(d => d.id === doc.id ? { ...d, ...updated } : d));
           void loadStats();
         } catch (err) { console.error(err); }
         setConfirmState(s => ({ ...s, show: false }));
@@ -243,8 +243,8 @@ export default function ElectricianKYC() {
   const handleEditSave = async (data: Partial<ElectricianKYCItem>) => {
     if (!editingDoc) return;
     try {
-      await electricianApi.update(editingDoc.id, data);
-      setDocuments(prev => prev.map(d => d.id === editingDoc.id ? { ...d, ...data } : d));
+      const updated = await electricianApi.update(editingDoc.id, data);
+      setDocuments(prev => prev.map(d => d.id === editingDoc.id ? { ...d, ...updated } : d));
       setEditingDoc(null);
       void loadStats();
     } catch (err) { console.error(err); }
@@ -258,13 +258,13 @@ export default function ElectricianKYC() {
       onConfirm: async () => {
         try {
           await electricianApi.update(doc.id, {
-            kycStatus: 'not_submitted',
+            kycStatus: 'pending',
             aadharNumber: null,
             aadharFrontImage: null, aadharBackImage: null,
             kycRejectionReason: null,
           });
           setDocuments(prev => prev.map(d => d.id === doc.id ? {
-            ...d, kycStatus: 'not_submitted',
+            ...d, kycStatus: 'pending',
             aadharNumber: undefined,
             aadharFrontImage: undefined, aadharBackImage: undefined,
             kycRejectionReason: undefined,

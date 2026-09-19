@@ -322,10 +322,12 @@ export default function Home() {
     const interval = window.setInterval(() => { void refreshPendingNotifications(); }, 60_000);
     const onVisibility = () => { if (document.visibilityState === 'visible') void refreshPendingNotifications(); };
     document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('srv-crud-success', refreshPendingNotifications);
     return () => {
       cancelled = true;
       window.clearInterval(interval);
       document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('srv-crud-success', refreshPendingNotifications);
     };
   }, [loggedIn, role]);
 

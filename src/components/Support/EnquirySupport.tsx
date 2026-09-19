@@ -301,6 +301,7 @@ export default function EnquirySupport() {
                     <div style={{ fontSize: 10, color: C.muted }}>{formatDate(enq.createdAt)}</div>
                   </div>
                   <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 4 }}>{enq.subject}</div>
+                  <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>{enq.userPhone || '—'}</div>
                   <div style={{ fontSize: 12, color: C.muted, marginBottom: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {enq.message}
                   </div>

@@ -60,7 +60,6 @@ const NAV_GROUPS = [
     label: 'Financial',
     items: [
       { id: 'transfer-points', label: 'Transfer Points', Icon: ArrowLeftRight },
-      { id: 'commissions', label: 'Dealer Bonus', Icon: Percent },
     ]
   },
   {
