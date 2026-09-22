@@ -852,3 +852,32 @@ export const referralApi = {
   delete: (id: string) => request<void>(`/referrals/${id}`, { method: 'DELETE' }),
   getStats: () => request<any>('/referrals/stats'),
 };
+
+export const approveAllKyc = (role: 'electrician' | 'dealer') =>
+  request<{ approved: number }>(`/${role}s/kyc/approve-all`, { method: 'POST' });
+
+export async function uploadKycDocument(file: File): Promise<string> {
+  const body = new FormData();
+  body.append('file', file);
+  const response = await fetch(`${BASE_URL}/upload/kyc-document`, {
+    method: 'POST', headers: { Authorization: `Bearer ${getToken()}` }, body,
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.message || 'Document upload failed');
+  return result.url;
+}
+
+export function documentUrl(value?: string): string | undefined {
+  if (!value) return undefined;
+  if (value.startsWith('data:')) return value;
+  const origin = BASE_URL!.replace(/\/api\/v\d+$/, '');
+  if (value.startsWith('/uploads/')) return `${origin}${value}`;
+  try {
+    const url = new URL(value);
+    if (url.pathname.startsWith('/uploads/') &&
+        /^(localhost|127\.0\.0\.1|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|api\.srvelectricals\.in|staging\.srvelectricals\.in)/.test(url.hostname)) {
+      return `${origin}${url.pathname}`;
+    }
+    return ['https:', 'http:'].includes(url.protocol) ? value : undefined;
+  } catch { return undefined; }
+}
