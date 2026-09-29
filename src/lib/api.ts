@@ -99,6 +99,8 @@ function getCrudFeedback(path: string, method: string) {
   if (path.startsWith('/auth/') || path.startsWith('/settings/') || path.includes('/activity')) return null;
 
   const cleanPath = path.split('?')[0];
+  // This flow shows its own confirmation with the actual number moved.
+  if (/^\/dealers\/sub-dealers\/[^/]+\/transfer$/.test(cleanPath)) return null;
   const label = cleanPath
     .split('/')
     .filter(Boolean)
@@ -346,6 +348,10 @@ export const dealerApi = {
     request<{ data: any[]; total: number; phone: string }>(`/dealers/sub-dealers/${id}/electricians`),
   deleteSubDealer: (id: string) =>
     request<{ message: string; unlinkedElectricians: number }>(`/dealers/sub-dealers/${id}`, { method: 'DELETE' }),
+  getTransferTarget: (phone: string) =>
+    request<{ id: string; name: string; phone: string; type: 'dealer' | 'sub_dealer' }>(`/dealers/sub-dealers/transfer-target?${new URLSearchParams({ phone })}`),
+  transferSubDealer: (id: string, phone: string, targetId: string) =>
+    request<{ movedElectricians: number; dealer: { name: string; phone: string } }>(`/dealers/sub-dealers/${id}/transfer`, { method: 'POST', body: JSON.stringify({ phone, targetId }) }),
   getTop: (params?: Record<string, string>) => {
     const q = params ? '?' + new URLSearchParams(params).toString() : '';
     return request<any[]>(`/dealers/top${q}`);

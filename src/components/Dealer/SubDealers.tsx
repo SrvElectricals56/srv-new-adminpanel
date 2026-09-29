@@ -64,6 +64,11 @@ export default function SubDealers({ role }: { role: AdminRole }) {
   const [deleteTarget, setDeleteTarget] = useState<SubDealer | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [showExport, setShowExport] = useState(false);
+  const [transferSource, setTransferSource] = useState<SubDealer | null>(null);
+  const [transferPhone, setTransferPhone] = useState('');
+  const [transferTarget, setTransferTarget] = useState<Awaited<ReturnType<typeof dealerApi.getTransferTarget>> | null>(null);
+  const [transferBusy, setTransferBusy] = useState(false);
+  const [transferError, setTransferError] = useState('');
   const [alertDialog, setAlertDialog] = useState<{ show: boolean; title: string; message: string; type: 'error' | 'success' }>({ show: false, title: '', message: '', type: 'success' });
   const [electricianForm, setElectricianForm] = useState({
     name: '',
@@ -184,8 +189,68 @@ export default function SubDealers({ role }: { role: AdminRole }) {
     }
   };
 
+  const openTransfer = (row: SubDealer) => {
+    setTransferSource(row);
+    setTransferPhone('');
+    setTransferTarget(null);
+    setTransferError('');
+  };
+
+  const checkTransferTarget = async () => {
+    if (transferBusy) return;
+    setTransferBusy(true);
+    setTransferError('');
+    setTransferTarget(null);
+    try {
+      const target = await dealerApi.getTransferTarget(transferPhone.trim());
+      if (target.id === transferSource?.id || target.phone.replace(/\D/g, '').slice(-10) === transferSource?.phone?.replace(/\D/g, '').slice(-10)) {
+        throw new Error('Choose a different dealer phone number.');
+      }
+      setTransferTarget(target);
+    } catch (error) {
+      setTransferError(error instanceof Error ? error.message : 'Unable to find dealer.');
+    } finally {
+      setTransferBusy(false);
+    }
+  };
+
+  const transferElectricians = async () => {
+    if (!transferSource || !transferTarget || transferBusy) return;
+    setTransferBusy(true);
+    setTransferError('');
+    try {
+      const result = await dealerApi.transferSubDealer(transferSource.id, transferPhone.trim(), transferTarget.id);
+      setTransferSource(null);
+      setViewing(null);
+      await load();
+      setAlertDialog({ show: true, title: 'Electricians Transferred', message: `${result.movedElectricians} electricians moved to ${result.dealer.name} (${result.dealer.phone}).`, type: 'success' });
+    } catch (error) {
+      setTransferTarget(null);
+      setTransferError(error instanceof Error ? error.message : 'Unable to transfer electricians.');
+    } finally {
+      setTransferBusy(false);
+    }
+  };
+
   return (
     <div style={{ padding: 24, color: C.text }}>
+      {transferSource && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', zIndex: 1500, display: 'grid', placeItems: 'center', padding: 20 }}>
+          <div role="dialog" aria-modal="true" aria-labelledby="transfer-title" style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 24, width: 480, maxWidth: '100%', boxSizing: 'border-box', maxHeight: '90vh', overflowY: 'auto' }}>
+            <h2 id="transfer-title" style={{ marginTop: 0 }}>Transfer to Another Dealer</h2>
+            <p style={{ color: C.muted }}>Move all {transferSource.electricianCount} linked electricians from {transferSource.name} ({transferSource.identifier}). Their points, wallets and scan history stay with their accounts.</p>
+            <label htmlFor="transfer-phone">Destination dealer phone number</label>
+            <input id="transfer-phone" type="tel" value={transferPhone} disabled={transferBusy} onChange={event => { setTransferPhone(event.target.value); setTransferTarget(null); setTransferError(''); }} placeholder="10-digit mobile number" style={{ width: '100%', boxSizing: 'border-box', marginTop: 8, padding: 12, borderRadius: 8, border: `1px solid ${C.border}`, background: C.inputBg, color: C.text }} />
+            <p style={{ color: C.muted, fontSize: 12 }}>Enter a registered dealer or an existing SRV sub dealer number.</p>
+            {transferTarget && <div style={{ background: C.accentSoft, padding: 14, borderRadius: 10, marginTop: 12 }}><strong>{transferTarget.name}</strong><div>{transferTarget.phone} · {transferTarget.type === 'dealer' ? 'Registered dealer' : 'SRV Sub Dealer'}</div><p>All electricians currently linked to the source will be associated with this dealer. The old sub dealer entry will be removed.</p></div>}
+            {transferError && <p role="alert" style={{ color: C.dangerText }}>{transferError}</p>}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 18 }}>
+              <button disabled={transferBusy} onClick={() => setTransferSource(null)} style={{ padding: '10px 14px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.bg, color: C.text }}>Cancel</button>
+              <button disabled={transferBusy || !transferPhone.trim()} onClick={() => void (transferTarget ? transferElectricians() : checkTransferTarget())} style={{ padding: '10px 14px', borderRadius: 8, border: 0, background: C.accentText, color: '#fff', fontWeight: 800 }}>{transferBusy ? 'Please wait...' : transferTarget ? 'Confirm Transfer All' : 'Check Dealer'}</button>
+            </div>
+          </div>
+        </div>
+      )}
       <ConfirmDialog
         show={deleteTarget !== null}
         title="Delete Sub Dealer"
@@ -214,6 +279,7 @@ export default function SubDealers({ role }: { role: AdminRole }) {
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {canDelete && <button onClick={() => openTransfer(viewing)} style={{ background: C.accentSoft, border: `1px solid ${C.border}`, borderRadius: 9, padding: '8px 12px', cursor: 'pointer', color: C.accentText, fontWeight: 800 }}>Transfer All</button>}
                 <button onClick={() => setShowAddElectrician((value) => !value)} style={{ background: C.accentSoft, border: `1px solid ${C.border}`, borderRadius: 9, padding: '8px 12px', cursor: 'pointer', color: C.accentText, fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 7 }}><Plus size={15} /> Add Electrician</button>
                 <button onClick={() => setViewing(null)} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, width: 32, height: 32, cursor: 'pointer', color: C.muted }}>×</button>
               </div>
@@ -367,6 +433,7 @@ export default function SubDealers({ role }: { role: AdminRole }) {
                     <td style={{ padding: 16, color: C.muted, fontSize: 13 }}>{date(row.firstSeenAt)}</td>
                     <td style={{ padding: 16, color: C.muted, fontSize: 13 }}>{date(row.lastSeenAt)}</td>
                     <td style={{ padding: 16 }}>
+                      {canDelete && <button onClick={event => { event.stopPropagation(); openTransfer(row); }} style={{ border: 0, borderRadius: 8, background: C.accentSoft, color: C.accentText, padding: '8px 10px', marginBottom: 6, fontWeight: 800, cursor: 'pointer' }}>Transfer / Move</button>}
                       {canDelete ? (
                         <button
                           onClick={(event) => { event.stopPropagation(); setDeleteTarget(row); }}
