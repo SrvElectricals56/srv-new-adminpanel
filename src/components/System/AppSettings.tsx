@@ -53,7 +53,7 @@ const INITIAL: AppConfig = {
   iosReviewMaintenanceMessage: 'SRV Electricals for iOS is temporarily under maintenance while the latest version is being prepared. Please try again soon.',
   maintenanceMode: false, maintenanceMessage: 'App is under maintenance. Please try again later.',
   supportPhone: '+91 88376 84004', supportEmail: 'info@srvelectricals.com', whatsappNumber: '918837684004',
-  maxPointsPerDay: 500, minRedemptionPoints: 500, pointsExpiry: 365, cashbackRate: 5, referrerBonus: 500, refereeBonus: 250,
+  maxPointsPerDay: 500, minRedemptionPoints: 500, pointsExpiry: 0, cashbackRate: 1, referrerBonus: 500, refereeBonus: 250,
   minTransferPoints: 100,
   minimumOrderAmountElectrician: 5000, minimumOrderAmountDealer: 5000,
   minimumOrderAmountUser: 5000, minimumOrderAmountCounterboy: 5000,
@@ -147,7 +147,7 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
   const [notificationSent, setNotificationSent] = useState(false);
   const [notificationSending, setNotificationSending] = useState(false);
   const [notificationError, setNotificationError] = useState('');
-  const numberInputValue = (value: number | string | undefined) => value === 0 || value === '' || value == null ? '' : value;
+  const numberInputValue = (value: number | string | undefined) => value ?? '';
   const parseNumberInput = (value: string) => value === '' ? '' : Number(value);
   const normalizeNumberConfig = (value: unknown) => typeof value === 'number' ? value : Number(value || 0);
 
@@ -171,6 +171,8 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
         if (!next.generalCatalogPdfUrl && map.catalogPdfUrl !== undefined) {
           next.generalCatalogPdfUrl = map.catalogPdfUrl;
         }
+        next.pointsExpiry = 0;
+        next.cashbackRate = 1;
         return next;
       });
     }).catch(console.error).finally(() => setLoading(false));
@@ -233,6 +235,7 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
       console.error('Save failed:', err);
+      window.alert(err instanceof Error ? err.message : 'Unable to save app settings');
     } finally {
       setSaving(false);
     }
@@ -445,12 +448,12 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <div><label style={lbl}>Max Points Per Day (per user)</label><input type="number" style={inp} value={numberInputValue(config.maxPointsPerDay)} onChange={e => f('maxPointsPerDay', parseNumberInput(e.target.value))} /></div>
                 <div><label style={lbl}>Min Redemption Points</label><input type="number" style={inp} value={numberInputValue(config.minRedemptionPoints)} onChange={e => f('minRedemptionPoints', parseNumberInput(e.target.value))} /></div>
-                <div><label style={lbl}>Points Expiry (days, 0=never)</label><input type="number" style={inp} value={numberInputValue(config.pointsExpiry)} onChange={e => f('pointsExpiry', parseNumberInput(e.target.value))} /></div>
-                <div><label style={lbl}>Cashback Rate (pts per ₹1)</label><input type="number" style={inp} value={numberInputValue(config.cashbackRate)} onChange={e => f('cashbackRate', parseNumberInput(e.target.value))} /></div>
+                <div><label style={lbl}>Points Expiry</label><div style={inp}>Never — points remain available until used</div></div>
+                <div><label style={lbl}>Withdrawal Value</label><div style={inp}>1 point = ₹1</div></div>
                 <div><label style={lbl}>Referrer Bonus Points</label><input type="number" style={inp} value={numberInputValue(config.referrerBonus)} onChange={e => f('referrerBonus', parseNumberInput(e.target.value))} /></div>
                 <div><label style={lbl}>Referee Bonus Points</label><input type="number" style={inp} value={numberInputValue(config.refereeBonus)} onChange={e => f('refereeBonus', parseNumberInput(e.target.value))} /></div>
                 <div><label style={lbl}>Min Transfer Points</label><input type="number" style={inp} value={numberInputValue(config.minTransferPoints)} onChange={e => f('minTransferPoints', parseNumberInput(e.target.value))} /></div>
-                <div><label style={lbl}>Dealer Commission Rate (%)</label><input type="number" style={inp} value={numberInputValue(config.dealerCommissionRate)} onChange={e => f('dealerCommissionRate', parseNumberInput(e.target.value))} /></div>
+                <div><label style={lbl}>Dealer Commission Rate (%)</label><input type="number" min={0} max={100} style={inp} value={numberInputValue(config.dealerCommissionRate)} onChange={e => f('dealerCommissionRate', parseNumberInput(e.target.value))} /><div style={{ color: C.muted, fontSize: 12, marginTop: 6 }}>At 5%, an approved 100-point electrician withdrawal credits 5 points to the dealer.</div></div>
               </div>
             </div>
           )}

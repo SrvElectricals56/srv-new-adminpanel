@@ -193,9 +193,9 @@ export default function ElectricianKYC() {
       type: 'success',
       onConfirm: async () => {
         try {
-          const updated = await electricianApi.update(doc.id, { kycStatus: 'verified', kycRejectionReason: null });
-          setDocuments(prev => prev.map(d => d.id === doc.id ? { ...d, ...updated } : d));
-          void loadStats();
+          await electricianApi.update(doc.id, { kycStatus: 'verified', kycRejectionReason: null });
+          setDocuments(prev => prev.map(d => d.id === doc.id ? { ...d, kycStatus: 'verified', kycRejectionReason: undefined } : d));
+          await Promise.all([loadDocuments(currentPage), loadStats()]);
         } catch (err) { console.error(err); window.alert(err instanceof Error ? err.message : 'Unable to save KYC'); }
         setConfirmState(s => ({ ...s, show: false }));
       }

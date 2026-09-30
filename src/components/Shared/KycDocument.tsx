@@ -1,9 +1,10 @@
  'use client';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { documentUrl, uploadKycDocument } from '@/lib/api';
 
 export function DocThumb({ src, C }: { src?: string; C: any }) {
   const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [src]);
   const url = documentUrl(src);
   if (!url) return <span style={{ color: C.muted, fontSize: 11 }}>{src ? 'Legacy file unavailable — upload again' : 'Not uploaded'}</span>;
   const pdf = /\.pdf(?:[?#]|$)/i.test(url) || url.startsWith('data:application/pdf');
