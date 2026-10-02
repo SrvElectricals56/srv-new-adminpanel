@@ -312,6 +312,7 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
     { id: 'app', label: 'App Info', Icon: Info },
     { id: 'support', label: 'Support', Icon: Headphones },
     { id: 'points', label: 'Points', Icon: Award },
+    { id: 'gifts', label: 'Gift Orders / Redeem', Icon: Gift },
     { id: 'orders', label: 'Order Rules', Icon: ShoppingCart },
     { id: 'tiers', label: 'Tiers', Icon: Medal },
     { id: 'features', label: 'Features', Icon: SlidersHorizontal },
@@ -447,13 +448,29 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
               <div style={{ fontSize: 16, fontWeight: 800, color: C.text, marginBottom: 4 }}>Points & Rewards Config</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <div><label style={lbl}>Max Points Per Day (per user)</label><input type="number" style={inp} value={numberInputValue(config.maxPointsPerDay)} onChange={e => f('maxPointsPerDay', parseNumberInput(e.target.value))} /></div>
-                <div><label style={lbl}>Min Redemption Points</label><input type="number" style={inp} value={numberInputValue(config.minRedemptionPoints)} onChange={e => f('minRedemptionPoints', parseNumberInput(e.target.value))} /></div>
+                <div><label style={lbl}>Min Cash Withdrawal Points</label><input type="number" style={inp} value={numberInputValue(config.minRedemptionPoints)} onChange={e => f('minRedemptionPoints', parseNumberInput(e.target.value))} /><div style={{ color: C.muted, fontSize: 12, marginTop: 6 }}>Applies to bank withdrawals. Gift orders use each gift's point cost.</div></div>
                 <div><label style={lbl}>Points Expiry</label><div style={inp}>Never — points remain available until used</div></div>
                 <div><label style={lbl}>Withdrawal Value</label><div style={inp}>1 point = ₹1</div></div>
                 <div><label style={lbl}>Referrer Bonus Points</label><input type="number" style={inp} value={numberInputValue(config.referrerBonus)} onChange={e => f('referrerBonus', parseNumberInput(e.target.value))} /></div>
                 <div><label style={lbl}>Referee Bonus Points</label><input type="number" style={inp} value={numberInputValue(config.refereeBonus)} onChange={e => f('refereeBonus', parseNumberInput(e.target.value))} /></div>
                 <div><label style={lbl}>Min Transfer Points</label><input type="number" style={inp} value={numberInputValue(config.minTransferPoints)} onChange={e => f('minTransferPoints', parseNumberInput(e.target.value))} /></div>
                 <div><label style={lbl}>Dealer Commission Rate (%)</label><input type="number" min={0} max={100} style={inp} value={numberInputValue(config.dealerCommissionRate)} onChange={e => f('dealerCommissionRate', parseNumberInput(e.target.value))} /><div style={{ color: C.muted, fontSize: 12, marginTop: 6 }}>At 5%, an approved 100-point electrician withdrawal credits 5 points to the dealer.</div></div>
+              </div>
+            </div>
+          )}
+
+          {activeSection === 'gifts' && (
+            <div style={{ display: 'grid', gap: 16 }}>
+              <div style={{ fontSize: 16, fontWeight: 800, color: C.text }}>Gift Orders & Redemption</div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 16, background: C.bg, borderRadius: 12, border: `1px solid ${C.border}` }}>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Allow Gift Orders</div>
+                  <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Show the Gift Store and accept gift redemption requests.</div>
+                </div>
+                <Toggle value={config.giftsEnabled} onChange={v => f('giftsEnabled', v)} />
+              </div>
+              <div style={{ padding: 16, background: C.bg, borderRadius: 12, border: `1px solid ${C.border}`, fontSize: 13, color: C.text, lineHeight: 1.6 }}>
+                A member can order any available gift when their wallet has at least that gift's point cost. Set each gift's cost and stock in Gift Management. The cash withdrawal minimum in Points does not apply to gifts.
               </div>
             </div>
           )}
