@@ -110,6 +110,8 @@ function getCrudFeedback(path: string, method: string) {
   if (path.startsWith('/auth/') || path.startsWith('/settings/') || path.includes('/activity')) return null;
 
   const cleanPath = path.split('?')[0];
+  // This flow shows its own confirmation with the actual number moved.
+  if (/^\/dealers\/sub-dealers\/[^/]+\/transfer$/.test(cleanPath)) return null;
   const label = cleanPath
     .split('/')
     .filter(Boolean)
@@ -358,6 +360,10 @@ export const dealerApi = {
     request<{ data: any[]; total: number; phone: string }>(`/dealers/sub-dealers/${id}/electricians`),
   deleteSubDealer: (id: string) =>
     request<{ message: string; unlinkedElectricians: number }>(`/dealers/sub-dealers/${id}`, { method: 'DELETE' }),
+  getTransferTarget: (phone: string) =>
+    request<{ id: string; name: string; phone: string; type: 'dealer' | 'sub_dealer' }>(`/dealers/sub-dealers/transfer-target?${new URLSearchParams({ phone })}`),
+  transferSubDealer: (id: string, phone: string, targetId: string) =>
+    request<{ movedElectricians: number; dealer: { name: string; phone: string } }>(`/dealers/sub-dealers/${id}/transfer`, { method: 'POST', body: JSON.stringify({ phone, targetId }) }),
   getTop: (params?: Record<string, string>) => {
     const q = params ? '?' + new URLSearchParams(params).toString() : '';
     return request<any[]>(`/dealers/top${q}`);
@@ -864,3 +870,32 @@ export const referralApi = {
   delete: (id: string) => request<void>(`/referrals/${id}`, { method: 'DELETE' }),
   getStats: () => request<any>('/referrals/stats'),
 };
+
+export const approveAllKyc = (role: 'electrician' | 'dealer') =>
+  request<{ approved: number }>(`/${role}s/kyc/approve-all`, { method: 'POST' });
+
+export async function uploadKycDocument(file: File): Promise<string> {
+  const body = new FormData();
+  body.append('file', file);
+  const response = await fetch(`${BASE_URL}/upload/kyc-document`, {
+    method: 'POST', headers: { Authorization: `Bearer ${getToken()}` }, body,
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.message || 'Document upload failed');
+  return result.url;
+}
+
+export function documentUrl(value?: string): string | undefined {
+  if (!value) return undefined;
+  if (value.startsWith('data:')) return value;
+  const origin = BASE_URL!.replace(/\/api\/v\d+$/, '');
+  if (value.startsWith('/uploads/')) return `${origin}${value}`;
+  try {
+    const url = new URL(value);
+    if (url.pathname.startsWith('/uploads/') &&
+        /^(localhost|127\.0\.0\.1|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|api\.srvelectricals\.in|staging\.srvelectricals\.in)/.test(url.hostname)) {
+      return `${origin}${url.pathname}`;
+    }
+    return ['https:', 'http:'].includes(url.protocol) ? value : undefined;
+  } catch { return undefined; }
+}

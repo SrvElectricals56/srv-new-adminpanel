@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Banknote, Check, CreditCard, DollarSign, Eye, FileSpreadsheet, TrendingUp, X } from 'lucide-react';
+import { Banknote, CreditCard, DollarSign, Pencil, FileSpreadsheet, TrendingUp } from 'lucide-react';
 import ExportModal from '@/components/Shared/ExportModal';
 import { redemptionApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
@@ -70,11 +70,8 @@ export default function RoleRedemptionRequestsPage({
   const [viewItem, setViewItem] = useState<RedemptionRecord | null>(null);
   const [submittingId, setSubmittingId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
-  const [rejectState, setRejectState] = useState<{ open: boolean; item: RedemptionRecord | null }>({
-    open: false,
-    item: null,
-  });
-  const [rejectReason, setRejectReason] = useState('');
+  const [draftStatus, setDraftStatus] = useState<'pending' | 'approved' | 'rejected'>('pending');
+  const [draftReason, setDraftReason] = useState('');
 
   const loadData = useCallback(async () => {
     const currentRequest = ++requestId.current;
@@ -124,71 +121,19 @@ export default function RoleRedemptionRequestsPage({
 
   const handleStatusChange = async (item: RedemptionRecord, nextStatus: 'approved' | 'pending' | 'rejected') => {
     if (item.status === nextStatus) return;
-    let reason: string | undefined;
-    if (nextStatus === 'rejected') {
-      const entered = window.prompt('Enter the rejection reason:', item.rejectionReason ?? '');
-      if (entered === null) return;
-      reason = entered.trim();
-      if (!reason) {
-        setFeedback({ type: 'error', message: 'A rejection reason is required.' });
-        return;
-      }
-    }
+    const reason = nextStatus === 'rejected' ? draftReason.trim() : undefined;
+   if (nextStatus === 'rejected' && !reason) {
+     setFeedback({ type: 'error', message: 'A rejection reason is required.' }); return;
+   }
     setSubmittingId(item.id);
     try {
       const updated = await redemptionApi.updateStatus(item.id, nextStatus, reason);
       setViewItem(current => current?.id === item.id ? { ...current, ...updated, status: nextStatus } : current);
       await loadData();
       setFeedback({ type: 'success', message: `Request moved to ${nextStatus}.` });
+      setViewItem(null);
     } catch (error) {
       setFeedback({ type: 'error', message: error instanceof Error ? error.message : 'Failed to update request status.' });
-    } finally {
-      setSubmittingId(null);
-    }
-  };
-
-  const closeRejectModal = () => {
-    setRejectState({ open: false, item: null });
-    setRejectReason('');
-  };
-
-  const handleApprove = async (item: RedemptionRecord) => {
-    setSubmittingId(item.id);
-    try {
-      await redemptionApi.approve(item.id);
-      setFeedback({ type: 'success', message: 'Request approved successfully.' });
-      await loadData();
-    } catch (error) {
-      console.error(error);
-      setFeedback({
-        type: 'error',
-        message: error instanceof Error ? error.message : 'Failed to approve request.',
-      });
-    } finally {
-      setSubmittingId(null);
-    }
-  };
-
-  const handleReject = async () => {
-    if (!rejectState.item) return;
-    const reason = rejectReason.trim();
-    if (!reason) {
-      setFeedback({ type: 'error', message: 'Reject karne ke liye reason dena zaroori hai.' });
-      return;
-    }
-
-    setSubmittingId(rejectState.item.id);
-    try {
-      await redemptionApi.reject(rejectState.item.id, reason);
-      closeRejectModal();
-      setFeedback({ type: 'success', message: 'Request rejected successfully.' });
-      await loadData();
-    } catch (error) {
-      console.error(error);
-      setFeedback({
-        type: 'error',
-        message: error instanceof Error ? error.message : 'Failed to reject request.',
-      });
     } finally {
       setSubmittingId(null);
     }
@@ -349,46 +294,8 @@ export default function RoleRedemptionRequestsPage({
                       </td>
                       <td style={{ padding: '12px 16px' }}>
                         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                          <select value={['approved', 'pending', 'rejected'].includes(row.status) ? row.status : 'pending'} onChange={(event) => void handleStatusChange(row, event.target.value as any)} disabled={submittingId === row.id} aria-label={`Edit status for ${row.userName || row.userId}`} style={{ padding: '7px 9px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.surface, color: C.text, fontSize: 12, fontWeight: 700 }}>
-                            <option value="approved">Approved</option>
-                            <option value="pending">Pending</option>
-                            <option value="rejected">Rejected</option>
-                          </select>
-                        {row.status === 'pending' ? (
-                          <div style={{ display: 'flex', gap: 8 }}>
-                            <button
-                              onClick={() => setViewItem(row)}
-                              style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: '7px 10px', cursor: 'pointer', color: C.muted, display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                            >
-                              <Eye size={13} /> View
-                            </button>
-                            <button
-                              onClick={() => void handleApprove(row)}
-                              disabled={submittingId === row.id}
-                              style={{ background: '#D1FAE5', color: '#065F46', border: 'none', borderRadius: 8, padding: '7px 12px', fontSize: 12, fontWeight: 700, cursor: submittingId === row.id ? 'wait' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                            >
-                              <Check size={13} /> Approve
-                            </button>
-                            <button
-                              onClick={() => {
-                                setRejectState({ open: true, item: row });
-                                setRejectReason(row.rejectionReason ?? '');
-                              }}
-                              disabled={submittingId === row.id}
-                              style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 8, padding: '7px 12px', fontSize: 12, fontWeight: 700, cursor: submittingId === row.id ? 'wait' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                            >
-                              <X size={13} /> Reject
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => setViewItem(row)}
-                            style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: '7px 10px', cursor: 'pointer', color: C.muted, display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                          >
-                            <Eye size={13} /> View
-                          </button>
-                        )}
-                        </div>
+                          <button onClick={() => { setViewItem(row); setDraftStatus(row.status as 'pending' | 'approved' | 'rejected'); setDraftReason(row.rejectionReason ?? ''); setFeedback(null); }} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: '7px 10px', cursor: 'pointer', color: C.text }}><Pencil size={13} /> Edit</button>
+                       </div>
                       </td>
                     </tr>
                   );
@@ -409,8 +316,8 @@ export default function RoleRedemptionRequestsPage({
           <div style={{ background: C.card, borderRadius: 18, width: 'min(920px, 96vw)', maxHeight: '88vh', boxShadow: '0 25px 70px rgba(0,0,0,0.2)', border: `1px solid ${C.border}`, overflow: 'hidden', display: 'flex', flexDirection: 'column' }} onClick={(event) => event.stopPropagation()}>
             <div style={{ padding: '18px 22px', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: C.text }}>Request Details</div>
-                <div style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>Compact payment-ready request summary.</div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: C.text }}>Edit Redemption</div>
+                <div style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>Review payment details, choose a status, then save.</div>
               </div>
               <button onClick={() => setViewItem(null)} style={{ background: C.bg, border: 'none', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', color: C.muted, fontSize: 15 }}>
                 ×
@@ -418,10 +325,12 @@ export default function RoleRedemptionRequestsPage({
             </div>
             <div style={{ padding: 22, overflowY: 'auto' }}>
               <label style={{ display: 'block', marginBottom: 16, color: C.text }}>Status
-                <select aria-label="Redemption status" value={viewItem.status} disabled={submittingId === viewItem.id} onChange={event => void handleStatusChange(viewItem, event.target.value as 'pending' | 'approved' | 'rejected')} style={{ ...inputStyle, marginTop: 6 }}>
+                <select aria-label="Redemption status" value={draftStatus} disabled={submittingId === viewItem.id} onChange={event => setDraftStatus(event.target.value as 'pending' | 'approved' | 'rejected')} style={{ ...inputStyle, marginTop: 6 }}>
                   <option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option>
                 </select>
               </label>
+              {draftStatus === 'rejected' && <label style={{ display: 'block', marginBottom: 16 }}>Rejection reason<textarea aria-label="Rejection reason" value={draftReason} onChange={event => setDraftReason(event.target.value)} style={inputStyle} /></label>}
+             <button disabled={!!submittingId || draftStatus === viewItem.status} onClick={() => void handleStatusChange(viewItem, draftStatus)} style={{ background: C.red, color: '#fff', border: 'none', borderRadius: 8, padding: '10px 20px', marginBottom: 16 }}>{submittingId ? 'Saving...' : 'Save Changes'}</button>
               {feedback && <div role="status" style={{ color: feedback.type === 'error' ? '#991B1B' : '#065F46', marginBottom: 12 }}>{feedback.message}</div>}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
                 <div style={{ background: C.bg, borderRadius: 14, padding: 16, border: `1px solid ${C.border}` }}>
@@ -484,40 +393,7 @@ export default function RoleRedemptionRequestsPage({
         </div>
       )}
 
-      {rejectState.open && (
-        <div style={{ position: 'fixed', inset: 0, background: C.overlay, backdropFilter: 'blur(6px)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={closeRejectModal}>
-          <div style={{ background: C.card, borderRadius: 16, width: 520, maxWidth: '95vw', boxShadow: '0 25px 70px rgba(0,0,0,0.2)', border: `1px solid ${C.border}` }} onClick={(event) => event.stopPropagation()}>
-            <div style={{ padding: '18px 22px', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontSize: 16, fontWeight: 800, color: C.text }}>Reject Request</div>
-              <button onClick={closeRejectModal} style={{ background: C.bg, border: 'none', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', color: C.muted, fontSize: 15 }}>
-                ×
-              </button>
-            </div>
-            <div style={{ padding: 22 }}>
-              <div style={{ fontSize: 13, color: C.muted, marginBottom: 12 }}>
-                Reason save hote hi status rejected ho jayega. Wallet-deducted requests par refund backend automatically handle karega.
-              </div>
-              <label style={{ fontSize: 12, fontWeight: 700, color: C.muted, textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>
-                Rejection Reason
-              </label>
-              <textarea
-                value={rejectReason}
-                onChange={(event) => setRejectReason(event.target.value)}
-                placeholder="Why is this request being rejected?"
-                style={{ ...inputStyle, minHeight: 110, resize: 'vertical' }}
-              />
-            </div>
-            <div style={{ padding: '0 22px 22px', display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-              <button onClick={closeRejectModal} style={{ background: C.surface, color: C.muted, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-                Cancel
-              </button>
-              <button onClick={() => void handleReject()} disabled={submittingId === rejectState.item?.id} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 10, padding: '10px 16px', fontSize: 13, fontWeight: 700, cursor: submittingId === rejectState.item?.id ? 'wait' : 'pointer' }}>
-                Save & Reject
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+
     </>
   );
 }

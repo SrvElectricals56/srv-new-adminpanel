@@ -2,8 +2,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { FileCheck, Eye, Check, X, Search, Upload, ImageIcon, Pencil, Trash2, FileSpreadsheet } from 'lucide-react';
 import { dealerApi } from '@/lib/api';
+import { approveAllKyc, getStoredAdmin, documentUrl } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
+import { DocThumb, ImageUploadBox } from '@/components/Shared/KycDocument';
 import ExportModal from '@/components/Shared/ExportModal';
 
 interface DealerKYC {
@@ -23,45 +25,6 @@ interface DealerKYC {
   updatedAt?: string;
 }
 
-function ImageUploadBox({ label, value, onChange, C }: { label: string; value?: string; onChange: (v: string) => void; C: any }) {
-  const ref = useRef<HTMLInputElement>(null);
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => onChange(reader.result as string);
-    reader.readAsDataURL(file);
-  };
-  return (
-    <div>
-      <div style={{ fontSize: 12, fontWeight: 700, color: C.muted, marginBottom: 6, textTransform: 'uppercase' }}>{label}</div>
-      <div onClick={() => ref.current?.click()} style={{ border: `2px dashed ${value ? C.red : C.border}`, borderRadius: 10, height: 120, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: value ? 'transparent' : C.bg, overflow: 'hidden' }}>
-        {value ? <img src={value} alt={label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <><Upload size={20} style={{ color: C.muted, marginBottom: 6 }} /><span style={{ fontSize: 11, color: C.muted }}>Click to upload</span></>}
-      </div>
-      <input ref={ref} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFile} />
-    </div>
-  );
-}
-
-function DocThumb({ src, C }: { src?: string; C: any }) {
-  const [open, setOpen] = useState(false);
-  if (!src) return (
-    <div style={{ width: 48, height: 36, borderRadius: 6, background: C.bg, border: `1px dashed ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <ImageIcon size={14} style={{ color: C.muted }} />
-    </div>
-  );
-  return (
-    <>
-      <img src={src} alt="doc" onClick={() => setOpen(true)} style={{ width: 48, height: 36, objectFit: 'cover', borderRadius: 6, border: `1px solid ${C.border}`, cursor: 'pointer' }} />
-      {open && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setOpen(false)}>
-          <img src={src} alt="doc" style={{ maxWidth: '90vw', maxHeight: '90vh', borderRadius: 12 }} onClick={e => e.stopPropagation()} />
-        </div>
-      )}
-    </>
-  );
-}
-
 function EditKYCModal({ doc, onClose, onSave, C }: { doc: DealerKYC; onClose: () => void; onSave: (data: Partial<DealerKYC>) => void; C: any }) {
   const [form, setForm] = useState<Partial<DealerKYC>>({
     aadharNumber: doc.aadharNumber ?? '',
@@ -73,6 +36,9 @@ function EditKYCModal({ doc, onClose, onSave, C }: { doc: DealerKYC; onClose: ()
     kycStatus: doc.kycStatus,
     kycRejectionReason: doc.kycRejectionReason ?? '',
   });
+  const [uploads, setUploads] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const onBusy = (busy: boolean) => setUploads(count => Math.max(0, count + (busy ? 1 : -1)));
   const f = (k: keyof DealerKYC, v: unknown) => setForm(p => ({ ...p, [k]: v }));
   const inputStyle: React.CSSProperties = { width: '100%', padding: '9px 12px', border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 13.5, outline: 'none', background: C.surface, color: C.text, boxSizing: 'border-box' };
   const labelStyle: React.CSSProperties = { fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 5, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' };
@@ -103,9 +69,9 @@ function EditKYCModal({ doc, onClose, onSave, C }: { doc: DealerKYC; onClose: ()
             </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
-            <ImageUploadBox label="Aadhar Card" value={form.aadharFrontImage} onChange={v => f('aadharFrontImage', v)} C={C} />
-            <ImageUploadBox label="PAN Document" value={form.panDocument} onChange={v => f('panDocument', v)} C={C} />
-            <ImageUploadBox label="GST Document" value={form.gstDocument} onChange={v => f('gstDocument', v)} C={C} />
+            <ImageUploadBox onBusy={onBusy} label="Aadhar Card" value={form.aadharFrontImage} onChange={v => f('aadharFrontImage', v)} C={C} />
+            <ImageUploadBox onBusy={onBusy} label="PAN Document" value={form.panDocument} onChange={v => f('panDocument', v)} C={C} />
+            <ImageUploadBox onBusy={onBusy} label="GST Document" value={form.gstDocument} onChange={v => f('gstDocument', v)} C={C} />
           </div>
           <div>
             <label style={labelStyle}>KYC Status</label>
@@ -123,7 +89,7 @@ function EditKYCModal({ doc, onClose, onSave, C }: { doc: DealerKYC; onClose: ()
             </div>
           )}
           <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-            <button onClick={() => onSave(form)} style={{ flex: 1, background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 10, padding: '12px', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Save Changes</button>
+            <button disabled={saving || uploads > 0} onClick={async () => { setSaving(true); try { await onSave(form); } finally { setSaving(false); } }} style={{ flex: 1, background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 10, padding: '12px', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Save Changes</button>
             <button onClick={onClose} style={{ background: C.bg, color: C.muted, border: 'none', borderRadius: 10, padding: '12px 20px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
           </div>
         </div>
@@ -141,20 +107,31 @@ export default function KYCManagement() {
   const [selectedDoc, setSelectedDoc] = useState<DealerKYC | null>(null);
   const [editingDoc, setEditingDoc] = useState<DealerKYC | null>(null);
   const [showExport, setShowExport] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const bulkLock = useRef(false);
+  const handleApproveAll = () => setConfirmState({
+    show: true, title: 'Approve All KYC', type: 'success',
+    message: 'Approve ALL unverified KYC records across every page, including pending, rejected and not submitted records, regardless of search filters? This is an explicit Super Admin approval even for accounts without uploaded documents.',
+    onConfirm: async () => {
+      if (bulkLock.current) return;
+      bulkLock.current = true; setBulkBusy(true);
+      try {
+        const result = await approveAllKyc('dealer');
+        setRefreshKey(value => value + 1);
+        window.alert(`${result.approved} KYC records approved.`);
+      } catch (error) { window.alert(error instanceof Error ? error.message : 'Bulk approval failed'); }
+      finally { bulkLock.current = false; setBulkBusy(false); setConfirmState(s => ({ ...s, show: false })); }
+    },
+  });
+
   const [confirmState, setConfirmState] = useState<{ show: boolean; title: string; message: string; onConfirm: () => void; type: 'success' | 'danger' }>({ show: false, title: '', message: '', onConfirm: () => {}, type: 'success' });
 
   useEffect(() => {
     dealerApi.getAll({ limit: '10000', includeMedia: 'true' }).then(res => {
       const data = Array.isArray(res) ? res : (res as any).data ?? [];
 
-      // Normalize any LAN IP in image URLs to localhost for admin browser
-      const normalizeUrl = (url?: string) => {
-        if (!url) return url;
-        return url.replace(
-          /http:\/\/(10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.\d+\.\d+\.\d+)(:\d+)?/g,
-          (_, _ip, port) => `http://localhost${port || ''}`
-        );
-      };
+      const normalizeUrl = (value?: string) => documentUrl(value) ?? value;
 
       setDocuments(data.map((d: any) => ({
         id: d.id,
@@ -174,7 +151,7 @@ export default function KYCManagement() {
         updatedAt: d.updatedAt,
       })));
     }).catch(console.error).finally(() => setLoading(false));
-  }, []);
+  }, [refreshKey]);
 
   const filtered = documents.filter(d => {
     const q = search.trim().toLowerCase();
@@ -210,7 +187,7 @@ export default function KYCManagement() {
         try {
           await dealerApi.update(doc.id, { kycStatus: 'verified', kycRejectionReason: null });
           setDocuments(prev => prev.map(d => d.id === doc.id ? { ...d, kycStatus: 'verified', kycRejectionReason: undefined } : d));
-        } catch (err) { console.error(err); }
+        } catch (err) { console.error(err); window.alert(err instanceof Error ? err.message : 'Unable to save KYC'); }
         setConfirmState(s => ({ ...s, show: false }));
       }
     });
@@ -231,7 +208,7 @@ export default function KYCManagement() {
         try {
           await dealerApi.update(doc.id, { kycStatus: 'rejected', kycRejectionReason: reason.trim() });
           setDocuments(prev => prev.map(d => d.id === doc.id ? { ...d, kycStatus: 'rejected', kycRejectionReason: reason.trim() } : d));
-        } catch (err) { console.error(err); }
+        } catch (err) { console.error(err); window.alert(err instanceof Error ? err.message : 'Unable to save KYC'); }
         setConfirmState(s => ({ ...s, show: false }));
       }
     });
@@ -240,10 +217,10 @@ export default function KYCManagement() {
   const handleEditSave = async (data: Partial<DealerKYC>) => {
     if (!editingDoc) return;
     try {
-      await dealerApi.update(editingDoc.id, data);
-      setDocuments(prev => prev.map(d => d.id === editingDoc.id ? { ...d, ...data } : d));
+      const updated = await dealerApi.update(editingDoc.id, { ...data, kycRejectionReason: data.kycStatus === 'rejected' ? data.kycRejectionReason : null });
+      setDocuments(prev => prev.map(d => d.id === editingDoc.id ? { ...d, ...updated } : d));
       setEditingDoc(null);
-    } catch (err) { console.error(err); }
+    } catch (err) { console.error(err); window.alert(err instanceof Error ? err.message : 'Unable to save KYC'); }
   };
 
   const handleDelete = (doc: DealerKYC) => {
@@ -267,7 +244,7 @@ export default function KYCManagement() {
             panDocument: undefined, gstDocument: undefined,
             kycRejectionReason: undefined,
           } : d));
-        } catch (err) { console.error(err); }
+        } catch (err) { console.error(err); window.alert(err instanceof Error ? err.message : 'Unable to save KYC'); }
         setConfirmState(s => ({ ...s, show: false }));
       }
     });
@@ -297,6 +274,7 @@ export default function KYCManagement() {
           <h1 style={{ fontSize: 26, fontWeight: 800, color: C.text, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}><FileCheck size={24} style={{ color: C.red }} /> KYC Management</h1>
           <p style={{ color: C.muted, fontSize: 14 }}>Verify and manage dealer KYC documents</p>
         </div>
+        {getStoredAdmin()?.role === 'super_admin' && <button disabled={bulkBusy || loading} onClick={handleApproveAll} style={{ background: '#065F46', color: 'white', border: 'none', borderRadius: 10, padding: '10px 20px', cursor: 'pointer' }}>{bulkBusy ? 'Approving...' : 'Approve All'}</button>}
         <button onClick={() => setShowExport(true)} style={{ background: C.red, color: 'white', border: 'none', borderRadius: 10, padding: '10px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}><FileSpreadsheet size={14} /> Export</button>
       </div>
       <ExportModal show={showExport} onClose={() => setShowExport(false)} title="Dealer KYC" fileName="dealer-kyc" getData={() => documents.map(d => ({ Dealer: d.dealerName, Phone: d.phone, Code: d.dealerCode, KYCStatus: d.kycStatus, Aadhar: d.aadharNumber ?? '', PAN: d.panNumber ?? '', GST: d.gstNumber ?? '' }))} />
@@ -404,7 +382,7 @@ export default function KYCManagement() {
                 {[['Aadhar', selectedDoc.aadharFrontImage], ['PAN', selectedDoc.panDocument], ['GST', selectedDoc.gstDocument]].map(([label, src]) => (
                   <div key={label}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: C.muted, marginBottom: 8, textTransform: 'uppercase' }}>{label}</div>
-                    {src ? <img src={src} alt={label} style={{ width: '100%', borderRadius: 10, border: `1px solid ${C.border}` }} /> : <div style={{ height: 80, background: C.bg, borderRadius: 10, border: `1px dashed ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.muted, fontSize: 12 }}>No image</div>}
+                    {src ? <DocThumb src={src} C={C} /> : <div style={{ height: 80, background: C.bg, borderRadius: 10, border: `1px dashed ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.muted, fontSize: 12 }}>No image</div>}
                   </div>
                 ))}
               </div>

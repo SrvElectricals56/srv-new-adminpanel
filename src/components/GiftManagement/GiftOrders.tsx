@@ -105,11 +105,12 @@ function TrackingModal({ order, onClose, onSave, C }: { order: GiftOrder; onClos
   const [deliveryNotes, setDeliveryNotes] = useState(order.deliveryNotes ?? '');
   const [rejectionReason, setRejectionReason] = useState(order.rejectionReason ?? '');
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const inputStyle: React.CSSProperties = { width: '100%', boxSizing: 'border-box', padding: '10px 12px', border: `1.5px solid ${C.border}`, borderRadius: 10, background: C.inputBg, color: C.text, outline: 'none', fontSize: 13 };
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={onClose}>
-      <div style={{ background: C.card, borderRadius: 20, width: 460, maxWidth: '95vw', boxShadow: '0 25px 70px rgba(0,0,0,0.25)', border: `1px solid ${C.border}` }} onClick={e => e.stopPropagation()}>
+      <div style={{ background: C.card, borderRadius: 20, width: 460, maxWidth: '95vw', maxHeight: '90dvh', overflowY: 'auto', boxShadow: '0 25px 70px rgba(0,0,0,0.25)', border: `1px solid ${C.border}` }} onClick={e => e.stopPropagation()}>
         <div style={{ padding: '18px 22px', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <div style={{ fontSize: 17, fontWeight: 800, color: C.text }}>Update Gift Tracking</div>
@@ -154,9 +155,10 @@ function TrackingModal({ order, onClose, onSave, C }: { order: GiftOrder; onClos
             </div>
           )}
         </div>
+        {saveError && <div role="alert" style={{ margin: '0 22px 12px', color: '#B91C1C', fontSize: 12, fontWeight: 700 }}>{saveError}</div>}
         <div style={{ padding: '0 22px 22px', display: 'flex', gap: 10 }}>
           <button onClick={onClose} style={{ flex: 1, padding: '11px', borderRadius: 11, border: `1px solid ${C.border}`, background: C.bg, color: C.muted, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
-          <button disabled={saving || (status === 'approved' && !shippingAddress.trim())} onClick={async () => { setSaving(true); try { await onSave(status, { shippingAddress, trackingNumber, courierName, deliveryNotes, rejectionReason }); onClose(); } finally { setSaving(false); } }} style={{ flex: 1, padding: '11px', borderRadius: 11, border: 'none', background: 'linear-gradient(135deg, #7C3AED, #5B21B6)', color: 'white', fontSize: 13, fontWeight: 800, cursor: saving || (status === 'approved' && !shippingAddress.trim()) ? 'not-allowed' : 'pointer', opacity: status === 'approved' && !shippingAddress.trim() ? 0.55 : 1 }}>
+          <button disabled={saving || (status === 'approved' && !shippingAddress.trim())} onClick={async () => { setSaving(true); setSaveError(''); try { await onSave(status, { shippingAddress, trackingNumber, courierName, deliveryNotes, rejectionReason }); onClose(); } catch (error: any) { setSaveError(error?.message || 'Could not update the gift order. Please try again.'); } finally { setSaving(false); } }} style={{ flex: 1, padding: '11px', borderRadius: 11, border: 'none', background: 'linear-gradient(135deg, #7C3AED, #5B21B6)', color: 'white', fontSize: 13, fontWeight: 800, cursor: saving || (status === 'approved' && !shippingAddress.trim()) ? 'not-allowed' : 'pointer', opacity: status === 'approved' && !shippingAddress.trim() ? 0.55 : 1 }}>
             {saving ? 'Saving...' : 'Save Tracking'}
           </button>
         </div>
@@ -184,10 +186,12 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const [orderError, setOrderError] = useState('');
 
   const loadOrders = async () => {
     try {
       setLoading(true);
+      setOrderError('');
       const res = await giftApi.getOrders({
         page: String(page),
         limit: String(PAGE_SIZE),
@@ -219,6 +223,7 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
       })));
     } catch (err) {
       console.error('Failed to load gift orders:', err);
+      setOrderError(err instanceof Error ? err.message : 'Could not load gift orders. Please retry.');
     } finally {
       setLoading(false);
     }
@@ -234,10 +239,12 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
 
   const confirmAction = async () => {
     try {
+      setOrderError('');
       await giftApi.updateOrderStatus(confirmState.id, confirmState.action === 'approve' ? 'approved' : 'rejected');
       await loadOrders();
     } catch (err) {
       console.error('Failed to update order:', err);
+      setOrderError(err instanceof Error ? err.message : 'Could not update the gift order.');
     }
     setConfirmState({ show: false, id: '', action: 'approve' });
   };
@@ -265,6 +272,7 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
       <ExportModal show={showExport} onClose={() => setShowExport(false)} title={`${tab.charAt(0).toUpperCase() + tab.slice(1)} Gift Orders`} fileName={`gift-orders-${tab}`} getData={() => filtered.map(o => ({ Name: o.userName, Phone: o.userPhone ?? '', Code: o.userCode, Dealer: o.dealerName, Gift: o.giftName, Points: o.pointsUsed, Date: o.orderedAt, Status: o.status, Courier: o.courierName, TrackingID: o.trackingNumber }))} />
 
       {/* Header */}
+      {orderError && <div role="alert" style={{ marginBottom: 16, padding: '12px 16px', borderRadius: 10, background: '#FEF2F2', color: '#991B1B', fontSize: 13, fontWeight: 700 }}>{orderError}</div>}
       <div style={{ background: 'linear-gradient(135deg, #7C3AED, #5B21B6)', borderRadius: 18, padding: '22px 28px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 8px 24px rgba(124,58,237,0.25)' }}>
         <div>
           <div style={{ fontSize: 22, fontWeight: 900, color: 'white', display: 'flex', alignItems: 'center', gap: 10 }}><ShoppingBag size={26} /> Gift Orders</div>
@@ -394,7 +402,7 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
                           <button onClick={() => setConfirmState({ show: true, id: order.id, action: 'reject' })} title="Reject" style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 7, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={14} /></button>
                         </>
                       )}
-                      {canEdit && <button onClick={() => setDeleteTarget(order)} title="Delete order" style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 7, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Trash2 size={14} /></button>}
+                      {canEdit && order.status === 'rejected' && <button onClick={() => setDeleteTarget(order)} title="Delete rejected order" style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 7, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Trash2 size={14} /></button>}
                     </div>
                   </td>
                 </tr>
