@@ -9,7 +9,14 @@ import { I } from '@/lib/iconMap';
 
 type Range = 'all' | 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom';
 type SortBy = 'points' | 'wallet' | 'scans';
-const SORT_LABELS = { points: 'Total Points Scan', wallet: 'Wallet', scans: 'Scans' };
+const SORT_LABELS = { points: 'Total Points', wallet: 'Wallet', scans: 'Scans' };
+const TOP_FETCH_LIMIT = '5000';
+
+function getElectricianMetric(electrician: any, sortBy: SortBy) {
+  if (sortBy === 'wallet') return Number(electrician.walletBalance ?? 0);
+  if (sortBy === 'scans') return Number(electrician.totalScans ?? 0);
+  return Number(electrician.totalPoints ?? 0);
+}
 
 const TIER_CONFIG: Record<MemberTier, { color: string; bg: string; icon: string }> = {
   Silver:   { color: '#475569', bg: '#F1F5F9', icon: '' },
@@ -52,17 +59,17 @@ export default function TopElectricians() {
   useEffect(() => {
     const { from, to } = getDateRange();
     setLoading(true);
-    electricianApi.getTop({ from, to, sortBy, limit: String(resultLimit) })
-      .then(res => setTopList(Array.isArray(res) ? res : []))
+    electricianApi.getTop({ from, to, sortBy, limit: TOP_FETCH_LIMIT })
+      .then(res => {
+        const rows = Array.isArray(res) ? [...res] : [];
+        rows.sort((a, b) => getElectricianMetric(b, sortBy) - getElectricianMetric(a, sortBy));
+        setTopList(rows.slice(0, resultLimit));
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [range, sortBy, resultLimit, fromDate, toDate, getDateRange]);
 
-  const maxVal = topList[0]
-    ? sortBy === 'points' ? topList[0].periodPoints
-    : sortBy === 'scans' ? topList[0].periodScans
-    : Number(topList[0].walletBalance ?? 0)
-    : 1;
+  const maxVal = topList[0] ? getElectricianMetric(topList[0], sortBy) : 1;
 
   const rangeLabels: Record<Range, string> = {
     all: 'All Time', weekly: 'This Week', monthly: 'This Month',
@@ -89,9 +96,6 @@ export default function TopElectricians() {
           City: e.city,
           State: e.state,
           Tier: e.tier,
-          PeriodPoints: e.periodPoints,
-          PeriodScans: e.periodScans,
-          PeriodRedemptions: e.periodRedemptions,
           TotalPoints: e.totalPoints,
           TotalScans: e.totalScans,
           WalletBalance: e.walletBalance,
@@ -159,7 +163,7 @@ export default function TopElectricians() {
           {[topList[1], topList[0], topList[2]].map((e, i) => {
             const rank = i === 1 ? 1 : i === 0 ? 2 : 3;
             const tier = TIER_CONFIG[e.tier as MemberTier] ?? TIER_CONFIG['Silver'];
-            const val = sortBy === 'points' ? e.periodPoints : sortBy === 'scans' ? e.periodScans : Number(e.walletBalance ?? 0);
+            const val = getElectricianMetric(e, sortBy);
             const podiumH = rank === 1 ? 90 : rank === 2 ? 70 : 55;
             return (
               <div key={e.id} style={{ background: C.card, borderRadius: 16, padding: '20px 16px', border: `2px solid ${rank === 1 ? '#F59E0B' : C.border}`, textAlign: 'center', boxShadow: rank === 1 ? '0 8px 24px rgba(245,158,11,0.2)' : '0 2px 8px rgba(0,0,0,0.04)', position: 'relative' }}>
@@ -189,7 +193,7 @@ export default function TopElectricians() {
         </div>
         {topList.map((e, idx) => {
           const tier = TIER_CONFIG[e.tier as MemberTier] ?? TIER_CONFIG['Silver'];
-          const val = sortBy === 'points' ? e.periodPoints : sortBy === 'scans' ? e.periodScans : Number(e.walletBalance ?? 0);
+          const val = getElectricianMetric(e, sortBy);
           const pct = maxVal > 0 ? Math.round((val / maxVal) * 100) : 0;
           const rankColor = idx < 3 ? RANK_COLORS[idx] : C.muted;
           return (
@@ -221,20 +225,26 @@ export default function TopElectricians() {
                 <div style={{ fontSize: 18, fontWeight: 900, color: rankColor }}>{val.toLocaleString('en-IN')}</div>
                 <div style={{ fontSize: 10, color: C.muted, textTransform: 'capitalize' }}>{SORT_LABELS[sortBy]}</div>
               </div>
-              {/* Extra stats */}
+              {/* Extra stats — skip the active sort metric so it is not shown twice */}
               <div style={{ display: 'flex', gap: 12, flexShrink: 0 }}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: '#F59E0B' }}>{Number(e.totalPoints ?? 0).toLocaleString('en-IN')}</div>
-                  <div style={{ fontSize: 10, color: C.muted }}>Total Points</div>
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{e.totalScans}</div>
-                  <div style={{ fontSize: 10, color: C.muted }}>Total Scans</div>
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: '#10B981' }}>₹{Number(e.walletBalance ?? 0).toLocaleString('en-IN')}</div>
-                  <div style={{ fontSize: 10, color: C.muted }}>Wallet</div>
-                </div>
+                {sortBy !== 'points' && (
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#F59E0B' }}>{Number(e.totalPoints ?? 0).toLocaleString('en-IN')}</div>
+                    <div style={{ fontSize: 10, color: C.muted }}>Total Points</div>
+                  </div>
+                )}
+                {sortBy !== 'scans' && (
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{e.totalScans}</div>
+                    <div style={{ fontSize: 10, color: C.muted }}>Total Scans</div>
+                  </div>
+                )}
+                {sortBy !== 'wallet' && (
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#10B981' }}>₹{Number(e.walletBalance ?? 0).toLocaleString('en-IN')}</div>
+                    <div style={{ fontSize: 10, color: C.muted }}>Wallet</div>
+                  </div>
+                )}
               </div>
             </div>
           );

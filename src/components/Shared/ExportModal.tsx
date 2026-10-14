@@ -30,7 +30,10 @@ export default function ExportModal({ show, onClose, title, getData, fileName, o
 
     try {
       const rows = format === 'excel' && onExcelExport ? [] : await getData();
-      if (!rows.length && !(format === 'excel' && onExcelExport)) throw new Error('No records to export for the selected filters.');
+      if (!rows.length && !(format === 'excel' && onExcelExport)) {
+        setExportError('No records to export for the selected filters.');
+        return;
+      }
       const dateTag = new Date().toISOString().slice(0, 10);
       const name = `${fileName}-${dateTag}`;
       const keys = rows.length ? Object.keys(rows[0]) : [];

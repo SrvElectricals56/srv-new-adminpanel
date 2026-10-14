@@ -216,14 +216,9 @@ function ViewModal({
             {[
               { label: 'City', value: el.city }, { label: 'District', value: el.district },
               { label: 'State', value: el.state },
-              {
-                label: 'Dealer Details',
-                value: [
-                  el.dealerName || el.fallbackDealerName || 'SRV Dealer',
-                  `Mobile: ${el.dealerPhone || el.fallbackDealerPhone || '—'}`,
-                  `Code: ${el.dealerCode || el.fallbackDealerCode || '—'}`,
-                ].join(' • '),
-              },
+              { label: 'Dealer Name', value: el.dealerName || el.fallbackDealerName || 'SRV Dealer' },
+              { label: 'Dealer Number', value: el.dealerPhone || el.fallbackDealerPhone || '—' },
+              { label: 'Dealer Code', value: el.dealerCode || el.fallbackDealerCode || '—' },
               { label: 'Email', value: el.email || '—' },
               { label: 'Electrician Code', value: el.electricianCode },
               { label: 'App Joined', value: el.appInstalled && el.firstAppLoginAt ? formatISTDate(el.firstAppLoginAt) : '—' },

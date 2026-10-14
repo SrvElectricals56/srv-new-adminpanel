@@ -19,9 +19,18 @@ const TIER_CONFIG: Record<MemberTier, { color: string; bg: string; icon: string 
 
 const RANK_COLORS = ['#F59E0B', '#94A3B8', '#CD7F32', '#6B7280'];
 
+type SearchType = 'name' | 'number' | 'code';
+
+const SEARCH_TYPES: { value: SearchType; label: string; placeholder: string }[] = [
+  { value: 'name',   label: 'Dealer Name',   placeholder: 'Enter dealer name...' },
+  { value: 'number', label: 'Dealer Number',  placeholder: 'Enter dealer phone number...' },
+  { value: 'code',   label: 'Dealer Code',    placeholder: 'Enter dealer code...' },
+];
+
 export default function TopDealers() {
   const C = useThemePalette();
   const [associatedSearch, setAssociatedSearch] = useState('');
+  const [searchType, setSearchType] = useState<SearchType>('name');
   const [showAssociated, setShowAssociated] = useState(false);
   const [topList, setTopList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
