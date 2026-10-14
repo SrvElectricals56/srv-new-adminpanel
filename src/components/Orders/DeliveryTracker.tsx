@@ -13,6 +13,8 @@ type DeliveryOrder = {
   source?: 'product' | 'gift';
   userName: string;
   userPhone?: string;
+  userCode?: string;
+  dealerName?: string;
   userRole: string;
   productName: string;
   productImage?: string;
@@ -94,6 +96,8 @@ export default function DeliveryTracker({ role }: { role?: import('@/lib/types')
         source: 'gift' as const,
         userName: order.userName,
         userPhone: order.userPhone,
+        userCode: order.userCode,
+        dealerName: order.dealerName,
         userRole: order.type || order.role || 'gift',
         productName: order.giftName,
         productImage: order.giftImage,
@@ -318,7 +322,10 @@ export default function DeliveryTracker({ role }: { role?: import('@/lib/types')
           <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, width: 520, maxWidth: '95vw', padding: 24 }} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: 18, fontWeight: 900, color: C.text, marginBottom: 6 }}>Manage Delivery #{selected.id.slice(0, 8)}</div>
             <div style={{ color: C.muted, fontSize: 13, marginBottom: 18 }}>{selected.productName} • {selected.source === 'gift' ? 'Gift redemption' : 'Product order'} • {formatISTDateTime(selected.orderedAt)}</div>
-            <div style={{ background: C.bg, borderRadius: 10, padding: 10, marginBottom: 12, color: C.text, fontSize: 13 }}><strong>User:</strong> {selected.userName} · <strong>Mobile:</strong> {selected.userPhone ? `+91 ${selected.userPhone}` : 'Not available'}</div>
+            <div style={{ background: C.bg, borderRadius: 10, padding: 10, marginBottom: 12, color: C.text, fontSize: 13, display: 'grid', gap: 6 }}>
+              <div><strong>{selected.userRole === 'electrician' ? 'Electrician' : 'User'}:</strong> {selected.userName} · <strong>Mobile:</strong> {selected.userPhone ? `+91 ${selected.userPhone}` : 'Not available'}</div>
+              {selected.userRole === 'electrician' && <div><strong>Electrician Code:</strong> {selected.userCode || 'Not available'} · <strong>Dealer:</strong> {selected.dealerName || 'Not available'}</div>}
+            </div>
             {(selected.courierName || selected.trackingNumber) && (
               <div style={{ background: C.bg, borderRadius: 12, padding: 12, marginBottom: 12, color: C.text, fontSize: 13 }}>
                 <div><strong>Courier:</strong> {selected.courierName || 'Not assigned'}</div>
