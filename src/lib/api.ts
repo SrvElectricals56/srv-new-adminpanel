@@ -66,7 +66,9 @@ type CacheEntry = {
   value: unknown;
 };
 
-const GET_CACHE_TTL_MS = 0;
+// Short-lived caching coalesces simultaneous screen-load requests (especially
+// React dev-mode renders) without making admin data appear stale.
+const GET_CACHE_TTL_MS = 750;
 const responseCache = new Map<string, CacheEntry>();
 const inflightRequests = new Map<string, Promise<unknown>>();
 
@@ -89,8 +91,17 @@ function getRequestCacheKey(path: string, token: string | null) {
   return `GET ${path} ${token ? token.slice(0, 24) : 'public'}`;
 }
 
-function shouldCacheGet(_path: string) {
-  return false;
+function shouldCacheGet(path: string) {
+  const resource = path.split('?')[0];
+  return [
+    '/electricians',
+    '/electricians/stats',
+    '/electricians/tier-counts',
+    '/electricians/distinct-states',
+    '/electricians/distinct-cities',
+    '/electricians/distinct-categories',
+    '/dealers/options',
+  ].includes(resource);
 }
 
 function getCrudFeedback(path: string, method: string) {
@@ -215,9 +226,10 @@ async function request<T>(
     if (
       method === 'GET' &&
       transientRetries < 1 &&
-      [500, 502, 503, 504].includes(res.status)
+      [429, 500, 502, 503, 504].includes(res.status)
     ) {
-      await new Promise(resolve => setTimeout(resolve, 350));
+      const retryAfter = Number(res.headers.get('retry-after'));
+      await new Promise(resolve => setTimeout(resolve, Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 500));
       return request<T>(path, options, retried, transientRetries + 1);
     }
 

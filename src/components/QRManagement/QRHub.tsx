@@ -325,13 +325,16 @@ export default function QRHub({ role }: QRHubProps) {
     }
   };
 
-  const openBatchExport = async (batch: QRBatch) => {
+  const openBatchExport = (batch: QRBatch) => {
     setExportTitle(`QR Batch ${getBatchLabel(batch)}`);
     setExportFileName(`qr-batch-${getBatchLabel(batch)}`);
     setExportBatch(batch);
     setExportRows([]);
-    setExportRowsLoading(true);
     setShowExport(true);
+  };
+
+  const prepareBatchExportRows = async (batch: QRBatch) => {
+    setExportRowsLoading(true);
     try {
       const rows = await getBatchExportRows(batch);
       if (batch.qty > BATCH_EXPORT_MAX_ROWS) {
@@ -343,8 +346,10 @@ export default function QRHub({ role }: QRHubProps) {
         });
       }
       setExportRows(rows);
+      return rows;
     } catch (err: any) {
       setAlertDialog({ show: true, title: 'Export Failed', message: err.message || 'Unable to prepare batch export.', type: 'error' });
+      throw err;
     } finally {
       setExportRowsLoading(false);
     }
@@ -913,6 +918,7 @@ export default function QRHub({ role }: QRHubProps) {
         getData={() => exportRows}
         isDataLoading={exportRowsLoading}
         onExcelExport={exportBatch ? downloadBatchExcel : undefined}
+        onPrepareExportData={exportBatch ? () => prepareBatchExportRows(exportBatch) : undefined}
         onExportComplete={exportBatch ? async (format) => {
           if (format !== 'excel') {
             await recordBatchDownload(exportBatch, `batch_${format}`, exportRows.length || exportBatch.qty);

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronDown, Search } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 
-type Option = { value: string; label: string };
+type Option = { value: string; label: string; searchValue?: string };
 
 export default function SearchableSelect({ value, options, onChange, placeholder, searchPlaceholder, minWidth = 150 }: {
   value: string; options: Option[]; onChange: (value: string) => void;
@@ -18,7 +18,12 @@ export default function SearchableSelect({ value, options, onChange, placeholder
   const selected = options.find((option) => option.value === value);
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
-    return term ? options.filter((option) => option.label.toLowerCase().includes(term)) : options;
+    return term
+      ? options.filter((option) =>
+          option.label.toLowerCase().includes(term) ||
+          (option.searchValue ?? '').toLowerCase().includes(term)
+        )
+      : options;
   }, [options, query]);
 
   useEffect(() => {

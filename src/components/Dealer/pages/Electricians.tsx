@@ -476,7 +476,7 @@ function EditModal({
 export default function AssociatedElectricians({ initialSearch = '' }: { initialSearch?: string }) {
   const C = useThemePalette();
   const [electricians, setElectricians] = useState<Electrician[]>([]);
-  const [dealers, setDealers] = useState<{id: string; name: string}[]>([]);
+  const [dealers, setDealers] = useState<{id: string; name: string; phone?: string; dealerCode?: string}[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -489,7 +489,7 @@ export default function AssociatedElectricians({ initialSearch = '' }: { initial
         ]);
 
         const dealData = Array.isArray(dealRes) ? dealRes : (dealRes as any).data ?? [];
-        setDealers(dealData.map((d: any) => ({ id: d.id, name: d.name })));
+        setDealers(dealData.map((d: any) => ({ id: d.id, name: d.name, phone: d.phone ?? '', dealerCode: d.dealerCode ?? '' })));
         const dealerMap = new Map(dealData.map((d: any) => [d.id, d.name]));
 
         // Use actual total so this works no matter how many electricians exist
@@ -684,11 +684,18 @@ export default function AssociatedElectricians({ initialSearch = '' }: { initial
         <SearchableSelect
           value={filterDealer}
           placeholder={`All Dealers (${electricians.length})`}
-          searchPlaceholder="Search dealer..."
+          searchPlaceholder="Search by name, phone or code..."
           minWidth={240}
           options={[
             { value: 'all', label: `All Dealers (${electricians.length})` },
-            ...visibleDealers.map(d => ({ value: d, label: `${d} (${dealerCounts[d]})` })),
+            ...visibleDealers.map(d => {
+              const dealerInfo = dealers.find(dl => dl.name === d);
+              return {
+                value: d,
+                label: `${d} (${dealerCounts[d]})`,
+                searchValue: [d, dealerInfo?.phone ?? '', dealerInfo?.dealerCode ?? ''].join(' '),
+              };
+            }),
           ]}
           onChange={setFilterDealer}
         />
