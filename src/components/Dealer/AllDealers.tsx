@@ -1,5 +1,5 @@
 ﻿'use client';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { FileSpreadsheet, Plus, Store, CheckCircle, Bolt, Clock, MapPin, Phone, Building2, Target, Check, Pencil, SlidersHorizontal, Calendar, Trash2, Smartphone } from 'lucide-react';
 import { dealerApi, financeApi } from '@/lib/api';
 import type { Dealer, MemberTier, UserStatus, AdminRole } from '@/lib/types';
@@ -398,6 +398,7 @@ export default function Dealers({ role }: DealersProps) {
   const C = useThemePalette();
   const [data, setData] = useState<Dealer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // ── Server-side pagination ────────────────────────────────────────────────
   const [currentPage, setCurrentPage] = useState(1);
@@ -428,7 +429,17 @@ export default function Dealers({ role }: DealersProps) {
   const [dealerStats, setDealerStats] = useState({ total: 0, active: 0, pending: 0, inactive: 0, installed: 0, notInstalled: 0 });
   const [allStates, setAllStates] = useState<string[]>([]);
   const [allCities, setAllCities] = useState<string[]>([]);
-  const sanitizeOptions = (values: string[]) => Array.from(new Set(values.map(value => value.trim()).filter(value => value && value !== '?'))).sort((a, b) => a.localeCompare(b));
+  const sanitizeOptions = (values: string[]) => Array.from(
+    values.map(value => value.trim()).filter(value => value && value !== '?')
+      .reduce((options, value) => {
+        const key = value.toLocaleLowerCase();
+        const previous = options.get(key);
+        if (!previous || (previous === previous.toUpperCase() && value !== value.toUpperCase())) options.set(key, value);
+        return options;
+      }, new Map<string, string>()).values(),
+  ).sort((a, b) => a.localeCompare(b));
+  const listRequestId = useRef(0);
+  const cityRequestId = useRef(0);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedSearch(search.trim()), 300);
@@ -449,16 +460,18 @@ export default function Dealers({ role }: DealersProps) {
   };
 
   const loadCities = useCallback(async (state: string) => {
+    const requestId = ++cityRequestId.current;
     try {
       const citiesRes = await dealerApi.getDistinctCities(state !== 'all' ? { state } : undefined);
-      setAllCities(sanitizeOptions(citiesRes.cities ?? []));
+      if (requestId === cityRequestId.current) setAllCities(sanitizeOptions(citiesRes.cities ?? []));
     } catch (err) {
       console.error('Failed to load dealer cities:', err);
-      setAllCities([]);
+      if (requestId === cityRequestId.current) setAllCities([]);
     }
   }, []);
 
   const loadData = useCallback(async (page: number) => {
+    const requestId = ++listRequestId.current;
     try {
       setLoading(true);
       const params: Record<string, string> = {
@@ -487,14 +500,21 @@ export default function Dealers({ role }: DealersProps) {
       }
 
       const res = await dealerApi.getAll(params);
+      if (requestId !== listRequestId.current) return;
       const items = Array.isArray(res) ? res : (res as any).data ?? [];
       const total = Array.isArray(res) ? items.length : (res as any).total ?? items.length;
       setTotalCount(total);
       setData(items);
-    } catch (err) {
+      setLoadError(null);
+    } catch (err: any) {
       console.error('Failed to load dealers:', err);
+      if (requestId === listRequestId.current) {
+        setData([]);
+        setTotalCount(0);
+        setLoadError(err?.message?.includes('fetch') ? 'Unable to reach server. Ensure the backend is running on port 3001.' : err?.message || 'Failed to load dealers');
+      }
     } finally {
-      setLoading(false);
+      if (requestId === listRequestId.current) setLoading(false);
     }
   }, [debouncedSearch, filterTier, filterStatus, filterState, filterCity, filterBank, filterAppInstalled, dateFilter, customDateRange]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -793,7 +813,7 @@ export default function Dealers({ role }: DealersProps) {
                 <div style={{ padding: '20px 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                   {[
                     { label: 'Tier', value: filterTier, set: setFilterTier, options: [['all','All Tiers'],['Silver','Silver'],['Gold','Gold'],['Platinum','Platinum'],['Diamond','Diamond']] },
-                    { label: 'Status', value: filterStatus, set: setFilterStatus, options: [['all','All Status'],['active','Active'],['pending','Pending'],['inactive','Inactive']] },
+                    { label: 'Status', value: filterStatus, set: setFilterStatus, options: [['all','All Status'],['active','Active'],['pending','Pending'],['inactive','Inactive'],['suspended','Suspended']] },
                     { label: 'State', value: filterState, set: setFilterState, options: [['all','All States'], ...uniqueStates.filter(s => s !== 'all').map(s => [s, s])] },
                     { label: 'City', value: filterCity, set: setFilterCity, options: [['all','All Cities'], ...uniqueCities.filter(c => c !== 'all').map(c => [c, c])] },
                     { label: 'Bank Account', value: filterBank, set: setFilterBank, options: [['all','All'],['linked','Linked'],['not_linked','Not Linked']] },
@@ -839,6 +859,10 @@ export default function Dealers({ role }: DealersProps) {
         <span style={{ fontSize: 13, color: C.muted, whiteSpace: 'nowrap' }}>{filtered.length} of {totalCount} total</span>
       </div>
 
+      {loadError && <div role="alert" style={{ padding: '12px 16px', marginBottom: 12, borderRadius: 10, background: '#FEF2F2', color: '#B91C1C', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <span>{loadError}</span>
+        <button onClick={() => loadData(currentPage)} style={{ background: '#B91C1C', color: 'white', border: 'none', borderRadius: 8, padding: '7px 14px', cursor: 'pointer' }}>Retry</button>
+      </div>}
       {loading && <div style={{ textAlign: 'center', padding: 40, color: C.muted }}>Loading dealers...</div>}
       {viewMode === 'grid' ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>

@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { FileSpreadsheet, Plus, Users, Star, ScanLine, Wallet, Trash2, SlidersHorizontal, Calendar, Medal, Award, Trophy, Gem, Smartphone } from 'lucide-react';
 import { electricianApi, dealerApi } from '@/lib/api';
 import type { Electrician, ElectricianActivityStatus, MemberTier, UserStatus, AdminRole } from '@/lib/types';
@@ -553,7 +553,6 @@ export default function Electricians({ role }: ElectriciansProps) {
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterBank, setFilterBank] = useState('all');
   const [filterWelcomeBonus, setFilterWelcomeBonus] = useState('all');
-  const [filterElectricianGroup, setFilterElectricianGroup] = useState('all');
   const [filterAppInstalled, setFilterAppInstalled] = useState('all');
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'week' | 'month' | 'custom'>('all');
   const [customDateRange, setCustomDateRange] = useState<{ from: string; to: string }>({ from: '', to: '' });
@@ -572,7 +571,17 @@ export default function Electricians({ role }: ElectriciansProps) {
   const [allStates, setAllStates] = useState<string[]>([]);
   const [allCities, setAllCities] = useState<string[]>([]);
   const [allCategories, setAllCategories] = useState<string[]>([]);
-  const sanitizeOptions = (values: string[]) => Array.from(new Set(values.map(value => value.trim()).filter(value => value && value !== '?'))).sort((a, b) => a.localeCompare(b));
+  const sanitizeOptions = (values: string[]) => Array.from(
+    values.map(value => value.trim()).filter(value => value && value !== '?')
+      .reduce((options, value) => {
+        const key = value.toLocaleLowerCase();
+        const previous = options.get(key);
+        if (!previous || (previous === previous.toUpperCase() && value !== value.toUpperCase())) options.set(key, value);
+        return options;
+      }, new Map<string, string>()).values(),
+  ).sort((a, b) => a.localeCompare(b));
+  const listRequestId = useRef(0);
+  const cityRequestId = useRef(0);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedSearch(search.trim()), 300);
@@ -597,12 +606,13 @@ export default function Electricians({ role }: ElectriciansProps) {
   };
 
   const loadCities = useCallback(async (state: string) => {
+    const requestId = ++cityRequestId.current;
     try {
       const citiesRes = await electricianApi.getDistinctCities(state !== 'all' ? { state } : undefined);
-      setAllCities(sanitizeOptions(citiesRes.cities ?? []));
+      if (requestId === cityRequestId.current) setAllCities(sanitizeOptions(citiesRes.cities ?? []));
     } catch (err) {
       console.error('Failed to load electrician cities:', err);
-      setAllCities([]);
+      if (requestId === cityRequestId.current) setAllCities([]);
     }
   }, []);
 
@@ -616,6 +626,7 @@ export default function Electricians({ role }: ElectriciansProps) {
   }, []);
 
   const loadData = useCallback(async (page: number) => {
+    const requestId = ++listRequestId.current;
     try {
       setLoading(true);
       const params: Record<string, string> = {
@@ -651,6 +662,7 @@ export default function Electricians({ role }: ElectriciansProps) {
 
       setLoadError(null);
       const elecRes = await electricianApi.getAll(params);
+      if (requestId !== listRequestId.current) return;
 
       const rawElecs = Array.isArray(elecRes) ? elecRes : (elecRes as any).data ?? [];
       const total = Array.isArray(elecRes) ? rawElecs.length : (elecRes as any).total ?? rawElecs.length;
@@ -665,9 +677,13 @@ export default function Electricians({ role }: ElectriciansProps) {
       })));
     } catch (err: any) {
       console.error('Failed to load electricians:', err);
-      setLoadError(err?.message?.includes('fetch') ? 'Unable to reach server. Ensure the backend is running on port 3001.' : err?.message || 'Failed to load electricians');
+      if (requestId === listRequestId.current) {
+        setData([]);
+        setTotalCount(0);
+        setLoadError(err?.message?.includes('fetch') ? 'Unable to reach server. Ensure the backend is running on port 3001.' : err?.message || 'Failed to load electricians');
+      }
     } finally {
-      setLoading(false);
+      if (requestId === listRequestId.current) setLoading(false);
     }
   }, [debouncedSearch, filterTier, filterStatus, filterActivityStatus, filterState, filterCity, filterCategory, filterBank, filterWelcomeBonus, filterAppInstalled, dateFilter, customDateRange]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -734,11 +750,7 @@ export default function Electricians({ role }: ElectriciansProps) {
   const uniqueCities = ['all', ...sanitizeOptions(allCities)];
   const uniqueCategories = ['all', ...sanitizeOptions(allCategories)];
 
-  const filtered = data.filter((electrician: any) => {
-    const groupOk = filterElectricianGroup === 'all'
-      || String(electrician.subCategory ?? '').toLowerCase().includes(filterElectricianGroup.toLowerCase());
-    return groupOk;
-  }); // Welcome scans and main filters are server-side; group remains a local quick filter.
+  const filtered = data; // All filters apply before server-side pagination.
 
   const handleSave = async (form: Partial<Electrician>) => {
     if (!form.name?.trim() || !form.phone?.trim() || !form.city?.trim() || !form.state?.trim()) {
@@ -931,8 +943,8 @@ export default function Electricians({ role }: ElectriciansProps) {
       </div>
 
       {/* Filters */}
-      <div style={{ background: C.card, borderRadius: 14, padding: '14px 18px', border: `1px solid ${C.border}`, marginBottom: 16, display: 'flex', gap: 10, alignItems: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', position: 'relative' }}>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, phone, city, code, dealer..." style={{ ...inputStyle, flex: '1 0 280px', minWidth: 'min(280px, 100%)', maxWidth: '100%' }} onFocus={e => (e.target as HTMLInputElement).style.borderColor = C.red} onBlur={e => (e.target as HTMLInputElement).style.borderColor = C.border} />
+      <div style={{ background: C.card, borderRadius: 14, padding: '14px 18px', border: `1px solid ${C.border}`, marginBottom: 16, display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', position: 'relative' }}>
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, phone, city, code, dealer..." style={{ ...inputStyle, flex: '1 1 280px', minWidth: 'min(280px, 100%)', maxWidth: '100%' }} onFocus={e => (e.target as HTMLInputElement).style.borderColor = C.red} onBlur={e => (e.target as HTMLInputElement).style.borderColor = C.border} />
 
         <select
           value={filterWelcomeBonus}
@@ -944,14 +956,12 @@ export default function Electricians({ role }: ElectriciansProps) {
         </select>
 
         <select
-          value={filterElectricianGroup}
-          onChange={e => setFilterElectricianGroup(e.target.value)}
-          style={{ padding: '9px 12px', borderRadius: 10, border: `1px solid ${filterElectricianGroup !== 'all' ? C.red : C.border}`, background: C.bg, color: C.text, fontSize: 13, cursor: 'pointer', minWidth: 170, flexShrink: 0 }}
+          value={filterCategory}
+          onChange={e => setFilterCategory(e.target.value)}
+          style={{ padding: '9px 12px', borderRadius: 10, border: `1px solid ${filterCategory !== 'all' ? C.red : C.border}`, background: C.bg, color: C.text, fontSize: 13, cursor: 'pointer', minWidth: 170, flexShrink: 0 }}
         >
           <option value="all">All Electrician</option>
-          <option value="General Electrician">General Electrician</option>
-          <option value="Industrial Electrician">Industrial Electrician</option>
-          <option value="Residential Wiring">Residential Wiring</option>
+          {uniqueCategories.filter(category => category !== 'all').map(category => <option key={category} value={category}>{category}</option>)}
         </select>
 
         <select
@@ -1001,8 +1011,8 @@ export default function Electricians({ role }: ElectriciansProps) {
         )}
 
         {/* Active filter count badge */}
-        {(filterTier !== 'all' || filterStatus !== 'all' || filterActivityStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all' || filterWelcomeBonus !== 'all' || filterElectricianGroup !== 'all' || filterAppInstalled !== 'all' || dateFilter !== 'all') && (
-          <button onClick={() => { setFilterTier('all'); setFilterStatus('all'); setFilterActivityStatus('all'); setFilterState('all'); setFilterCity('all'); setFilterCategory('all'); setFilterBank('all'); setFilterWelcomeBonus('all'); setFilterElectricianGroup('all'); setFilterAppInstalled('all'); setDateFilter('all'); setCustomDateRange({ from: '', to: '' }); }}
+        {(filterTier !== 'all' || filterStatus !== 'all' || filterActivityStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all' || filterWelcomeBonus !== 'all' || filterAppInstalled !== 'all' || dateFilter !== 'all') && (
+          <button onClick={() => { setFilterTier('all'); setFilterStatus('all'); setFilterActivityStatus('all'); setFilterState('all'); setFilterCity('all'); setFilterCategory('all'); setFilterBank('all'); setFilterWelcomeBonus('all'); setFilterAppInstalled('all'); setDateFilter('all'); setCustomDateRange({ from: '', to: '' }); }}
             style={{ padding: '8px 12px', borderRadius: 8, border: `1px solid ${C.red}`, background: '#FFF0F0', color: C.red, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4 }}>
             Clear Filters
           </button>
@@ -1013,16 +1023,16 @@ export default function Electricians({ role }: ElectriciansProps) {
           <button
             onClick={() => setShowFilterPopup(p => !p)}
             style={{
-              width: 38, height: 38, borderRadius: 10, border: `1.5px solid ${showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterActivityStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all' || filterWelcomeBonus !== 'all' || filterElectricianGroup !== 'all' || filterAppInstalled !== 'all') ? C.red : C.border}`,
-              background: showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterActivityStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all' || filterWelcomeBonus !== 'all' || filterElectricianGroup !== 'all' || filterAppInstalled !== 'all') ? '#FFF0F0' : C.card,
-              color: showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterActivityStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all' || filterWelcomeBonus !== 'all' || filterElectricianGroup !== 'all' || filterAppInstalled !== 'all') ? C.red : C.muted,
+              width: 38, height: 38, borderRadius: 10, border: `1.5px solid ${showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterActivityStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all' || filterWelcomeBonus !== 'all' || filterAppInstalled !== 'all') ? C.red : C.border}`,
+              background: showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterActivityStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all' || filterWelcomeBonus !== 'all' || filterAppInstalled !== 'all') ? '#FFF0F0' : C.card,
+              color: showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterActivityStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all' || filterWelcomeBonus !== 'all' || filterAppInstalled !== 'all') ? C.red : C.muted,
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative',
             }}
           >
             <SlidersHorizontal size={17} />
-            {(filterTier !== 'all' || filterStatus !== 'all' || filterActivityStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all' || filterWelcomeBonus !== 'all' || filterElectricianGroup !== 'all' || filterAppInstalled !== 'all') && (
+            {(filterTier !== 'all' || filterStatus !== 'all' || filterActivityStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all' || filterWelcomeBonus !== 'all' || filterAppInstalled !== 'all') && (
               <span style={{ position: 'absolute', top: -5, right: -5, width: 16, height: 16, borderRadius: '50%', background: C.red, color: 'white', fontSize: 9, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {[filterTier, filterStatus, filterActivityStatus, filterState, filterCity, filterCategory, filterBank, filterWelcomeBonus, filterElectricianGroup, filterAppInstalled].filter(f => f !== 'all').length}
+                {[filterTier, filterStatus, filterActivityStatus, filterState, filterCity, filterCategory, filterBank, filterWelcomeBonus, filterAppInstalled].filter(f => f !== 'all').length}
               </span>
             )}
           </button>
@@ -1055,7 +1065,7 @@ export default function Electricians({ role }: ElectriciansProps) {
                     { label: 'Category', value: filterCategory, set: setFilterCategory, options: [['all','All Categories'], ...uniqueCategories.filter(c => c !== 'all').map(c => [c, c])] },
                     { label: 'Bank Account', value: filterBank, set: setFilterBank, options: [['all','All'],['linked','Linked'],['not_linked','Not Linked']] },
                     { label: 'Bonus', value: filterWelcomeBonus, set: setFilterWelcomeBonus, options: [['all','All Bonus'],['welcome_back_bonus','Welcome Back Bonus']] },
-                    { label: 'Electrician', value: filterElectricianGroup, set: setFilterElectricianGroup, options: [['all','All Electrician'],['General Electrician','General Electrician'],['Industrial Electrician','Industrial Electrician'],['Residential Wiring','Residential Wiring']] },
+                    { label: 'Electrician', value: filterCategory, set: setFilterCategory, options: [['all','All Electrician'], ...uniqueCategories.filter(c => c !== 'all').map(c => [c, c])] },
                     { label: 'App Status', value: filterAppInstalled, set: setFilterAppInstalled, options: [['all','All'],['installed','App Installed'],['not_installed','Not Installed']] },
                   ].map(f => (
                     <div key={f.label}>
@@ -1075,7 +1085,7 @@ export default function Electricians({ role }: ElectriciansProps) {
                 </div>
                 {/* Footer */}
                 <div style={{ padding: '16px 24px', borderTop: `1px solid ${C.border}`, display: 'flex', gap: 10 }}>
-                  <button onClick={() => { setFilterTier('all'); setFilterStatus('all'); setFilterActivityStatus('all'); setFilterState('all'); setFilterCity('all'); setFilterCategory('all'); setFilterBank('all'); setFilterWelcomeBonus('all'); setFilterElectricianGroup('all'); setFilterAppInstalled('all'); setDateFilter('all'); setCustomDateRange({ from: '', to: '' }); }}
+                  <button onClick={() => { setFilterTier('all'); setFilterStatus('all'); setFilterActivityStatus('all'); setFilterState('all'); setFilterCity('all'); setFilterCategory('all'); setFilterBank('all'); setFilterWelcomeBonus('all'); setFilterAppInstalled('all'); setDateFilter('all'); setCustomDateRange({ from: '', to: '' }); }}
                     style={{ flex: 1, padding: '10px', borderRadius: 10, border: `1px solid ${C.border}`, background: C.bg, color: C.muted, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                     Reset All
                   </button>
@@ -1089,8 +1099,10 @@ export default function Electricians({ role }: ElectriciansProps) {
           )}
         </div>
 
-        <ViewModeToggle value={viewMode} onChange={setViewMode} accent={C.red} border={C.border} activeBg="#FFF0F0" inactiveBg={C.card} muted={C.muted} />
-        <span style={{ fontSize: 13, color: C.muted, whiteSpace: 'nowrap', flexShrink: 0 }}>{filtered.length} of {totalCount} total</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: 'auto' }}>
+          <ViewModeToggle value={viewMode} onChange={setViewMode} accent={C.red} border={C.border} activeBg="#FFF0F0" inactiveBg={C.card} muted={C.muted} />
+          <span style={{ fontSize: 13, color: C.muted, whiteSpace: 'nowrap', flexShrink: 0 }}>{filtered.length} of {totalCount} total</span>
+        </div>
       </div>
 
       {/* Error banner */}
