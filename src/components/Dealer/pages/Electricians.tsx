@@ -476,25 +476,25 @@ function EditModal({
 export default function AssociatedElectricians({ initialSearch = '' }: { initialSearch?: string }) {
   const C = useThemePalette();
   const [electricians, setElectricians] = useState<Electrician[]>([]);
-  const [dealers, setDealers] = useState<{id: string; name: string}[]>([]);
+  const [dealers, setDealers] = useState<{id: string; name: string; phone?: string; dealerCode?: string}[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Load dealers and get total electrician count in parallel
-        const [countRes, dealRes] = await Promise.all([
-          electricianApi.getAll({ limit: '1', page: '1' }),
-          dealerApi.getAll({ limit: '1000' }),
+        // Load the compact dealer option list and electrician total first.
+        const [electricianStats, dealRes] = await Promise.all([
+          electricianApi.getStats(),
+          dealerApi.getOptions(),
         ]);
 
-        const dealData = Array.isArray(dealRes) ? dealRes : (dealRes as any).data ?? [];
-        setDealers(dealData.map((d: any) => ({ id: d.id, name: d.name })));
+        const dealData = Array.isArray(dealRes) ? dealRes : [];
+        setDealers(dealData.map((d: any) => ({ id: d.id, name: d.name, phone: d.phone ?? '', dealerCode: d.dealerCode ?? '' })));
         const dealerMap = new Map(dealData.map((d: any) => [d.id, d.name]));
 
         // Use actual total so this works no matter how many electricians exist
-        const total = Array.isArray(countRes) ? (countRes as any[]).length : (countRes as any).total ?? 50000;
-        const fetchLimit = Math.max(total, 50000);
+        const total = Number(electricianStats?.total ?? 0);
+        const fetchLimit = Math.max(total, 1);
 
         const elecRes = await electricianApi.getAll({ limit: String(fetchLimit), page: '1' });
         const rawElecs = Array.isArray(elecRes) ? elecRes : (elecRes as any).data ?? [];
@@ -532,7 +532,10 @@ export default function AssociatedElectricians({ initialSearch = '' }: { initial
     });
     return counts;
   }, [electricians]);
-  const dealerNames = Object.keys(dealerCounts).sort((a, b) => a.localeCompare(b));
+  const dealerNames = Array.from(new Set([
+    ...dealers.map(dealer => dealer.name).filter(Boolean),
+    ...Object.keys(dealerCounts),
+  ])).sort((a, b) => a.localeCompare(b));
   const visibleDealers = dealerNames.filter(dealer => {
     if (!dealerSearchQuery) return true;
     if (dealer.toLowerCase().includes(dealerSearchQuery)) return true;
@@ -684,11 +687,18 @@ export default function AssociatedElectricians({ initialSearch = '' }: { initial
         <SearchableSelect
           value={filterDealer}
           placeholder={`All Dealers (${electricians.length})`}
-          searchPlaceholder="Search dealer..."
+          searchPlaceholder="Search by name, phone or code..."
           minWidth={240}
           options={[
             { value: 'all', label: `All Dealers (${electricians.length})` },
-            ...visibleDealers.map(d => ({ value: d, label: `${d} (${dealerCounts[d]})` })),
+            ...visibleDealers.map(d => {
+              const dealerInfo = dealers.find(dl => dl.name === d);
+              return {
+                value: d,
+                label: `${d} (${dealerCounts[d]})`,
+                searchValue: [d, dealerInfo?.phone ?? '', dealerInfo?.dealerCode ?? ''].join(' '),
+              };
+            }),
           ]}
           onChange={setFilterDealer}
         />

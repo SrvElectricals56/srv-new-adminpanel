@@ -11,11 +11,12 @@ interface ExportModalProps {
   getData: () => object[] | Promise<object[]>;
   fileName: string;
   onExcelExport?: () => Promise<void> | void;
+  onPrepareExportData?: (format: 'csv' | 'pdf' | 'zip') => Promise<object[]>;
   onExportComplete?: (format: 'excel' | 'csv' | 'pdf' | 'zip') => Promise<void> | void;
   isDataLoading?: boolean;
 }
 
-export default function ExportModal({ show, onClose, title, getData, fileName, onExcelExport, onExportComplete, isDataLoading = false }: ExportModalProps) {
+export default function ExportModal({ show, onClose, title, getData, fileName, onExcelExport, onPrepareExportData, onExportComplete, isDataLoading = false }: ExportModalProps) {
   const C = useThemePalette();
   const [exporting, setExporting] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -29,7 +30,10 @@ export default function ExportModal({ show, onClose, title, getData, fileName, o
 
     try {
       const rows = format === 'excel' && onExcelExport ? [] : await getData();
-      if (!rows.length && !(format === 'excel' && onExcelExport)) throw new Error('No records to export for the selected filters.');
+      if (!rows.length && !(format === 'excel' && onExcelExport)) {
+        setExportError('No records to export for the selected filters.');
+        return;
+      }
       const dateTag = new Date().toISOString().slice(0, 10);
       const name = `${fileName}-${dateTag}`;
       const keys = rows.length ? Object.keys(rows[0]) : [];
