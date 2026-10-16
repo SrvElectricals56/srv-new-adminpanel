@@ -59,6 +59,7 @@ export default function ProductCategories({ role, onNavigate }: { role?: import(
   const canEdit = isSuperAdmin || isAdmin;
   const canDelete = isSuperAdmin;
   const [categories, setCategories] = useState<Category[]>([]);
+  const [failedCategoryImages, setFailedCategoryImages] = useState<Set<string | number>>(() => new Set());
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -366,12 +367,14 @@ export default function ProductCategories({ role, onNavigate }: { role?: import(
               style={{ position: 'relative', height: 140, background: C.inputBg, overflow: 'hidden', cursor: onNavigate ? 'pointer' : 'default' }}
               title={`View ${cat.name} products`}
             >
-              {cat.image ? (
+              {cat.image && !failedCategoryImages.has(cat.id) ? (
                 <img
                   src={cat.image}
                   alt={cat.name}
                   style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 8 }}
-                  onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                  loading="lazy"
+                  decoding="async"
+                  onError={() => setFailedCategoryImages(previous => new Set(previous).add(cat.id))}
                 />
               ) : (
                 <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

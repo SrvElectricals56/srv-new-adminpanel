@@ -277,6 +277,7 @@ export default function Home() {
   const [remoteSearchResults, setRemoteSearchResults] = useState<GlobalSearchResult[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [routeLoading, setRouteLoading] = useState(false);
   const [pendingNotifications, setPendingNotifications] = useState<Record<string, number>>({});
   const [crudAlert, setCrudAlert] = useState<{ show: boolean; title: string; message: string; type: 'success' | 'info' }>({
@@ -521,7 +522,12 @@ export default function Home() {
   };
 
   useEffect(() => {
-    const query = searchQuery.trim();
+    const timeout = window.setTimeout(() => setDebouncedSearchQuery(searchQuery.trim()), 180);
+    return () => window.clearTimeout(timeout);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    const query = debouncedSearchQuery;
     if (query.length < 2) {
       setRemoteSearchResults([]);
       setSearchError('');
@@ -532,6 +538,7 @@ export default function Home() {
     let cancelled = false;
     setSearchLoading(true);
     setSearchError('');
+    setRemoteSearchResults([]);
     const timeout = window.setTimeout(async () => {
       try {
         const { settingsApi } = await import('@/lib/api');
@@ -545,13 +552,13 @@ export default function Home() {
       } finally {
         if (!cancelled) setSearchLoading(false);
       }
-    }, 250);
+    }, 0);
 
     return () => {
       cancelled = true;
       window.clearTimeout(timeout);
     };
-  }, [searchQuery]);
+  }, [debouncedSearchQuery]);
 
   const getPageData = async () => {
     const dateTag = new Date().toISOString().slice(0, 10);
@@ -737,8 +744,8 @@ export default function Home() {
       />
       {/* Search Modal */}
       {showSearchModal && (
-        <div style={{ position: 'fixed', inset: 0, background: mode === 'dark' ? 'rgba(0,0,0,0.75)' : 'rgba(15,23,42,0.6)', backdropFilter: 'blur(8px)', zIndex: 2000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '80px 20px 20px', overflowY: 'auto' }} onClick={() => setShowSearchModal(false)}>
-          <div style={{ background: P.modalBg, borderRadius: 20, padding: '0', width: 700, maxWidth: '95vw', boxShadow: '0 25px 70px rgba(0,0,0,0.3)', animation: 'modalSlideIn 0.3s cubic-bezier(0.16,1,0.3,1)', border: `1px solid ${P.border}`, maxHeight: '80vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+    <div style={{ position: 'fixed', inset: 0, background: mode === 'dark' ? 'rgba(0,0,0,0.75)' : 'rgba(15,23,42,0.6)', backdropFilter: 'blur(8px)', zIndex: 2000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 'min(80px, 8vh) 20px 20px', overflowY: 'auto' }} onClick={() => setShowSearchModal(false)}>
+          <div style={{ background: P.modalBg, borderRadius: 20, padding: '0', width: 700, maxWidth: '95vw', boxShadow: '0 25px 70px rgba(0,0,0,0.3)', animation: 'modalSlideIn 0.3s cubic-bezier(0.16,1,0.3,1)', border: `1px solid ${P.border}`, maxHeight: '84vh', display: 'flex', flexDirection: 'column', minHeight: 0 }} onClick={e => e.stopPropagation()}>
             {/* Header with Search */}
             <div style={{ padding: '24px 28px', borderBottom: `1px solid ${P.border}`, position: 'sticky', top: 0, background: P.modalBg, borderRadius: '20px 20px 0 0', zIndex: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
@@ -806,7 +813,7 @@ export default function Home() {
             </div>
 
             {/* Search Results */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px' }}>
+            <div style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto', padding: '20px clamp(16px, 4vw, 28px)' }}>
               {/* eslint-disable-next-line react-hooks/refs */}
               {(() => {
                 const query = searchQuery.toLowerCase().trim();
@@ -962,7 +969,7 @@ export default function Home() {
                         <div style={{ fontSize: 12, fontWeight: 700, color: P.muted, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                           {type} ({items.length})
                         </div>
-                        <div style={{ display: 'grid', gap: 6 }}>
+                        <div style={{ display: 'grid', gap: 8 }}>
                           {items.map((item, idx) => (
                             <button
                               key={idx}
@@ -971,12 +978,15 @@ export default function Home() {
                                 background: P.surface,
                                 border: `1px solid ${P.border}`,
                                 borderRadius: 10,
-                                padding: '10px 12px',
+                                padding: '12px 14px',
                                 cursor: 'pointer',
                                 textAlign: 'left',
                                 display: 'flex',
-                                alignItems: 'center',
+                                alignItems: 'flex-start',
                                 gap: 12,
+                                width: '100%',
+                                minWidth: 0,
+                                boxSizing: 'border-box',
                                 transition: 'all 0.2s'
                               }}
                               onMouseEnter={e => {
@@ -990,10 +1000,10 @@ export default function Home() {
                                 (e.currentTarget as HTMLButtonElement).style.transform = 'translateX(0)';
                               }}
                             >
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24 }}><I name={item.icon} size={20} /></div>
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontSize: 13, fontWeight: 700, color: P.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</div>
-                                <div style={{ fontSize: 11, color: P.modalMuted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.subtitle}</div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24, flex: '0 0 24px', marginTop: 1 }}><I name={item.icon} size={20} /></div>
+                              <div style={{ flex: 1, minWidth: 0, display: 'grid', gap: 4 }}>
+                                <div style={{ fontSize: 13, lineHeight: 1.4, fontWeight: 700, color: P.text, overflowWrap: 'anywhere' }}>{item.title}</div>
+                                <div style={{ fontSize: 11, lineHeight: 1.45, color: P.modalMuted, overflowWrap: 'anywhere' }}>{item.subtitle}</div>
                               </div>
                             </button>
                           ))}

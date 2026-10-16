@@ -374,6 +374,10 @@ export const dealerApi = {
     const q = params ? '?' + new URLSearchParams(params).toString() : '';
     return request<{ cities: string[] }>(`/dealers/distinct-cities${q}`);
   },
+  getDistinctDistricts: (params?: Record<string, string>) => {
+    const q = params ? '?' + new URLSearchParams(params).toString() : '';
+    return request<{ districts: string[] }>(`/dealers/distinct-districts${q}`);
+  },
   getOne: (id: string) => request<any>(`/dealers/${id}`),
   getActivity: (id: string) => request<any>(`/dealers/${id}/activity`),
   create: (body: object) => request<any>('/dealers', { method: 'POST', body: JSON.stringify(body) }),

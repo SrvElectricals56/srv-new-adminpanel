@@ -412,6 +412,7 @@ export default function Dealers({ role }: DealersProps) {
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterState, setFilterState] = useState('all');
   const [filterCity, setFilterCity] = useState('all');
+  const [filterDistrict, setFilterDistrict] = useState('all');
   const [filterBank, setFilterBank] = useState('all');
   const [filterAppInstalled, setFilterAppInstalled] = useState('all');
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'week' | 'month' | 'custom'>('all');
@@ -429,8 +430,11 @@ export default function Dealers({ role }: DealersProps) {
   const [dealerStats, setDealerStats] = useState({ total: 0, active: 0, pending: 0, inactive: 0, installed: 0, notInstalled: 0 });
   const [allStates, setAllStates] = useState<string[]>([]);
   const [allCities, setAllCities] = useState<string[]>([]);
+  const [allDistricts, setAllDistricts] = useState<string[]>([]);
   const sanitizeOptions = (values: string[]) => Array.from(
-    values.map(value => value.trim()).filter(value => value && value !== '?')
+    values.map(value => value.trim().replace(/\s+/g, ' ')).filter(value =>
+      value && !['?', 'unknown', 'n/a', 'na', 'null', 'undefined', 'not provided', '-'].includes(value.toLocaleLowerCase())
+    )
       .reduce((options, value) => {
         const key = value.toLocaleLowerCase();
         const previous = options.get(key);
@@ -440,6 +444,7 @@ export default function Dealers({ role }: DealersProps) {
   ).sort((a, b) => a.localeCompare(b));
   const listRequestId = useRef(0);
   const cityRequestId = useRef(0);
+  const districtRequestId = useRef(0);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedSearch(search.trim()), 300);
@@ -470,6 +475,17 @@ export default function Dealers({ role }: DealersProps) {
     }
   }, []);
 
+  const loadDistricts = useCallback(async (state: string) => {
+    const requestId = ++districtRequestId.current;
+    try {
+      const districtsRes = await dealerApi.getDistinctDistricts(state !== 'all' ? { state } : undefined);
+      if (requestId === districtRequestId.current) setAllDistricts(sanitizeOptions(districtsRes.districts ?? []));
+    } catch (err) {
+      console.error('Failed to load dealer districts:', err);
+      if (requestId === districtRequestId.current) setAllDistricts([]);
+    }
+  }, []);
+
   const loadData = useCallback(async (page: number) => {
     const requestId = ++listRequestId.current;
     try {
@@ -483,6 +499,7 @@ export default function Dealers({ role }: DealersProps) {
       if (filterStatus !== 'all') params.status = filterStatus;
       if (filterState !== 'all') params.state = filterState;
       if (filterCity !== 'all') params.city = filterCity;
+      if (filterDistrict !== 'all') params.district = filterDistrict;
       if (filterBank !== 'all') params.bankLinked = filterBank === 'linked' ? 'true' : 'false';
       if (filterAppInstalled !== 'all') params.appInstalled = filterAppInstalled === 'installed' ? 'true' : 'false';
 
@@ -516,7 +533,7 @@ export default function Dealers({ role }: DealersProps) {
     } finally {
       if (requestId === listRequestId.current) setLoading(false);
     }
-  }, [debouncedSearch, filterTier, filterStatus, filterState, filterCity, filterBank, filterAppInstalled, dateFilter, customDateRange]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, filterTier, filterStatus, filterState, filterCity, filterDistrict, filterBank, filterAppInstalled, dateFilter, customDateRange]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadOne = async (id: string, mode: 'view' | 'edit') => {
     try {
@@ -532,20 +549,27 @@ export default function Dealers({ role }: DealersProps) {
   useEffect(() => {
     setCurrentPage(1);
     loadData(1);
-  }, [debouncedSearch, filterTier, filterStatus, filterState, filterCity, filterBank, filterAppInstalled, dateFilter, customDateRange]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, filterTier, filterStatus, filterState, filterCity, filterDistrict, filterBank, filterAppInstalled, dateFilter, customDateRange]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Initial load
   useEffect(() => { loadStats(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     void loadCities(filterState);
-  }, [filterState, loadCities]);
+    void loadDistricts(filterState);
+  }, [filterState, loadCities, loadDistricts]);
 
   useEffect(() => {
     if (filterCity !== 'all' && !allCities.includes(filterCity)) {
       setFilterCity('all');
     }
   }, [allCities, filterCity]);
+
+  useEffect(() => {
+    if (filterDistrict !== 'all' && !allDistricts.includes(filterDistrict)) {
+      setFilterDistrict('all');
+    }
+  }, [allDistricts, filterDistrict]);
 
   // Auto-refresh when tab becomes visible
   useEffect(() => {
@@ -578,6 +602,7 @@ export default function Dealers({ role }: DealersProps) {
 
   const uniqueStates = ['all', ...sanitizeOptions(allStates)];
   const uniqueCities = ['all', ...sanitizeOptions(allCities)];
+  const uniqueDistricts = ['all', ...sanitizeOptions(allDistricts)];
 
   const filtered = data; // Server-side pagination handles filtering
 
@@ -736,7 +761,7 @@ export default function Dealers({ role }: DealersProps) {
       </div>
 
       {/* Filters */}
-      <div style={{ background: C.card, borderRadius: 14, padding: '14px 18px', border: `1px solid ${C.border}`, marginBottom: 18, display: 'flex', gap: 10, alignItems: 'center', position: 'relative' }}>
+      <div style={{ background: C.card, borderRadius: 14, padding: '14px 18px', border: `1px solid ${C.border}`, marginBottom: 18, display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', position: 'relative' }}>
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search dealer name, code, town, contact..." style={{ ...inputStyle, flex: '1 1 280px', maxWidth: 420 }} onFocus={e => (e.target as HTMLInputElement).style.borderColor = C.red} onBlur={e => (e.target as HTMLInputElement).style.borderColor = C.border} />
 
         <select
@@ -773,8 +798,8 @@ export default function Dealers({ role }: DealersProps) {
           </div>
         )}
 
-{(filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterBank !== 'all' || filterAppInstalled !== 'all' || dateFilter !== 'all') && (
-          <button onClick={() => { setFilterTier('all'); setFilterStatus('all'); setFilterState('all'); setFilterCity('all'); setFilterBank('all'); setFilterAppInstalled('all'); setDateFilter('all'); setCustomDateRange({ from: '', to: '' }); }}
+{(filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterDistrict !== 'all' || filterBank !== 'all' || filterAppInstalled !== 'all' || dateFilter !== 'all') && (
+          <button onClick={() => { setFilterTier('all'); setFilterStatus('all'); setFilterState('all'); setFilterCity('all'); setFilterDistrict('all'); setFilterBank('all'); setFilterAppInstalled('all'); setDateFilter('all'); setCustomDateRange({ from: '', to: '' }); }}
             style={{ padding: '8px 12px', borderRadius: 8, border: `1px solid ${C.red}`, background: '#FFF0F0', color: C.red, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4 }}>
             Clear Filters
           </button>
@@ -785,9 +810,9 @@ export default function Dealers({ role }: DealersProps) {
           <button
             onClick={() => setShowFilterPopup(p => !p)}
             style={{
-              width: 38, height: 38, borderRadius: 10, border: `1.5px solid ${showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterBank !== 'all' || filterAppInstalled !== 'all') ? C.red : C.border}`,
-              background: showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterBank !== 'all' || filterAppInstalled !== 'all') ? '#FFF0F0' : C.card,
-              color: showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterBank !== 'all' || filterAppInstalled !== 'all') ? C.red : C.muted,
+              width: 38, height: 38, borderRadius: 10, border: `1.5px solid ${showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterDistrict !== 'all' || filterBank !== 'all' || filterAppInstalled !== 'all') ? C.red : C.border}`,
+              background: showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterDistrict !== 'all' || filterBank !== 'all' || filterAppInstalled !== 'all') ? '#FFF0F0' : C.card,
+              color: showFilterPopup || (filterTier !== 'all' || filterStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterDistrict !== 'all' || filterBank !== 'all' || filterAppInstalled !== 'all') ? C.red : C.muted,
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative',
             }}
           >
@@ -816,15 +841,16 @@ export default function Dealers({ role }: DealersProps) {
                     { label: 'Status', value: filterStatus, set: setFilterStatus, options: [['all','All Status'],['active','Active'],['pending','Pending'],['inactive','Inactive'],['suspended','Suspended']] },
                     { label: 'State', value: filterState, set: setFilterState, options: [['all','All States'], ...uniqueStates.filter(s => s !== 'all').map(s => [s, s])] },
                     { label: 'City', value: filterCity, set: setFilterCity, options: [['all','All Cities'], ...uniqueCities.filter(c => c !== 'all').map(c => [c, c])] },
+                    { label: 'District', value: filterDistrict, set: setFilterDistrict, options: [['all','All Districts'], ...uniqueDistricts.filter(d => d !== 'all').map(d => [d, d])] },
                     { label: 'Bank Account', value: filterBank, set: setFilterBank, options: [['all','All'],['linked','Linked'],['not_linked','Not Linked']] },
                     { label: 'App Status', value: filterAppInstalled, set: setFilterAppInstalled, options: [['all','All'],['installed','App Installed'],['not_installed','Not Installed']] },
                   ].map(f => (
                     <div key={f.label}>
                       <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>{f.label}</div>
-                      {['State', 'City'].includes(f.label) ? (
+                      {['State', 'City', 'District'].includes(f.label) ? (
                         <SearchableSelect value={f.value} placeholder={`All ${f.label}s`} minWidth={180}
                           options={f.options.map(([value, label]) => ({ value, label }))}
-                          onChange={(next) => { f.set(next); if (f.label === 'State') setFilterCity('all'); }} />
+                          onChange={(next) => { f.set(next); if (f.label === 'State') { setFilterCity('all'); setFilterDistrict('all'); } }} />
                       ) : (
                         <select value={f.value} onChange={e => f.label === 'App Status' ? handleAppStatusChange(e.target.value) : f.set(e.target.value)}
                           style={{ width: '100%', padding: '9px 12px', border: `1.5px solid ${f.value !== 'all' ? C.red : C.border}`, borderRadius: 10, fontSize: 13, outline: 'none', background: C.inputBg, color: C.text, cursor: 'pointer' }}>
@@ -835,7 +861,7 @@ export default function Dealers({ role }: DealersProps) {
                   ))}
                 </div>
                 <div style={{ padding: '16px 24px', borderTop: `1px solid ${C.border}`, display: 'flex', gap: 10 }}>
-                  <button onClick={() => { setFilterTier('all'); setFilterStatus('all'); setFilterState('all'); setFilterCity('all'); setFilterBank('all'); setFilterAppInstalled('all'); setDateFilter('all'); setCustomDateRange({ from: '', to: '' }); }}
+                  <button onClick={() => { setFilterTier('all'); setFilterStatus('all'); setFilterState('all'); setFilterCity('all'); setFilterDistrict('all'); setFilterBank('all'); setFilterAppInstalled('all'); setDateFilter('all'); setCustomDateRange({ from: '', to: '' }); }}
                     style={{ flex: 1, padding: '10px', borderRadius: 10, border: `1px solid ${C.border}`, background: C.bg, color: C.muted, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                     Reset All
                   </button>

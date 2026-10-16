@@ -566,6 +566,20 @@ export default function Electricians({ role }: ElectriciansProps) {
     setDateFilter(next);
   };
 
+  const selectTierSummary = (tier: string) => {
+    setFilterTier(tier);
+    setFilterStatus('all');
+    setFilterActivityStatus('all');
+    setFilterState('all');
+    setFilterCity('all');
+    setFilterCategory('all');
+    setFilterBank('all');
+    setFilterWelcomeBonus('all');
+    setFilterAppInstalled('all');
+    setDateFilter('all');
+    setCustomDateRange({ from: '', to: '' });
+  };
+
   // ── Tier counts (fetched separately for accurate totals across all pages) ──
   const [tierCounts, setTierCounts] = useState<{ Silver: number; Gold: number; Platinum: number; Diamond: number }>({ Silver: 0, Gold: 0, Platinum: 0, Diamond: 0 });
   const [installationStats, setInstallationStats] = useState({ total: 0, installed: 0, notInstalled: 0 });
@@ -573,7 +587,9 @@ export default function Electricians({ role }: ElectriciansProps) {
   const [allCities, setAllCities] = useState<string[]>([]);
   const [allCategories, setAllCategories] = useState<string[]>([]);
   const sanitizeOptions = (values: string[]) => Array.from(
-    values.map(value => value.trim()).filter(value => value && value !== '?')
+    values.map(value => value.trim().replace(/\s+/g, ' ')).filter(value =>
+      value && !['?', 'unknown', 'n/a', 'na', 'null', 'undefined', 'not provided', '-'].includes(value.toLocaleLowerCase())
+    )
       .reduce((options, value) => {
         const key = value.toLocaleLowerCase();
         const previous = options.get(key);
@@ -924,7 +940,7 @@ export default function Electricians({ role }: ElectriciansProps) {
             };
           }),
         ].map((s, i) => (
-          <div key={i} onClick={() => setFilterTier(i === 0 ? 'all' : s.label)} style={{ background: C.card, borderRadius: 14, padding: '16px 18px', border: `1px solid ${C.border}`, cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
+          <div key={i} onClick={() => selectTierSummary(i === 0 ? 'all' : s.label)} style={{ background: C.card, borderRadius: 14, padding: '16px 18px', border: `1px solid ${C.border}`, cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
             onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'}
             onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)'}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

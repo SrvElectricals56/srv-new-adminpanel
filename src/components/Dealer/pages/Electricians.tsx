@@ -482,19 +482,19 @@ export default function AssociatedElectricians({ initialSearch = '' }: { initial
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Load dealers and get total electrician count in parallel
-        const [countRes, dealRes] = await Promise.all([
-          electricianApi.getAll({ limit: '1', page: '1' }),
-          dealerApi.getAll({ limit: '1000' }),
+        // Load the compact dealer option list and electrician total first.
+        const [electricianStats, dealRes] = await Promise.all([
+          electricianApi.getStats(),
+          dealerApi.getOptions(),
         ]);
 
-        const dealData = Array.isArray(dealRes) ? dealRes : (dealRes as any).data ?? [];
+        const dealData = Array.isArray(dealRes) ? dealRes : [];
         setDealers(dealData.map((d: any) => ({ id: d.id, name: d.name, phone: d.phone ?? '', dealerCode: d.dealerCode ?? '' })));
         const dealerMap = new Map(dealData.map((d: any) => [d.id, d.name]));
 
         // Use actual total so this works no matter how many electricians exist
-        const total = Array.isArray(countRes) ? (countRes as any[]).length : (countRes as any).total ?? 50000;
-        const fetchLimit = Math.max(total, 50000);
+        const total = Number(electricianStats?.total ?? 0);
+        const fetchLimit = Math.max(total, 1);
 
         const elecRes = await electricianApi.getAll({ limit: String(fetchLimit), page: '1' });
         const rawElecs = Array.isArray(elecRes) ? elecRes : (elecRes as any).data ?? [];
@@ -532,7 +532,10 @@ export default function AssociatedElectricians({ initialSearch = '' }: { initial
     });
     return counts;
   }, [electricians]);
-  const dealerNames = Object.keys(dealerCounts).sort((a, b) => a.localeCompare(b));
+  const dealerNames = Array.from(new Set([
+    ...dealers.map(dealer => dealer.name).filter(Boolean),
+    ...Object.keys(dealerCounts),
+  ])).sort((a, b) => a.localeCompare(b));
   const visibleDealers = dealerNames.filter(dealer => {
     if (!dealerSearchQuery) return true;
     if (dealer.toLowerCase().includes(dealerSearchQuery)) return true;

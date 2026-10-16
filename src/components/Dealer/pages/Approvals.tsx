@@ -1,5 +1,5 @@
 ﻿'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle, Check, X, Eye, FileSpreadsheet } from 'lucide-react';
 import { dealerApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
@@ -27,6 +27,8 @@ export default function DealerApprovals() {
   const C = useThemePalette();
   const [dealers, setDealers] = useState<PendingDealer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [approvalCounts, setApprovalCounts] = useState({ pending: 0, approved: 0, rejected: 0 });
+  const requestId = useRef(0);
   const [selectedDealer, setSelectedDealer] = useState<PendingDealer | null>(null);
   const [activeView, setActiveView] = useState<ApprovalView>('pending');
   const [confirmState, setConfirmState] = useState<{
@@ -45,9 +47,19 @@ export default function DealerApprovals() {
   const [rejectReason, setRejectReason] = useState('');
 
   useEffect(() => {
+    dealerApi.getStats()
+      .then((stats) => setApprovalCounts({ pending: stats.pending, approved: stats.active, rejected: stats.inactive }))
+      .catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    const currentRequestId = ++requestId.current;
+    setLoading(true);
+    const status = activeView === 'approved' ? 'active' : activeView === 'rejected' ? 'inactive' : 'pending';
     dealerApi
-      .getAll({ limit: '500' })
+      .getAll({ limit: '500', status })
       .then((res) => {
+        if (currentRequestId !== requestId.current) return;
         const data = (Array.isArray(res) ? res : res.data ?? []) as DealerApprovalApiRow[];
         setDealers(
           data.map((d) => ({
@@ -64,12 +76,13 @@ export default function DealerApprovals() {
         );
       })
       .catch(console.error)
-      .finally(() => setLoading(false));
-  }, []);
+      .finally(() => { if (currentRequestId === requestId.current) setLoading(false); });
+    return () => { requestId.current += 1; };
+  }, [activeView]);
 
-  const pending = dealers.filter((d) => d.status === 'pending');
-  const approved = dealers.filter((d) => d.status === 'active');
-  const rejected = dealers.filter((d) => d.status === 'inactive');
+  const pending = activeView === 'pending' ? dealers.filter((d) => d.status === 'pending') : [];
+  const approved = activeView === 'approved' ? dealers.filter((d) => d.status === 'active') : [];
+  const rejected = activeView === 'rejected' ? dealers.filter((d) => d.status === 'inactive') : [];
 
   const visibleDealers = useMemo(() => {
     if (activeView === 'approved') return approved;
@@ -93,6 +106,7 @@ export default function DealerApprovals() {
       onConfirm: async () => {
         try {
           await dealerApi.updateStatus(dealer.id, 'active');
+          setApprovalCounts((counts) => ({ ...counts, pending: Math.max(0, counts.pending - 1), approved: counts.approved + 1 }));
           setDealers((prev) =>
             prev.map((d) =>
               d.id === dealer.id ? { ...d, status: 'active', rejectionReason: '' } : d
@@ -119,6 +133,7 @@ export default function DealerApprovals() {
     try {
       if (rejectState.bulk) {
         await Promise.all(pending.map((dealer) => dealerApi.updateStatus(dealer.id, 'inactive', reason)));
+        setApprovalCounts((counts) => ({ ...counts, pending: Math.max(0, counts.pending - pending.length), rejected: counts.rejected + pending.length }));
         setDealers((prev) =>
           prev.map((dealer) =>
             dealer.status === 'pending'
@@ -130,6 +145,7 @@ export default function DealerApprovals() {
         setActiveView('rejected');
       } else if (rejectState.dealer) {
         await dealerApi.updateStatus(rejectState.dealer.id, 'inactive', reason);
+        setApprovalCounts((counts) => ({ ...counts, pending: Math.max(0, counts.pending - 1), rejected: counts.rejected + 1 }));
         setDealers((prev) =>
           prev.map((dealer) =>
             dealer.id === rejectState.dealer?.id
@@ -148,9 +164,9 @@ export default function DealerApprovals() {
   };
 
   const cards = [
-    { key: 'pending' as const, label: 'Pending', value: pending.length, color: '#F59E0B', bg: '#FFFBEB' },
-    { key: 'approved' as const, label: 'Approved', value: approved.length, color: '#10B981', bg: '#D1FAE5' },
-    { key: 'rejected' as const, label: 'Rejected', value: rejected.length, color: '#EF4444', bg: '#FEE2E2' },
+    { key: 'pending' as const, label: 'Pending', value: approvalCounts.pending, color: '#F59E0B', bg: '#FFFBEB' },
+    { key: 'approved' as const, label: 'Approved', value: approvalCounts.approved, color: '#10B981', bg: '#D1FAE5' },
+    { key: 'rejected' as const, label: 'Rejected', value: approvalCounts.rejected, color: '#EF4444', bg: '#FEE2E2' },
   ];
 
   return (
@@ -287,6 +303,7 @@ export default function DealerApprovals() {
                     message: `Approve all ${pending.length} pending dealers?`,
                     onConfirm: async () => {
                       await Promise.all(pending.map((d) => dealerApi.updateStatus(d.id, 'active')));
+                      setApprovalCounts((counts) => ({ ...counts, pending: Math.max(0, counts.pending - pending.length), approved: counts.approved + pending.length }));
                       setDealers((prev) =>
                         prev.map((d) =>
                           d.status === 'pending'
