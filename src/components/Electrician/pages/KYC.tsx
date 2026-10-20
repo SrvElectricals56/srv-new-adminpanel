@@ -99,7 +99,7 @@ export default function ElectricianKYC() {
   const bulkLock = useRef(false);
   const handleApproveAll = () => setConfirmState({
     show: true, title: 'Approve All KYC', type: 'success',
-    message: 'Approve ALL unverified KYC records across every page, including pending, rejected and not submitted records, regardless of search filters? This is an explicit Super Admin approval even for accounts without uploaded documents.',
+    message: 'Approve all pending KYC records with uploaded documents across every page, regardless of search filters. Accounts without documents remain Not Submitted.',
     onConfirm: async () => {
       if (bulkLock.current) return;
       bulkLock.current = true; setBulkBusy(true);

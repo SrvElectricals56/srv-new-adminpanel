@@ -663,10 +663,9 @@ export default function Electricians({ role }: ElectriciansProps) {
 
       // Date filter → convert to dateFrom / dateTo
       if (dateFilter !== 'all') {
-        // Installed accounts are filtered by their first app login. Accounts
-        // without an install timestamp use their joined date, otherwise every
-        // "Not Installed" date range would necessarily be empty.
-        params.dateField = filterAppInstalled === 'installed' ? 'installed' : 'joined';
+        // Date presets always represent when this electrician was added.
+        // App-install status remains an independent filter.
+        params.dateField = 'joined';
         if (dateFilter !== 'custom') {
           const range = getISTDatePresetRange(dateFilter);
           params.dateFrom = range.from;
@@ -775,6 +774,15 @@ export default function Electricians({ role }: ElectriciansProps) {
   const uniqueCategories = ['all', ...sanitizeOptions(allCategories)];
 
   const filtered = data; // All filters apply before server-side pagination.
+  const hasCompleteCustomDateRange = customDateRange.from !== '' && customDateRange.to !== '';
+  const isDateRangeApplied = dateFilter !== 'all' && (dateFilter !== 'custom' || hasCompleteCustomDateRange);
+  const dateRangeLabel = dateFilter === 'all' ? 'All time' : {
+    today: 'Added today',
+    yesterday: 'Added yesterday',
+    week: 'Added this week',
+    month: 'Added this month',
+    custom: 'Added in custom range',
+  }[dateFilter];
 
   const handleSave = async (form: Partial<Electrician>) => {
     if (!form.name?.trim() || !form.phone?.trim() || !form.city?.trim() || !form.state?.trim()) {
@@ -928,7 +936,7 @@ export default function Electricians({ role }: ElectriciansProps) {
       {/* Summary Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 12, marginBottom: 22 }}>
         {[
-          { label: 'Total', value: totalCount, Icon: Users, color: '#3B82F6', bg: '#EFF6FF' },
+          { label: 'Total Electricians', value: totalCount, subtitle: isDateRangeApplied ? dateRangeLabel : 'All time', Icon: Users, color: '#3B82F6', bg: '#EFF6FF' },
           ...(['Silver','Gold','Platinum','Diamond'] as MemberTier[]).map(t => {
             const tierIcons: Record<string, React.ReactNode> = { Silver: <Medal size={18} />, Gold: <Award size={18} />, Platinum: <Trophy size={18} />, Diamond: <Gem size={18} /> };
             return {
@@ -937,6 +945,7 @@ export default function Electricians({ role }: ElectriciansProps) {
               Icon: () => <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{tierIcons[t]}</span>, 
               color: TIER_CONFIG[t].color, 
               bg: TIER_CONFIG[t].bg,
+              subtitle: undefined,
             };
           }),
         ].map((s, i) => (
@@ -948,6 +957,7 @@ export default function Electricians({ role }: ElectriciansProps) {
               <div>
                 <div style={{ fontSize: 22, fontWeight: 800, color: C.text }}>{s.value}</div>
                 <div style={{ fontSize: 11, color: s.color, fontWeight: 700 }}>{s.label}</div>
+                {s.subtitle && <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{s.subtitle}</div>}
               </div>
             </div>
           </div>
@@ -1013,9 +1023,9 @@ export default function Electricians({ role }: ElectriciansProps) {
         {/* Date Filter */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <Calendar size={14} style={{ color: dateFilter !== 'all' ? C.red : C.muted }} />
-          <select value={dateFilter} aria-label="Account date" title={filterAppInstalled === 'installed' ? 'Filter by first app login date' : 'Filter by account joined date'} onChange={e => handleInstallDateChange(e.target.value as typeof dateFilter)}
+          <select value={dateFilter} aria-label="Account date" title="Filter by account added date" onChange={e => handleInstallDateChange(e.target.value as typeof dateFilter)}
             style={{ padding: '9px 12px', border: `1.5px solid ${dateFilter !== 'all' ? C.red : C.border}`, borderRadius: 8, fontSize: 13, outline: 'none', background: C.surface, color: C.text, cursor: 'pointer', minWidth: 120 }}>
-            <option value="all">{filterAppInstalled === 'installed' ? 'Install Date' : 'Joined Date'}: All Time</option>
+            <option value="all">Added Date: All Time</option>
             <option value="today">Today</option>
             <option value="yesterday">Yesterday</option>
             <option value="week">This Week</option>

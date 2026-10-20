@@ -505,7 +505,9 @@ export default function Dealers({ role }: DealersProps) {
 
       // Date filter → convert to dateFrom / dateTo
       if (dateFilter !== 'all') {
-        params.dateField = filterAppInstalled === 'installed' ? 'installed' : 'joined';
+        // Date presets always represent when this dealer was added. App-install
+        // status remains an independent filter.
+        params.dateField = 'joined';
         if (dateFilter !== 'custom') {
           const range = getISTDatePresetRange(dateFilter);
           params.dateFrom = range.from;
@@ -605,6 +607,15 @@ export default function Dealers({ role }: DealersProps) {
   const uniqueDistricts = ['all', ...sanitizeOptions(allDistricts)];
 
   const filtered = data; // Server-side pagination handles filtering
+  const hasCompleteCustomDateRange = customDateRange.from !== '' && customDateRange.to !== '';
+  const isDateRangeApplied = dateFilter !== 'all' && (dateFilter !== 'custom' || hasCompleteCustomDateRange);
+  const dateRangeLabel = dateFilter === 'all' ? 'All time' : {
+    today: 'Added today',
+    yesterday: 'Added yesterday',
+    week: 'Added this week',
+    month: 'Added this month',
+    custom: 'Added in custom range',
+  }[dateFilter];
 
   const handleSave = async (form: Partial<Dealer>) => {
     if (!form.name?.trim() || !form.phone?.trim() || !form.town?.trim() || !form.state?.trim()) {
@@ -747,7 +758,9 @@ export default function Dealers({ role }: DealersProps) {
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(175px,1fr))', gap: 14, marginBottom: 22 }}>
         {[
-          { label: 'Total Dealers', value: dealerStats.total, Icon: Store, color: '#3B82F6', bg: '#EFF6FF' },
+          // `totalCount` is the full matching count returned by the API, not
+          // only the dealers visible on the current pagination page.
+          { label: 'Total Dealers', value: isDateRangeApplied ? totalCount : dealerStats.total, subtitle: isDateRangeApplied ? dateRangeLabel : 'All time', Icon: Store, color: '#3B82F6', bg: '#EFF6FF' },
           { label: 'Active', value: dealerStats.active, Icon: CheckCircle, color: '#065F46', bg: '#D1FAE5' },
           { label: 'Pending Approval', value: dealerStats.pending, Icon: Clock, color: '#92400E', bg: '#FEF3C7' },
           { label: 'App Installed', value: dealerStats.installed, Icon: Smartphone, color: '#047857', bg: '#D1FAE5', appFilter: 'installed' },
@@ -755,7 +768,7 @@ export default function Dealers({ role }: DealersProps) {
         ].map((s, i) => (
           <div key={i} onClick={() => s.appFilter && handleAppStatusChange(s.appFilter)} style={{ background: C.card, borderRadius: 14, padding: '16px 18px', border: `1px solid ${s.appFilter && filterAppInstalled === s.appFilter ? s.color : C.border}`, display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', cursor: s.appFilter ? 'pointer' : 'default' }}>
             <div style={{ width: 42, height: 42, borderRadius: 12, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.color }}><s.Icon size={20} /></div>
-            <div><div style={{ fontSize: 22, fontWeight: 800, color: C.text }}>{s.value}</div><div style={{ fontSize: 12, color: s.color, fontWeight: 700 }}>{s.label}</div></div>
+            <div><div style={{ fontSize: 22, fontWeight: 800, color: C.text }}>{s.value}</div><div style={{ fontSize: 12, color: s.color, fontWeight: 700 }}>{s.label}</div>{s.subtitle && <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{s.subtitle}</div>}</div>
           </div>
         ))}
       </div>
@@ -777,9 +790,9 @@ export default function Dealers({ role }: DealersProps) {
         {/* Date Filter */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <Calendar size={14} style={{ color: dateFilter !== 'all' ? C.red : C.muted }} />
-          <select value={dateFilter} aria-label="Account date" title={filterAppInstalled === 'installed' ? 'Filter by first app login date' : 'Filter by account joined date'} onChange={e => handleInstallDateChange(e.target.value as typeof dateFilter)}
+          <select value={dateFilter} aria-label="Account date" title="Filter by account added date" onChange={e => handleInstallDateChange(e.target.value as typeof dateFilter)}
             style={{ padding: '9px 12px', border: `1.5px solid ${dateFilter !== 'all' ? C.red : C.border}`, borderRadius: 8, fontSize: 13, outline: 'none', background: C.surface, color: C.text, cursor: 'pointer', minWidth: 120 }}>
-            <option value="all">{filterAppInstalled === 'installed' ? 'Install Date' : 'Joined Date'}: All Time</option>
+            <option value="all">Added Date: All Time</option>
             <option value="today">Today</option>
             <option value="yesterday">Yesterday</option>
             <option value="week">This Week</option>
