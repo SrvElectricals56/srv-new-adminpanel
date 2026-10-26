@@ -480,23 +480,27 @@ export default function AssociatedElectricians({ initialSearch = '' }: { initial
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
     const loadData = async () => {
+      setLoading(true);
       try {
-        // Load the compact dealer option list and electrician total first.
-        const [electricianStats, dealRes] = await Promise.all([
-          electricianApi.getStats(),
+        // Searching a dealer should not download every electrician before the
+        // result can be shown. The API already searches dealer name, number and
+        // code, so request only the matching associated electricians.
+        const search = initialSearch.trim();
+        const [dealRes, elecRes] = await Promise.all([
           dealerApi.getOptions(),
+          electricianApi.getAll({
+            page: '1',
+            limit: '500',
+            ...(search ? { search } : {}),
+          }),
         ]);
 
+        if (cancelled) return;
         const dealData = Array.isArray(dealRes) ? dealRes : [];
         setDealers(dealData.map((d: any) => ({ id: d.id, name: d.name, phone: d.phone ?? '', dealerCode: d.dealerCode ?? '' })));
         const dealerMap = new Map(dealData.map((d: any) => [d.id, d.name]));
-
-        // Use actual total so this works no matter how many electricians exist
-        const total = Number(electricianStats?.total ?? 0);
-        const fetchLimit = Math.max(total, 1);
-
-        const elecRes = await electricianApi.getAll({ limit: String(fetchLimit), page: '1' });
         const rawElecs = Array.isArray(elecRes) ? elecRes : (elecRes as any).data ?? [];
 
         setElectricians(rawElecs.map((e: any) => ({
@@ -507,11 +511,12 @@ export default function AssociatedElectricians({ initialSearch = '' }: { initial
       } catch (err) {
         console.error('Failed to load data:', err);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
-    loadData();
-  }, []);
+    void loadData();
+    return () => { cancelled = true; };
+  }, [initialSearch]);
   const [filterDealer, setFilterDealer] = useState('all');
   const [filterStatus, setFilterStatus] = useState<'all' | UserStatus>('all');
   const [showExport, setShowExport] = useState(false);
@@ -719,7 +724,7 @@ export default function AssociatedElectricians({ initialSearch = '' }: { initial
         <span style={{ fontSize: 12, color: C.muted }}>{visibleDealers.length} dealers found</span>
         <span style={{ fontSize: 13, color: C.muted, marginLeft: 'auto' }}>{filtered.length} electricians</span>
       </div>
-      <ExportModal show={showExport} onClose={() => setShowExport(false)} title="Associated Electricians" fileName="dealer-electricians" getData={() => exportRows.map(e => ({ Name: e.name, Code: e.electricianCode, Phone: e.phone, Category: e.subCategory, Tier: e.tier, Status: e.status, City: e.city, State: e.state, Dealer: e.dealerName, Scans: e.totalScans, Points: e.totalPoints, Wallet: e.walletBalance }))} />
+      <ExportModal show={showExport} onClose={() => setShowExport(false)} title="Associated Electricians" fileName="dealer-electricians" getData={() => exportRows.map(e => ({ Name: e.name, Code: e.electricianCode, Phone: e.phone, Category: e.subCategory, Tier: e.tier, Status: e.status, AppInstallationStatus: e.appInstalled ? 'App Installed' : 'Not Installed', City: e.city, State: e.state, Dealer: e.dealerName, Scans: e.totalScans, Points: e.totalPoints, Wallet: e.walletBalance }))} />
 
       {dealerSearchQuery && (
         <div style={{ display: 'grid', gap: 14, marginBottom: 20 }}>
