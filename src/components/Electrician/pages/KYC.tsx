@@ -99,7 +99,7 @@ export default function ElectricianKYC() {
   const bulkLock = useRef(false);
   const handleApproveAll = () => setConfirmState({
     show: true, title: 'Approve All KYC', type: 'success',
-    message: 'Approve all pending KYC records with uploaded documents across every page, regardless of search filters. Accounts without documents remain Not Submitted.',
+    message: 'Verify all pending KYC records across every page, regardless of search filters or whether documents are uploaded.',
     onConfirm: async () => {
       if (bulkLock.current) return;
       bulkLock.current = true; setBulkBusy(true);
@@ -257,13 +257,13 @@ export default function ElectricianKYC() {
           await electricianApi.update(doc.id, {
             kycStatus: 'pending',
             aadharNumber: null,
-            aadharFrontImage: null, aadharBackImage: null,
+            aadharFrontImage: null,
             kycRejectionReason: null,
           });
           setDocuments(prev => prev.map(d => d.id === doc.id ? {
             ...d, kycStatus: 'pending',
             aadharNumber: undefined,
-            aadharFrontImage: undefined, aadharBackImage: undefined,
+            aadharFrontImage: undefined,
             kycRejectionReason: undefined,
           } : d));
           void loadStats();

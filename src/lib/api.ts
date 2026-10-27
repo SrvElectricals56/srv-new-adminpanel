@@ -875,8 +875,33 @@ export const referralApi = {
   getStats: () => request<any>('/referrals/stats'),
 };
 
-export const approveAllKyc = (role: 'electrician' | 'dealer') =>
-  request<{ approved: number }>(`/${role}s/kyc/approve-all`, { method: 'POST' });
+export async function approveAllKyc(role: 'electrician' | 'dealer'): Promise<{ approved: number }> {
+  const api = role === 'dealer' ? dealerApi : electricianApi;
+
+  // Collect every page before updating: approvals remove rows from the pending
+  // result set, so updating while paginating would skip records.
+  const ids = new Set<string>();
+  const limit = 50;
+  for (let page = 1; ; page++) {
+    const result = await api.getAll({
+      page: String(page), limit: String(limit), kycStatus: 'pending',
+    });
+    for (const item of result.data) {
+      // Also check locally in case the API ignores the status filter.
+      if (item.kycStatus === 'pending') ids.add(item.id);
+    }
+    if (result.data.length === 0 || page * limit >= result.total) break;
+  }
+
+  let approved = 0;
+  for (const id of ids) {
+    const item = await api.getOne(id);
+    if (item.kycStatus !== 'pending') continue;
+    await api.update(id, { kycStatus: 'verified', kycRejectionReason: null });
+    approved++;
+  }
+  return { approved };
+}
 
 export async function uploadKycDocument(file: File): Promise<string> {
   const body = new FormData();

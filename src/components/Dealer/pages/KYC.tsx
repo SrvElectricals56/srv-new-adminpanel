@@ -112,7 +112,7 @@ export default function KYCManagement() {
   const bulkLock = useRef(false);
   const handleApproveAll = () => setConfirmState({
     show: true, title: 'Approve All KYC', type: 'success',
-    message: 'Approve all pending KYC records with uploaded documents across every page, regardless of search filters. Accounts without documents remain Not Submitted.',
+    message: 'Verify all pending KYC records across every page, regardless of search filters or whether documents are uploaded.',
     onConfirm: async () => {
       if (bulkLock.current) return;
       bulkLock.current = true; setBulkBusy(true);
@@ -244,14 +244,14 @@ export default function KYCManagement() {
           await dealerApi.update(doc.id, {
             kycStatus: 'not_submitted',
             aadharNumber: null, panNumber: null, gstNumber: null,
-            aadharFrontImage: null, aadharBackImage: null,
+            aadharFrontImage: null,
             panDocument: null, gstDocument: null,
             kycRejectionReason: null,
           });
           setDocuments(prev => prev.map(d => d.id === doc.id ? {
             ...d, kycStatus: 'not_submitted',
             aadharNumber: undefined, panNumber: undefined, gstNumber: undefined,
-            aadharFrontImage: undefined, aadharBackImage: undefined,
+            aadharFrontImage: undefined,
             panDocument: undefined, gstDocument: undefined,
             kycRejectionReason: undefined,
           } : d));

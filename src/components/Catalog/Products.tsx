@@ -282,6 +282,7 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterStock, setFilterStock] = useState('all');
   const [filterBadge, setFilterBadge] = useState('all');
+  const [uniqueBadges, setUniqueBadges] = useState<string[]>([]);
   
   // â”€â”€ Server-side pagination state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [currentPage, setCurrentPage] = useState(1);
@@ -343,6 +344,7 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
           productCategoryApi.getAll().catch(() => []),
         ]);
         const allProducts = (Array.isArray(allRes) ? allRes : (allRes as { data?: Record<string, unknown>[] }).data ?? []) as Record<string, unknown>[];
+        setUniqueBadges(Array.from(new Set(allProducts.map(p => String(p.badge ?? '')).filter(Boolean))));
         const productCats = allProducts.map((p: any) => String(p.category ?? '').trim()).filter(Boolean);
         const masterCats = (Array.isArray(categoryRows) ? categoryRows : [])
           .filter((c: any) => c?.isActive !== false)
@@ -410,8 +412,6 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
   
   // Debug logging
   const inputStyle: React.CSSProperties = { width: '100%', padding: '9px 12px', border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 13.5, outline: 'none', background: C.surface, color: C.text, boxSizing: 'border-box' };
-
-  const uniqueBadges = Array.from(new Set(data.map((p: Product) => p.badge).filter(Boolean)));
 
   const filtered = data.filter((p: Product) => {
     const q = search.toLowerCase();
