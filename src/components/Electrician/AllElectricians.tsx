@@ -16,6 +16,7 @@ import PasswordInputField from '@/components/Shared/PasswordInputField';
 import CustomerActivityPanel from '@/components/Shared/CustomerActivityPanel';
 import { I } from '@/lib/iconMap';
 import { formatISTDate, formatISTDateTime, getISTDatePresetRange } from '@/lib/dateIST';
+import layoutStyles from './AllElectricians.module.css';
 
 interface ElectriciansProps {
   role: AdminRole;
@@ -378,7 +379,7 @@ function EditModal({ el, onClose, onSave, dealers = [] }: { el: Electrician | nu
             </div>
             <div>
               <label style={labelStyle}>Full Name *</label>
-              <input style={inputStyle} value={form.name ?? ''} onChange={e => f('name', e.target.value)} placeholder="e.g. Harshvardhan Singh" />
+              <input style={inputStyle} value={form.name ?? ''} onChange={e => f('name', e.target.value)} placeholder="e.g. Radhe Rahde" />
             </div>
             <div>
               <label style={labelStyle}>Phone Number *</label>
@@ -951,10 +952,12 @@ export default function Electricians({ role }: ElectriciansProps) {
       </div>
 
       {/* Filters */}
-      <div style={{ background: C.card, borderRadius: 14, padding: '14px 18px', border: `1px solid ${C.border}`, marginBottom: 16, display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', position: 'relative' }}>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, phone, city, code, dealer..." style={{ ...inputStyle, flex: '1 1 280px', minWidth: 'min(280px, 100%)', maxWidth: '100%' }} onFocus={e => (e.target as HTMLInputElement).style.borderColor = C.red} onBlur={e => (e.target as HTMLInputElement).style.borderColor = C.border} />
+      <div className={layoutStyles.filterPanel} style={{ background: C.card, border: `1px solid ${C.border}` }}>
+        <input className={layoutStyles.filterSearch} value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, phone, city, code, dealer..." style={{ ...inputStyle, maxWidth: '100%' }} onFocus={e => (e.target as HTMLInputElement).style.borderColor = C.red} onBlur={e => (e.target as HTMLInputElement).style.borderColor = C.border} />
+        <div className={layoutStyles.filterRowBreak} aria-hidden="true" />
 
         <select
+          className={layoutStyles.quickFilter}
           value={filterWelcomeBonus}
           onChange={e => setFilterWelcomeBonus(e.target.value)}
           style={{ padding: '9px 12px', borderRadius: 10, border: `1px solid ${filterWelcomeBonus !== 'all' ? C.red : C.border}`, background: C.bg, color: C.text, fontSize: 13, cursor: 'pointer', minWidth: 180, flexShrink: 0 }}
@@ -964,6 +967,7 @@ export default function Electricians({ role }: ElectriciansProps) {
         </select>
 
         <select
+          className={layoutStyles.quickFilter}
           value={filterCategory}
           onChange={e => setFilterCategory(e.target.value)}
           style={{ padding: '9px 12px', borderRadius: 10, border: `1px solid ${filterCategory !== 'all' ? C.red : C.border}`, background: C.bg, color: C.text, fontSize: 13, cursor: 'pointer', minWidth: 170, flexShrink: 0 }}
@@ -973,6 +977,7 @@ export default function Electricians({ role }: ElectriciansProps) {
         </select>
 
         <select
+          className={layoutStyles.quickFilter}
           value={filterAppInstalled}
           onChange={e => handleAppStatusChange(e.target.value)}
           style={{ padding: '9px 12px', borderRadius: 10, border: `1px solid ${filterAppInstalled !== 'all' ? C.red : C.border}`, background: C.bg, color: C.text, fontSize: 13, cursor: 'pointer', minWidth: 150, flexShrink: 0 }}
@@ -983,6 +988,7 @@ export default function Electricians({ role }: ElectriciansProps) {
         </select>
 
         <select
+          className={layoutStyles.quickFilter}
           value={filterActivityStatus}
           onChange={e => setFilterActivityStatus(e.target.value)}
           title="Based on QR scan recency"
@@ -995,9 +1001,9 @@ export default function Electricians({ role }: ElectriciansProps) {
         </select>
 
         {/* Date Filter */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div className={layoutStyles.dateFilter}>
           <Calendar size={14} style={{ color: dateFilter !== 'all' ? C.red : C.muted }} />
-          <select value={dateFilter} aria-label="Account date" title={filterAppInstalled === 'installed' ? 'Filter by first app login date' : 'Filter by account joined date'} onChange={e => handleInstallDateChange(e.target.value as typeof dateFilter)}
+          <select className={layoutStyles.dateSelect} value={dateFilter} aria-label="Account date" title={filterAppInstalled === 'installed' ? 'Filter by first app login date' : 'Filter by account joined date'} onChange={e => handleInstallDateChange(e.target.value as typeof dateFilter)}
             style={{ padding: '9px 12px', border: `1.5px solid ${dateFilter !== 'all' ? C.red : C.border}`, borderRadius: 8, fontSize: 13, outline: 'none', background: C.surface, color: C.text, cursor: 'pointer', minWidth: 120 }}>
             <option value="all">{filterAppInstalled === 'installed' ? 'Install Date' : 'Joined Date'}: All Time</option>
             <option value="today">Today</option>
@@ -1009,7 +1015,7 @@ export default function Electricians({ role }: ElectriciansProps) {
         </div>
 
         {dateFilter === 'custom' && (
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div className={layoutStyles.customDateRange}>
             <input type="date" value={customDateRange.from} onChange={e => setCustomDateRange(prev => ({ ...prev, from: e.target.value }))}
               style={{ padding: '8px 10px', border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 12, outline: 'none', background: C.surface, color: C.text }} />
             <span style={{ color: C.muted, fontSize: 12 }}>to</span>
@@ -1021,13 +1027,14 @@ export default function Electricians({ role }: ElectriciansProps) {
         {/* Active filter count badge */}
         {(filterTier !== 'all' || filterStatus !== 'all' || filterActivityStatus !== 'all' || filterState !== 'all' || filterCity !== 'all' || filterCategory !== 'all' || filterBank !== 'all' || filterWelcomeBonus !== 'all' || filterAppInstalled !== 'all' || dateFilter !== 'all') && (
           <button onClick={() => { setFilterTier('all'); setFilterStatus('all'); setFilterActivityStatus('all'); setFilterState('all'); setFilterCity('all'); setFilterCategory('all'); setFilterBank('all'); setFilterWelcomeBonus('all'); setFilterAppInstalled('all'); setDateFilter('all'); setCustomDateRange({ from: '', to: '' }); }}
+            className={layoutStyles.clearFilters}
             style={{ padding: '8px 12px', borderRadius: 8, border: `1px solid ${C.red}`, background: '#FFF0F0', color: C.red, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4 }}>
             Clear Filters
           </button>
         )}
 
         {/* Filter icon button */}
-        <div style={{ position: 'relative' }}>
+        <div className={layoutStyles.filterMenu}>
           <button
             onClick={() => setShowFilterPopup(p => !p)}
             style={{
@@ -1073,7 +1080,6 @@ export default function Electricians({ role }: ElectriciansProps) {
                     { label: 'Category', value: filterCategory, set: setFilterCategory, options: [['all','All Categories'], ...uniqueCategories.filter(c => c !== 'all').map(c => [c, c])] },
                     { label: 'Bank Account', value: filterBank, set: setFilterBank, options: [['all','All'],['linked','Linked'],['not_linked','Not Linked']] },
                     { label: 'Bonus', value: filterWelcomeBonus, set: setFilterWelcomeBonus, options: [['all','All Bonus'],['welcome_back_bonus','Welcome Back Bonus']] },
-                    { label: 'Electrician', value: filterCategory, set: setFilterCategory, options: [['all','All Electrician'], ...uniqueCategories.filter(c => c !== 'all').map(c => [c, c])] },
                     { label: 'App Status', value: filterAppInstalled, set: setFilterAppInstalled, options: [['all','All'],['installed','App Installed'],['not_installed','Not Installed']] },
                   ].map(f => (
                     <div key={f.label}>
@@ -1107,7 +1113,7 @@ export default function Electricians({ role }: ElectriciansProps) {
           )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: 'auto' }}>
+        <div className={layoutStyles.filterMeta}>
           <ViewModeToggle value={viewMode} onChange={setViewMode} accent={C.red} border={C.border} activeBg="#FFF0F0" inactiveBg={C.card} muted={C.muted} />
           <span style={{ fontSize: 13, color: C.muted, whiteSpace: 'nowrap', flexShrink: 0 }}>{filtered.length} of {totalCount} total</span>
         </div>

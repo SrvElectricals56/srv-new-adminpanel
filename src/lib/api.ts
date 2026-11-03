@@ -1,11 +1,13 @@
 ﻿// Central API client for SRV Admin Backend
 // Local backend runs at http://127.0.0.1:3001/api/v1
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '');
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '');
 
-if (!BASE_URL) {
+if (!API_BASE_URL) {
   throw new Error('NEXT_PUBLIC_API_URL must be configured for the admin panel.');
 }
+
+const BASE_URL = API_BASE_URL;
 
 // â”€â”€â”€ Token helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const getToken = (): string | null =>

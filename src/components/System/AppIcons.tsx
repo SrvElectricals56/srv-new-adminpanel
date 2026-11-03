@@ -1,14 +1,14 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { Plus, Pencil, Trash2, Upload, Image, CheckCircle, Circle } from 'lucide-react';
+import { Pencil, Trash2, Image, CheckCircle, Smartphone, Info } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
 import { appIconApi } from '@/lib/api';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 import AlertDialog from '@/components/Shared/AlertDialog';
 import type { AppIcon } from '@/lib/types';
 
-const EMPTY_FORM = { name: '', imageUrl: '', isActive: false, displayOrder: 0 };
+const EMPTY_FORM = { name: '', imageUrl: '', nativeKey: null as AppIcon['nativeKey'], isActive: false, displayOrder: 0 };
 const API_ORIGIN = process.env.NEXT_PUBLIC_API_URL!.replace(/\/api\/v1\/?$/, '');
 
 function normalizeIconUrl(value: string | null | undefined): string {
@@ -38,7 +38,6 @@ export default function AppIcons({ role }: { role?: import('@/lib/types').AdminR
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
-  const [uploading, setUploading] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [alertDialog, setAlertDialog] = useState<{ show: boolean; title: string; message: string; type: 'error' | 'success' | 'warning' | 'info' }>({ show: false, title: '', message: '', type: 'error' });
 
@@ -63,29 +62,10 @@ export default function AppIcons({ role }: { role?: import('@/lib/types').AdminR
     inactive: icons.filter(i => !i.isActive).length,
   }), [icons]);
 
-  const openCreate = () => {
-    setForm(EMPTY_FORM);
-    setEditingId(null);
-    setShowModal(true);
-  };
-
   const openEdit = (icon: AppIcon) => {
-    setForm({ name: icon.name, imageUrl: icon.imageUrl ?? '', isActive: icon.isActive, displayOrder: icon.displayOrder });
+    setForm({ name: icon.name, imageUrl: icon.imageUrl ?? '', nativeKey: icon.nativeKey ?? null, isActive: icon.isActive, displayOrder: icon.displayOrder });
     setEditingId(icon.id);
     setShowModal(true);
-  };
-
-  const handleFileUpload = async (file: File) => {
-    if (!file) return;
-    setUploading(true);
-    try {
-      const url = await appIconApi.uploadIcon(file);
-      setForm(prev => ({ ...prev, imageUrl: url }));
-    } catch (err: any) {
-      setAlertDialog({ show: true, title: 'Upload Failed', message: err.message || 'Could not upload image', type: 'error' });
-    } finally {
-      setUploading(false);
-    }
   };
 
   const handleSave = async () => {
@@ -94,7 +74,7 @@ export default function AppIcons({ role }: { role?: import('@/lib/types').AdminR
       return;
     }
     try {
-      const payload: any = { name: form.name, imageUrl: form.imageUrl, isActive: form.isActive, displayOrder: form.displayOrder };
+      const payload: any = { name: form.name, imageUrl: form.imageUrl, nativeKey: form.nativeKey, isActive: form.isActive, displayOrder: form.displayOrder };
       if (!editingId && !form.isActive) delete payload.isActive;
       if (editingId) {
         await appIconApi.update(editingId, payload);
@@ -158,19 +138,18 @@ export default function AppIcons({ role }: { role?: import('@/lib/types').AdminR
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
           <div style={{ fontSize: 22, fontWeight: 800, color: C.text }}>App Icons</div>
-          <div style={{ fontSize: 13, color: C.muted, marginTop: 4 }}>Manage app launcher icons — set default SRV logo or upload custom icons</div>
+          <div style={{ fontSize: 13, color: C.muted, marginTop: 4 }}>Switch the launcher icon used by installed SRV Android and iOS apps</div>
         </div>
-        {canEdit && (
-          <button onClick={openCreate} style={{
-            background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`,
-            border: 'none', borderRadius: 12, padding: '10px 20px',
-            color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: 8,
-            boxShadow: `0 4px 14px ${C.red}40`,
-          }}>
-            <Plus size={16} /> Add Icon
-          </button>
-        )}
+      </div>
+
+      <div style={{
+        display: 'flex', gap: 12, alignItems: 'flex-start', marginBottom: 24,
+        padding: '14px 16px', borderRadius: 12, background: '#EFF6FF', border: '1px solid #BFDBFE', color: '#1E3A8A',
+      }}>
+        <Info size={18} style={{ flexShrink: 0, marginTop: 1 }} />
+        <div style={{ fontSize: 12, lineHeight: 1.6 }}>
+          <strong>Store-safe launcher icons:</strong> Default SRV, Diwali, and Republic Day are bundled in the mobile release and can be switched remotely. A completely new design must first be bundled in a Play Store/App Store update; phones cannot install arbitrary launcher artwork from an uploaded URL.
+        </div>
       </div>
 
       {/* Stats */}
@@ -197,15 +176,7 @@ export default function AppIcons({ role }: { role?: import('@/lib/types').AdminR
         <div style={{ textAlign: 'center', padding: 60, borderRadius: 16, border: `2px dashed ${C.border}`, background: C.surface }}>
           <Image size={48} style={{ color: C.muted, marginBottom: 16, opacity: 0.4 }} />
           <div style={{ fontSize: 16, fontWeight: 700, color: C.text, marginBottom: 8 }}>No app icons yet</div>
-          <div style={{ fontSize: 13, color: C.muted, marginBottom: 20 }}>Add your first app icon to customize the launcher icon</div>
-          {canEdit && (
-            <button onClick={openCreate} style={{
-              background: C.red, border: 'none', borderRadius: 10, padding: '10px 24px',
-              color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer',
-            }}>
-              <Plus size={16} style={{ marginRight: 8 }} />Add First Icon
-            </button>
-          )}
+          <div style={{ fontSize: 13, color: C.muted }}>Run the launcher-icon database migration to install the bundled icon catalog.</div>
         </div>
       ) : (
         <div style={{ display: 'grid', gap: 12 }}>
@@ -246,13 +217,13 @@ export default function AppIcons({ role }: { role?: import('@/lib/types').AdminR
                   }}>{icon.isActive ? 'ACTIVE' : 'INACTIVE'}</span>
                 </div>
                 <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>
-                  {icon.imageUrl ? 'Image uploaded' : 'No image'}
+                  {icon.nativeKey ? `Bundled mobile key: ${icon.nativeKey}` : 'Legacy preview only — cannot be activated on phones'}
                 </div>
               </div>
 
               {/* Actions */}
               <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                {canEdit && !icon.isActive && (
+                {canEdit && !icon.isActive && icon.nativeKey && (
                   <button onClick={() => handleSetActive(icon.id)} title="Set as active"
                     style={{
                       background: 'transparent', border: `1.5px solid ${C.border}`,
@@ -281,7 +252,7 @@ export default function AppIcons({ role }: { role?: import('@/lib/types').AdminR
                     <Pencil size={14} />
                   </button>
                 )}
-                {canDelete && (
+                {canDelete && !icon.nativeKey && (
                   <button onClick={() => setDeleteId(icon.id)} title="Delete"
                     style={{
                       background: 'transparent', border: `1.5px solid ${C.border}`,
@@ -314,7 +285,7 @@ export default function AppIcons({ role }: { role?: import('@/lib/types').AdminR
             border: `1px solid ${C.border}`,
           }} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: 18, fontWeight: 800, color: C.text, marginBottom: 20 }}>
-              {editingId ? 'Edit App Icon' : 'Add New App Icon'}
+              Edit Launcher Icon
             </div>
 
             {/* Name */}
@@ -332,54 +303,36 @@ export default function AppIcons({ role }: { role?: import('@/lib/types').AdminR
               />
             </div>
 
-            {/* Image Upload */}
+            {/* Bundled native target */}
             <div style={{ marginBottom: 20 }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: C.muted, marginBottom: 6 }}>Icon Image (PNG, JPG, WEBP — 512x512 recommended)</label>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: C.muted, marginBottom: 6 }}>Installed App Target</label>
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 12,
                 padding: '12px 16px', borderRadius: 12,
-                border: `2px dashed ${C.border}`, background: C.surface,
+                border: `1.5px solid ${C.border}`, background: C.surface,
               }}>
                 {form.imageUrl ? (
                   <div style={{ width: 48, height: 48, borderRadius: 10, overflow: 'hidden', flexShrink: 0, border: `1px solid ${C.border}` }}>
                     <img src={form.imageUrl} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   </div>
                 ) : (
-                  <Image size={24} style={{ color: C.muted, flexShrink: 0, opacity: 0.5 }} />
+                  <Smartphone size={24} style={{ color: C.muted, flexShrink: 0, opacity: 0.7 }} />
                 )}
-                <div style={{ flex: 1, minWidth: 0, fontSize: 12, color: C.muted }}>
-                  {form.imageUrl ? 'Image selected' : 'Click to upload icon image'}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{form.nativeKey ?? 'Not bundled'}</div>
+                  <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>This key is compiled into the Play Store and App Store build.</div>
                 </div>
-                <label style={{
-                  background: C.bg, border: `1.5px solid ${C.border}`,
-                  borderRadius: 8, padding: '7px 14px', cursor: uploading ? 'wait' : 'pointer',
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  fontSize: 12, fontWeight: 600, color: C.text,
-                  opacity: uploading ? 0.7 : 1,
-                }}>
-                  <Upload size={14} />
-                  {uploading ? 'Uploading...' : 'Upload'}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    hidden
-                    disabled={uploading}
-                    onChange={e => {
-                      const file = e.target.files?.[0];
-                      if (file) handleFileUpload(file);
-                    }}
-                  />
-                </label>
               </div>
             </div>
 
             {/* Active Toggle */}
             <div style={{ display: 'flex', gap: 16, marginBottom: 20, alignItems: 'center' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}>
-                <div onClick={() => setForm(prev => ({ ...prev, isActive: !prev.isActive }))} style={{
+                <div onClick={() => form.nativeKey && setForm(prev => ({ ...prev, isActive: !prev.isActive }))} style={{
                   width: 44, height: 24, borderRadius: 12,
                   background: form.isActive ? C.red : C.border,
-                  position: 'relative', transition: 'background 0.2s', cursor: 'pointer', flexShrink: 0,
+                  position: 'relative', transition: 'background 0.2s', cursor: form.nativeKey ? 'pointer' : 'not-allowed', flexShrink: 0,
+                  opacity: form.nativeKey ? 1 : 0.55,
                 }}>
                   <div style={{
                     width: 20, height: 20, borderRadius: '50%', background: 'white',

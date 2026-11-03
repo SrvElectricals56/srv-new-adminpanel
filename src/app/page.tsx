@@ -10,6 +10,7 @@ import SrvLogoLoader from '@/components/Shared/SrvLogoLoader';
 import AlertDialog from '@/components/Shared/AlertDialog';
 import { useAppContext } from '@/lib/appContext';
 import type { AdminRole } from '@/lib/types';
+import { connectAdminRealtime, type RealtimeChangeEvent } from '@/lib/realtime';
 
 // ── Lazy-loaded page chunks ────────────────────────────────────────────────────
 // Each component is split into its own JS chunk and only downloaded when first visited.
@@ -279,6 +280,7 @@ export default function Home() {
   const [searchError, setSearchError] = useState('');
   const [routeLoading, setRouteLoading] = useState(false);
   const [pendingNotifications, setPendingNotifications] = useState<Record<string, number>>({});
+  const [realtimeVersion, setRealtimeVersion] = useState(0);
   const [crudAlert, setCrudAlert] = useState<{ show: boolean; title: string; message: string; type: 'success' | 'info' }>({
     show: false,
     title: '',
@@ -323,13 +325,35 @@ export default function Home() {
     const onVisibility = () => { if (document.visibilityState === 'visible') void refreshPendingNotifications(); };
     document.addEventListener('visibilitychange', onVisibility);
     window.addEventListener('srv-crud-success', refreshPendingNotifications);
+    window.addEventListener('srv-realtime-change', refreshPendingNotifications);
     return () => {
       cancelled = true;
       window.clearInterval(interval);
       document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('srv-crud-success', refreshPendingNotifications);
+      window.removeEventListener('srv-realtime-change', refreshPendingNotifications);
     };
   }, [loggedIn, role]);
+
+  useEffect(() => {
+    if (!loggedIn) return;
+
+    let refreshTimer: number | null = null;
+    const disconnect = connectAdminRealtime((change: RealtimeChangeEvent) => {
+      window.dispatchEvent(new CustomEvent('srv-realtime-change', { detail: change }));
+      if (refreshTimer !== null) window.clearTimeout(refreshTimer);
+      // Collapse several writes from one backend transaction into one reload.
+      refreshTimer = window.setTimeout(() => {
+        setRealtimeVersion((version) => version + 1);
+        refreshTimer = null;
+      }, 80);
+    });
+
+    return () => {
+      disconnect();
+      if (refreshTimer !== null) window.clearTimeout(refreshTimer);
+    };
+  }, [loggedIn]);
 
   useEffect(() => {
     const onCrudSuccess = (event: Event) => {
@@ -1226,8 +1250,10 @@ export default function Home() {
         adminName={adminName}
         lockedCollapsed={autoCollapsedSidebar}
         badges={{
-          electricians: Number(pendingNotifications.pendingElectricianRedemptions ?? 0) + Number(pendingNotifications.pendingElectricianKyc ?? 0),
-          dealers: Number(pendingNotifications.pendingDealerRedemptions ?? 0) + Number(pendingNotifications.pendingDealerKyc ?? 0) + Number(pendingNotifications.pendingDealerApprovals ?? 0),
+          electricians: Number(pendingNotifications.pendingElectricianRedemptions ?? 0) + Number(pendingNotifications.pendingElectricianKyc ?? 0) + Number(pendingNotifications.bankLinkedElectricians ?? 0),
+          dealers: Number(pendingNotifications.pendingDealerRedemptions ?? 0) + Number(pendingNotifications.pendingDealerKyc ?? 0) + Number(pendingNotifications.pendingDealerApprovals ?? 0) + Number(pendingNotifications.bankLinkedDealers ?? 0),
+          'app-users': Number(pendingNotifications.bankLinkedCustomers ?? 0),
+          counterboys: Number(pendingNotifications.bankLinkedCounterboys ?? 0),
           'gift-orders': Number(pendingNotifications.pendingGiftOrders ?? 0),
           'product-orders': Number(pendingNotifications.actionableProductOrders ?? pendingNotifications.pendingProductOrders ?? 0),
           'delivery-tracker': Number(pendingNotifications.pendingProductOrders ?? 0),
@@ -1408,7 +1434,7 @@ export default function Home() {
         </div>
 
         {/* Page content */}
-        <div key={active} style={{ flex: 1, animation: 'fadeInUp 0.3s ease' }}>
+        <div key={`${active}-${realtimeVersion}`} style={{ flex: 1, animation: 'fadeInUp 0.3s ease' }}>
           <Suspense fallback={<SrvLogoLoader label="Loading SRV section..." />}>
             {renderPage()}
           </Suspense>

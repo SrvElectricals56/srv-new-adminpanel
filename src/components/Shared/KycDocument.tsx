@@ -24,10 +24,10 @@ export function ImageUploadBox({ label, value, onChange, onBusy, C }: {
     {value && <DocThumb key={value} src={value} C={C} />}
     <button type="button" disabled={uploading} onClick={() => ref.current?.click()} style={{ display: 'block', padding: 10, marginTop: 8, border: `1px solid ${C.border}`, borderRadius: 8, background: C.bg, color: C.text }}>{uploading ? 'Uploading...' : value ? 'Replace document' : 'Upload image or PDF'}</button>
     {error && <div role="alert" style={{ color: '#991B1B' }}>{error}</div>}
-    <input ref={ref} type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,application/pdf" hidden disabled={uploading} onChange={async event => {
+    <input ref={ref} type="file" accept="image/*,.pdf" hidden disabled={uploading} onChange={async event => {
       const file = event.target.files?.[0];
       if (!file) return;
-      if (file.size > 10 * 1024 * 1024) { setError('Maximum file size is 10 MB.'); return; }
+      if (file.size > 25 * 1024 * 1024) { setError('Maximum file size is 25 MB.'); return; }
       setUploading(true); onBusy(true); setError('');
       try { onChange(await uploadKycDocument(file)); }
       catch (err) { setError(err instanceof Error ? err.message : 'Upload failed'); }

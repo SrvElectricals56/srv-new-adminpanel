@@ -292,6 +292,7 @@ export interface AppIcon {
   id: string;
   name: string;
   imageUrl?: string;
+  nativeKey?: 'default' | 'diwali' | 'republic-day' | null;
   isActive: boolean;
   displayOrder: number;
   updatedBy?: string;

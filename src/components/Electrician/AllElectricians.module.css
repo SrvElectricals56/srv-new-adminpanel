@@ -1,0 +1,139 @@
+.filterPanel {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.filterSearch {
+  order: 1;
+  flex: 1 1 340px !important;
+  width: auto !important;
+  min-width: 220px !important;
+  height: 40px;
+}
+
+.filterMenu {
+  order: 2;
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.filterMeta {
+  order: 3;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
+.filterRowBreak {
+  order: 4;
+  flex-basis: 100%;
+  width: 0;
+  height: 0;
+}
+
+.quickFilter {
+  order: 5;
+  flex: 1 1 150px !important;
+  width: 100%;
+  min-width: 140px !important;
+  height: 40px;
+}
+
+.dateFilter {
+  order: 5;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+  flex: 1.25 1 205px;
+  min-width: 185px;
+}
+
+.dateSelect {
+  width: 100%;
+  min-width: 0 !important;
+  height: 40px;
+}
+
+.customDateRange {
+  order: 6;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
+.customDateRange input {
+  min-width: 0;
+}
+
+.clearFilters {
+  order: 6;
+  flex: 0 0 auto;
+}
+
+@media (max-width: 900px) {
+  .filterSearch {
+    flex-basis: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .filterMenu {
+    order: 3;
+  }
+
+  .filterMeta {
+    order: 2;
+    flex: 1 1 auto;
+    justify-content: flex-end;
+  }
+
+  .quickFilter,
+  .dateFilter {
+    flex-basis: calc(50% - 5px) !important;
+    min-width: 0 !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .filterPanel {
+    padding: 12px;
+  }
+
+  .filterMeta {
+    order: 3;
+    flex-basis: 100%;
+    justify-content: space-between;
+  }
+
+  .filterMenu {
+    order: 2;
+  }
+
+  .quickFilter,
+  .dateFilter {
+    flex-basis: 100% !important;
+  }
+
+  .customDateRange {
+    flex-wrap: wrap;
+  }
+
+  .customDateRange input {
+    flex: 1 1 130px;
+  }
+
+  .clearFilters {
+    width: 100%;
+    justify-content: center;
+  }
+}

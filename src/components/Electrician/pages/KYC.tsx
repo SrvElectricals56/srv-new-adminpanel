@@ -5,6 +5,7 @@ import { electricianApi } from '@/lib/api';
 import { approveAllKyc, getStoredAdmin, documentUrl } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
+import AlertDialog from '@/components/Shared/AlertDialog';
 import { DocThumb, ImageUploadBox } from '@/components/Shared/KycDocument';
 import ExportModal from '@/components/Shared/ExportModal';
 
@@ -117,6 +118,7 @@ export default function ElectricianKYC() {
   const [statusCounts, setStatusCounts] = useState({ verified: 0, pending: 0, rejected: 0, not_submitted: 0 });
   const requestSequence = useRef(0);
   const [confirmState, setConfirmState] = useState<{ show: boolean; title: string; message: string; onConfirm: () => void; type: 'success' | 'danger' }>({ show: false, title: '', message: '', onConfirm: () => {}, type: 'success' });
+  const [alertDialog, setAlertDialog] = useState<{ show: boolean; title: string; message: string; type: 'error' | 'success' | 'warning' | 'info' }>({ show: false, title: '', message: '', type: 'success' });
 
   const loadStats = useCallback(async () => {
     try {
@@ -244,17 +246,17 @@ export default function ElectricianKYC() {
           await electricianApi.update(doc.id, {
             kycStatus: 'pending',
             aadharNumber: null,
-            aadharFrontImage: null, aadharBackImage: null,
+            aadharFrontImage: null,
+            panDocument: null,
+            gstDocument: null,
             kycRejectionReason: null,
           });
-          setDocuments(prev => prev.map(d => d.id === doc.id ? {
-            ...d, kycStatus: 'pending',
-            aadharNumber: undefined,
-            aadharFrontImage: undefined, aadharBackImage: undefined,
-            kycRejectionReason: undefined,
-          } : d));
-          void loadStats();
-        } catch (err) { console.error(err); window.alert(err instanceof Error ? err.message : 'Unable to save KYC'); }
+          await Promise.all([loadDocuments(currentPage), loadStats()]);
+          setAlertDialog({ show: true, title: 'KYC Deleted', message: 'KYC data deleted successfully and moved to the pending list.', type: 'success' });
+        } catch (err) {
+          console.error(err);
+          setAlertDialog({ show: true, title: 'Delete Failed', message: err instanceof Error ? err.message : 'Unable to delete KYC data.', type: 'error' });
+        }
         setConfirmState(s => ({ ...s, show: false }));
       }
     });
@@ -285,6 +287,7 @@ export default function ElectricianKYC() {
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
       <ConfirmDialog show={confirmState.show} title={confirmState.title} message={confirmState.message} onConfirm={confirmState.onConfirm} onCancel={() => setConfirmState(s => ({ ...s, show: false }))} type={confirmState.type} />
+      <AlertDialog show={alertDialog.show} title={alertDialog.title} message={alertDialog.message} type={alertDialog.type} onClose={() => setAlertDialog(prev => ({ ...prev, show: false }))} />
       {editingDoc && <EditKYCModal doc={editingDoc} onClose={() => setEditingDoc(null)} onSave={handleEditSave} C={C} />}
 
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 }}>
