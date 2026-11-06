@@ -5,6 +5,7 @@ import { useThemePalette } from '@/lib/theme';
 import { formatISTDateTime, formatISTDate, formatISTDateTimeFull } from '@/lib/dateIST';
 import { getToken } from '@/lib/api';
 import { I } from '@/lib/iconMap';
+import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL!;
 const API_ORIGIN = BASE_URL.replace(/\/api\/v1\/?$/, '');
@@ -339,6 +340,7 @@ export default function UploadPlays({ role }: { role?: string }) {
   const [viewersModal, setViewersModal] = useState<{ play: PlayItem; data: ViewersModalData | null } | null>(null);
   const [loadingViewers, setLoadingViewers] = useState(false);
   const [interactionsModal, setInteractionsModal] = useState<{ play: PlayItem; data: PlayInteractions | null } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
   const [loadingInteractions, setLoadingInteractions] = useState(false);
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
   const [replyingCommentId, setReplyingCommentId] = useState<string | null>(null);
@@ -421,7 +423,6 @@ export default function UploadPlays({ role }: { role?: string }) {
   };
 
   const handleDelete = async (id: string, title: string) => {
-    if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
     try {
       await req(`/plays/${id}`, { method: 'DELETE' });
       await load();
@@ -538,6 +539,19 @@ export default function UploadPlays({ role }: { role?: string }) {
 
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1200 }}>
+      <ConfirmDialog
+        show={deleteTarget !== null}
+        title="Delete Play"
+        message={`Delete "${deleteTarget?.title ?? 'this play'}"? This action cannot be undone.`}
+        confirmText="Delete"
+        type="danger"
+        onConfirm={() => {
+          const target = deleteTarget;
+          setDeleteTarget(null);
+          if (target) void handleDelete(target.id, target.title);
+        }}
+        onCancel={() => setDeleteTarget(null)}
+      />
       {/* Header */}
       <div style={{ background: 'linear-gradient(135deg, #1D4ED8, #1E40AF)', borderRadius: 16, padding: '24px 28px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -688,7 +702,7 @@ export default function UploadPlays({ role }: { role?: string }) {
                     <button onClick={() => openEdit(play)} style={{ padding: '7px 10px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.bg, cursor: 'pointer', color: '#1D4ED8' }}>
                       <Edit3 size={14} />
                     </button>
-                    <button onClick={() => handleDelete(play.id, play.title)} style={{ padding: '7px 10px', borderRadius: 8, border: `1px solid #FCA5A5`, background: '#FEF2F2', cursor: 'pointer', color: '#DC2626' }}>
+                    <button onClick={() => setDeleteTarget({ id: play.id, title: play.title })} style={{ padding: '7px 10px', borderRadius: 8, border: `1px solid #FCA5A5`, background: '#FEF2F2', cursor: 'pointer', color: '#DC2626' }}>
                       <Trash2 size={14} />
                     </button>
                   </>

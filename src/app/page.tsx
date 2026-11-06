@@ -248,7 +248,7 @@ const PAGE_SEARCH_KEYWORDS: Record<string, string[]> = {
   products: ['product', 'item', 'catalog', 'inventory', 'stock'],
   'points-config': ['points', 'config', 'rewards'],
   'qr-hub': ['qr hub', 'batch qr', 'qr batch', 'batch', 'quantity'],
-  'qr-codes': ['qr', 'qrcode', 'code', 'scan', 'barcode'],
+  'qr-codes': ['qr', 'qrcode', 'code', 'scan'],
   'qr-activity-history': ['qr activity', 'qr history', 'download history', 'generated qr', 'staff qr'],
   scans: ['scan', 'history', 'activity'],
   redemptions: ['redemption', 'redeem', 'pending', 'approve'],

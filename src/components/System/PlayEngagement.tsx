@@ -4,6 +4,7 @@ import { Heart, MessageCircle, RefreshCw, Share2, Trash2, Video } from 'lucide-r
 import { playApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
 import { formatISTDateTimeFull } from '@/lib/dateIST';
+import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 
 type PlayItem = {
   id: string;
@@ -42,6 +43,7 @@ export default function PlayEngagement({ canEdit }: { canEdit: boolean }) {
   const [loading, setLoading] = useState(true);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [error, setError] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<PlayComment | null>(null);
 
   const selectedPlay = useMemo(
     () => plays.find((play) => play.id === selectedId) ?? plays[0],
@@ -93,7 +95,6 @@ export default function PlayEngagement({ canEdit }: { canEdit: boolean }) {
 
   const deleteComment = async (comment: PlayComment) => {
     if (!selectedPlay || !canEdit) return;
-    if (!confirm('Delete this comment? This cannot be undone.')) return;
 
     try {
       const updated = await playApi.deleteComment(selectedPlay.id, comment.id);
@@ -119,6 +120,19 @@ export default function PlayEngagement({ canEdit }: { canEdit: boolean }) {
 
   return (
     <div style={{ display: 'grid', gap: 18 }}>
+      <ConfirmDialog
+        show={deleteTarget !== null}
+        title="Delete Comment"
+        message="Delete this comment? This action cannot be undone."
+        confirmText="Delete"
+        type="danger"
+        onConfirm={() => {
+          const target = deleteTarget;
+          setDeleteTarget(null);
+          if (target) void deleteComment(target);
+        }}
+        onCancel={() => setDeleteTarget(null)}
+      />
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontSize: 16, fontWeight: 800, color: C.text }}>Video Engagement</div>
@@ -202,7 +216,7 @@ export default function PlayEngagement({ canEdit }: { canEdit: boolean }) {
                         <div style={{ fontSize: 11, color: C.muted, textTransform: 'capitalize' }}>{comment.authorRole || 'customer'} | {comment.createdAt ? formatISTDateTimeFull(comment.createdAt) : '-'}</div>
                       </div>
                       {canEdit ? (
-                        <button onClick={() => deleteComment(comment)} title="Delete comment" style={{ border: 'none', background: '#FEE2E2', color: '#B91C1C', borderRadius: 8, padding: '7px 9px', cursor: 'pointer' }}>
+                        <button onClick={() => setDeleteTarget(comment)} title="Delete comment" style={{ border: 'none', background: '#FEE2E2', color: '#B91C1C', borderRadius: 8, padding: '7px 9px', cursor: 'pointer' }}>
                           <Trash2 size={14} />
                         </button>
                       ) : null}

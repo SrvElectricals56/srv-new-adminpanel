@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { ThemeProvider } from '@/lib/theme';
 import { AppProvider } from '@/lib/appContext';
+import AdminAlertBridge from '@/components/Shared/AdminAlertBridge';
 
 export const metadata: Metadata = {
   title: 'SRV Admin Panel',
@@ -18,6 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeProvider>
           <AppProvider>
             {children}
+            <AdminAlertBridge />
           </AppProvider>
         </ThemeProvider>
       </body>

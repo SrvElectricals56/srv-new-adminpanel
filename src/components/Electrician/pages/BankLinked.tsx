@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { Landmark, Search, Eye, Pencil, Check, X, SlidersHorizontal, FileSpreadsheet, Trash2 } from 'lucide-react';
-import { electricianApi } from '@/lib/api';
+import { documentUrl, electricianApi } from '@/lib/api';
 import type { Electrician, MemberTier } from '@/lib/types';
 import { useThemePalette } from '@/lib/theme';
 import ExportModal from '@/components/Shared/ExportModal';
@@ -52,9 +52,9 @@ function ViewModal({ el, onClose, C }: { el: Electrician; onClose: () => void; C
             </div>
           ))}
           {el.upiQrCodeImage ? (
-            <a href={el.upiQrCodeImage} target="_blank" rel="noreferrer" style={{ gridColumn: '1/-1', background: C.bg, borderRadius: 10, padding: 14, color: C.text, textDecoration: 'none' }}>
+            <a href={documentUrl(el.upiQrCodeImage)} target="_blank" rel="noreferrer" style={{ gridColumn: '1/-1', background: C.bg, borderRadius: 10, padding: 14, color: C.text, textDecoration: 'none' }}>
               <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textTransform: 'uppercase', marginBottom: 8 }}>UPI QR Code · click to open</div>
-              <img src={el.upiQrCodeImage} alt="Electrician UPI QR code" style={{ width: 180, height: 180, display: 'block', margin: '0 auto', objectFit: 'contain', borderRadius: 10, background: '#fff' }} />
+              <img src={documentUrl(el.upiQrCodeImage)} alt="Electrician UPI QR code" style={{ width: 180, height: 180, display: 'block', margin: '0 auto', objectFit: 'contain', borderRadius: 10, background: '#fff' }} />
             </a>
           ) : null}
         </div>
@@ -157,9 +157,15 @@ export default function ElectricianBankLinked() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    electricianApi.getAll({ limit: '500' }).then(res => {
+    electricianApi.getAll({ limit: '500', includeMedia: 'true' }).then(res => {
       setData(Array.isArray(res) ? res : (res as any).data ?? []);
     }).catch(console.error).finally(() => setLoading(false));
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        electricianApi.getAll({ limit: '500', includeMedia: 'true' }).then(res => setData(Array.isArray(res) ? res : (res as any).data ?? [])).catch(console.error);
+      }
+    }, 1000);
+    return () => window.clearInterval(timer);
   }, []);
   const [search, setSearch] = useState('');
   const [filterBank, setFilterBank] = useState<'all' | 'linked' | 'not_linked'>('all');
@@ -202,9 +208,9 @@ export default function ElectricianBankLinked() {
   const clearBankDetails = async () => {
     const row = clearState.row;
     if (!row) return;
-    const cleared = { ...row, bankLinked: false, upiId: undefined, bankAccount: undefined, ifsc: undefined, bankName: undefined, accountHolderName: undefined } as Electrician;
+    const cleared = { ...row, bankLinked: false, upiId: undefined, upiQrCodeImage: undefined, bankAccount: undefined, ifsc: undefined, bankName: undefined, accountHolderName: undefined } as Electrician;
     try {
-      await electricianApi.update(row.id, { bankLinked: false, upiId: null, bankAccount: null, ifsc: null, bankName: null, accountHolderName: null });
+      await electricianApi.update(row.id, { bankLinked: false, upiId: null, upiQrCodeImage: null, bankAccount: null, ifsc: null, bankName: null, accountHolderName: null });
       setData(prev => prev.map(e => e.id === row.id ? cleared : e));
     } catch (err) { console.error(err); }
     setClearState({ show: false, row: null });

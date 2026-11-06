@@ -6,6 +6,7 @@ import { settingsApi, notificationApi, userSearchApi } from '@/lib/api';
 import AppIcons from './AppIcons';
 import PlayEngagement from './PlayEngagement';
 import { I } from '@/lib/iconMap';
+import AlertDialog from '@/components/Shared/AlertDialog';
 
 interface AppConfig {
   // App Info
@@ -132,6 +133,7 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveDialog, setSaveDialog] = useState<{ show: boolean; title: string; message: string; type: 'error' | 'success' }>({ show: false, title: '', message: '', type: 'success' });
   const [activeSection, setActiveSection] = useState('app');
   const [ratingHistory, setRatingHistory] = useState<any[]>([]);
   const [ratingSummary, setRatingSummary] = useState<Record<string, number>>({});
@@ -232,10 +234,11 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
         ),
       );
       setSaved(true);
+      setSaveDialog({ show: true, title: 'Settings Saved', message: 'App settings were saved successfully and are now available to the app.', type: 'success' });
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
       console.error('Save failed:', err);
-      window.alert(err instanceof Error ? err.message : 'Unable to save app settings');
+      setSaveDialog({ show: true, title: 'Save Failed', message: err instanceof Error ? err.message : 'Unable to save app settings', type: 'error' });
     } finally {
       setSaving(false);
     }
@@ -327,6 +330,7 @@ export default function AppSettings({ role }: { role?: import('@/lib/types').Adm
 
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1200 }}>
+      <AlertDialog show={saveDialog.show} title={saveDialog.title} message={saveDialog.message} type={saveDialog.type} onClose={() => setSaveDialog(current => ({ ...current, show: false }))} />
       {/* Header */}
       <div style={{ background: 'linear-gradient(135deg, #7C3AED, #5B21B6)', borderRadius: 16, padding: '24px 28px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
