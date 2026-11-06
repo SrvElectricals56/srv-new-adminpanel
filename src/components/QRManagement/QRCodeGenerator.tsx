@@ -412,7 +412,13 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
     if (!generatedQRs.length) return;
     setDownloading('pdf');
     try {
-      const { jsPDF } = await import('jspdf');
+      const [{ jsPDF }, resolvedQRs] = await Promise.all([
+        import('jspdf'),
+        resolveAllQrData(generatedQRs),
+      ]);
+      if (resolvedQRs.some(qr => !qr.qrData.startsWith('data:image'))) {
+        throw new Error('Some QR images could not be generated. Please try the PDF download again.');
+      }
       const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
       const COLS = 4;
@@ -426,7 +432,7 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
       const imgSize = cellW - 8;
 
       let idx = 0;
-      for (let i = 0; i < generatedQRs.length; i++) {
+      for (let i = 0; i < resolvedQRs.length; i++) {
         if (i > 0 && i % (COLS * ROWS) === 0) {
           doc.addPage();
           idx = 0;
@@ -435,13 +441,9 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
         const row = Math.floor(idx / COLS);
         const x = marginX + col * cellW + 4;
         const y = marginY + row * cellH + 2;
-        const qr = generatedQRs[i];
+        const qr = resolvedQRs[i];
 
-        if (qr.qrData && qr.qrData.startsWith('data:image')) {
-          try {
-            doc.addImage(qr.qrData, 'PNG', x, y, imgSize, imgSize);
-          } catch { /* skip broken image */ }
-        }
+        doc.addImage(qr.qrData, 'PNG', x, y, imgSize, imgSize);
 
         doc.setFontSize(5.5);
         doc.setTextColor(80, 80, 80);
@@ -461,7 +463,7 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
       await recordQrDownload(generatedQRs, 'pdf');
     } catch (err) {
       console.error('PDF error:', err);
-      setAlertDialog({ show: true, title: 'PDF Generation Failed', message: 'PDF generation failed. Please try again.', type: 'error' });
+      setAlertDialog({ show: true, title: 'PDF Generation Failed', message: err instanceof Error ? err.message : 'PDF generation failed. Please try again.', type: 'error' });
     }
     setDownloading(null);
   };
