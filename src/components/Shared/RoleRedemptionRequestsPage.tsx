@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Banknote, CreditCard, DollarSign, Pencil, FileSpreadsheet, TrendingUp } from 'lucide-react';
 import ExportModal from '@/components/Shared/ExportModal';
-import { redemptionApi } from '@/lib/api';
+import { documentUrl, redemptionApi } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
 import { formatISTDate, formatISTDateTimeFull } from '@/lib/dateIST';
 
@@ -150,6 +150,7 @@ export default function RoleRedemptionRequestsPage({
     color: C.text,
     boxSizing: 'border-box',
   };
+  const viewUpiQrUrl = documentUrl(viewItem?.upiQrCodeImage ?? undefined);
 
   return (
     <>
@@ -268,7 +269,8 @@ export default function RoleRedemptionRequestsPage({
                   return (
                     <tr
                       key={row.id}
-                      style={{ borderBottom: `1px solid ${C.border}` }}
+                      onClick={() => { setViewItem(row); setDraftStatus(row.status as 'pending' | 'approved' | 'rejected'); setDraftReason(row.rejectionReason ?? ''); setFeedback(null); }}
+                      style={{ borderBottom: `1px solid ${C.border}`, cursor: 'pointer' }}
                       onMouseEnter={(event) => ((event.currentTarget as HTMLTableRowElement).style.background = C.hoverRow)}
                       onMouseLeave={(event) => ((event.currentTarget as HTMLTableRowElement).style.background = 'transparent')}
                     >
@@ -294,7 +296,7 @@ export default function RoleRedemptionRequestsPage({
                       </td>
                       <td style={{ padding: '12px 16px' }}>
                         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                          <button onClick={() => { setViewItem(row); setDraftStatus(row.status as 'pending' | 'approved' | 'rejected'); setDraftReason(row.rejectionReason ?? ''); setFeedback(null); }} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: '7px 10px', cursor: 'pointer', color: C.text }}><Pencil size={13} /> Edit</button>
+                          <button onClick={(event) => { event.stopPropagation(); setViewItem(row); setDraftStatus(row.status as 'pending' | 'approved' | 'rejected'); setDraftReason(row.rejectionReason ?? ''); setFeedback(null); }} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: '7px 10px', cursor: 'pointer', color: C.text }}><Pencil size={13} /> Edit</button>
                        </div>
                       </td>
                     </tr>
@@ -351,15 +353,19 @@ export default function RoleRedemptionRequestsPage({
                         {value}
                       </div>
                     ))}
-                    {viewItem.upiQrCodeImage ? (
+                    {viewUpiQrUrl ? (
                       <div style={{ background: C.card, borderRadius: 10, padding: 12 }}>
                         <div style={{ color: C.muted, fontWeight: 700, fontSize: 13, marginBottom: 8 }}>UPI QR Code</div>
-                        <a href={viewItem.upiQrCodeImage} target="_blank" rel="noreferrer" title="Open full-size UPI QR code">
+                        <a href={viewUpiQrUrl} target="_blank" rel="noreferrer" title="Open full-size UPI QR code">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={viewItem.upiQrCodeImage} alt="UPI QR Code" style={{ width: 180, height: 180, objectFit: 'contain', background: '#fff', borderRadius: 10, border: `1px solid ${C.border}` }} />
+                          <img src={viewUpiQrUrl} alt="UPI QR Code" style={{ width: 180, height: 180, objectFit: 'contain', background: '#fff', borderRadius: 10, border: `1px solid ${C.border}` }} />
                         </a>
                       </div>
-                    ) : null}
+                    ) : (
+                      <div style={{ background: C.card, borderRadius: 10, padding: 12, color: C.muted, fontSize: 13 }}>
+                        <strong>UPI QR Code:</strong> Not uploaded
+                      </div>
+                    )}
                   </div>
                 </div>
 

@@ -1,7 +1,7 @@
 ﻿'use client';
 import React, { useState, useEffect } from 'react';
 import { Plus, FileSpreadsheet, FileText, Image } from 'lucide-react';
-import { scanApi, redemptionApi, notificationApi, offerApi, settingsApi, bannerApi, analyticsApi, productApi } from '@/lib/api';
+import { documentUrl, scanApi, redemptionApi, notificationApi, offerApi, settingsApi, bannerApi, analyticsApi, productApi } from '@/lib/api';
 import type { PointsConfig, BannerItem } from '@/lib/types';
 import { useTheme, useThemePalette } from '@/lib/theme';
 import AlertDialog from '@/components/Shared/AlertDialog';
@@ -117,6 +117,7 @@ export function Redemptions() {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
+  const [selected, setSelected] = useState<any | null>(null);
 
   const loadData = async () => {
     try {
@@ -135,6 +136,7 @@ export function Redemptions() {
       if (status === 'approved') await redemptionApi.approve(id);
       else await redemptionApi.reject(id, 'Rejected by admin');
       await loadData();
+      setSelected(null);
     } catch (err) { console.error(err); }
   };
 
@@ -180,7 +182,7 @@ export function Redemptions() {
         filtered.map((r: any) => {
           const st = STATUS_STYLE[r.status] || STATUS_STYLE.pending;
           return (
-            <div key={r.id} style={{ background: C.card, borderRadius: 16, padding: '18px 22px', border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', flexWrap: 'wrap' }}>
+            <div key={r.id} onClick={() => setSelected(r)} style={{ background: C.card, borderRadius: 16, padding: '18px 22px', border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', flexWrap: 'wrap', cursor: 'pointer' }}>
               <div style={{ width: 44, height: 44, borderRadius: 12, background: '#FFF0F0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 800, color: C.red, flexShrink: 0 }}>{(r.userName || r.userId || 'U')[0]}</div>
               <div style={{ flex: 1, minWidth: 160 }}>
                 <div style={{ fontSize: 15, fontWeight: 700, color: C.text }}>{r.userName || r.userId}</div>
@@ -195,18 +197,58 @@ export function Redemptions() {
               </div>
               {r.status === 'pending' && (
                 <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                  <button onClick={() => updateStatus(r.id, 'approved')} style={{ background: '#D1FAE5', color: '#065F46', border: 'none', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Approve</button>
-                  <button onClick={() => updateStatus(r.id, 'rejected')} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Reject</button>
+                  <button onClick={(event) => { event.stopPropagation(); void updateStatus(r.id, 'approved'); }} style={{ background: '#D1FAE5', color: '#065F46', border: 'none', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Approve</button>
+                  <button onClick={(event) => { event.stopPropagation(); void updateStatus(r.id, 'rejected'); }} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Reject</button>
                 </div>
               )}
               {r.status !== 'pending' && (
-                <button onClick={() => handleDelete(r.id)} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 10, padding: '8px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>Delete</button>
+                <button onClick={(event) => { event.stopPropagation(); void handleDelete(r.id); }} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 10, padding: '8px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>Delete</button>
               )}
             </div>
           );
         })}
       </div>
       )}
+      {selected ? (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1100, background: C.overlay, backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={() => setSelected(null)}>
+          <div style={{ width: 'min(760px, 96vw)', maxHeight: '88vh', overflowY: 'auto', borderRadius: 20, background: C.card, border: `1px solid ${C.border}`, boxShadow: '0 28px 80px rgba(0,0,0,0.25)' }} onClick={(event) => event.stopPropagation()}>
+            <div style={{ padding: '18px 22px', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div><div style={{ color: C.text, fontSize: 17, fontWeight: 900 }}>Edit Redemption</div><div style={{ color: C.muted, fontSize: 12, marginTop: 3 }}>Review user payment details and uploaded UPI QR code.</div></div>
+              <button onClick={() => setSelected(null)} style={{ width: 32, height: 32, border: 'none', borderRadius: 9, background: C.bg, color: C.text, cursor: 'pointer', fontSize: 18 }}>×</button>
+            </div>
+            <div style={{ padding: 22, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 16 }}>
+              <div style={{ display: 'grid', gap: 9 }}>
+                {[
+                  ['User', selected.userName || selected.userId],
+                  ['Role', selected.role],
+                  ['Type', selected.type],
+                  ['Points', Number(selected.points ?? 0).toLocaleString('en-IN')],
+                  ['Amount', `₹${Number(selected.amount ?? 0).toLocaleString('en-IN')}`],
+                  ['Account Holder', selected.accountHolderName || '—'],
+                  ['Google Pay / Account', selected.bankAccount || '—'],
+                  ['IFSC', selected.ifsc || '—'],
+                  ['Requested', formatISTDateTimeFull(selected.requestedAt || selected.createdAt)],
+                ].map(([label, value]) => <div key={label} style={{ padding: '10px 12px', borderRadius: 10, background: C.bg, color: C.text, fontSize: 13 }}><strong style={{ color: C.muted }}>{label}: </strong>{value}</div>)}
+              </div>
+              <div style={{ minHeight: 250, borderRadius: 14, background: C.bg, border: `1px solid ${C.border}`, padding: 14 }}>
+                <div style={{ color: C.text, fontSize: 13, fontWeight: 900, marginBottom: 10 }}>Uploaded UPI QR Code</div>
+                {documentUrl(selected.upiQrCodeImage) ? (
+                  <a href={documentUrl(selected.upiQrCodeImage)} target="_blank" rel="noreferrer">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={documentUrl(selected.upiQrCodeImage)} alt="Uploaded UPI QR code" style={{ width: '100%', maxHeight: 280, objectFit: 'contain', background: '#fff', borderRadius: 12 }} />
+                  </a>
+                ) : <div style={{ padding: 40, textAlign: 'center', color: C.muted }}>No UPI QR image uploaded</div>}
+              </div>
+            </div>
+            {selected.status === 'pending' ? (
+              <div style={{ padding: '0 22px 22px', display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+                <button onClick={() => void updateStatus(selected.id, 'rejected')} style={{ padding: '10px 18px', border: 'none', borderRadius: 10, background: '#FEE2E2', color: '#991B1B', cursor: 'pointer', fontWeight: 800 }}>Reject</button>
+                <button onClick={() => void updateStatus(selected.id, 'approved')} style={{ padding: '10px 18px', border: 'none', borderRadius: 10, background: '#D1FAE5', color: '#065F46', cursor: 'pointer', fontWeight: 800 }}>Approve</button>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
