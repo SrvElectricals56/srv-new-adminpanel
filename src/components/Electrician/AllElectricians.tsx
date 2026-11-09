@@ -562,6 +562,11 @@ export default function Electricians({ role }: ElectriciansProps) {
     setFilterAppInstalled(next);
   };
 
+  const selectAppSummary = (next: string) => {
+    setFilterTier('all');
+    setFilterAppInstalled(next);
+  };
+
   const handleInstallDateChange = (next: typeof dateFilter) => {
     setDateFilter(next);
   };
@@ -948,10 +953,12 @@ export default function Electricians({ role }: ElectriciansProps) {
               subtitle: undefined,
             };
           }),
-        ].map((s, i) => (
-          <div key={i} onClick={() => selectTierSummary(i === 0 ? 'all' : s.label)} style={{ background: C.card, borderRadius: 14, padding: '16px 18px', border: `1px solid ${C.border}`, cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
-            onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'}
-            onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)'}>
+        ].map((s, i) => {
+          const tierFilter = i === 0 ? 'all' : s.label;
+          const selected = filterTier === tierFilter && filterAppInstalled === 'all';
+          return <button type="button" key={i} aria-pressed={selected} onClick={() => selectTierSummary(tierFilter)} style={{ width: '100%', background: C.card, borderRadius: 14, padding: '16px 18px', border: `1px solid ${selected ? s.color : C.border}`, cursor: 'pointer', transition: 'all 0.2s', boxShadow: selected ? `0 0 0 3px ${s.color}18` : '0 2px 8px rgba(0,0,0,0.04)', textAlign: 'left' }}
+            onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-2px)'}
+            onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)'}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{ width: 36, height: 36, borderRadius: 10, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.color }}><s.Icon size={18} /></div>
               <div>
@@ -960,8 +967,8 @@ export default function Electricians({ role }: ElectriciansProps) {
                 {s.subtitle && <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{s.subtitle}</div>}
               </div>
             </div>
-          </div>
-        ))}
+          </button>;
+        })}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(180px,1fr))', gap: 12, marginBottom: 22 }}>
@@ -969,7 +976,7 @@ export default function Electricians({ role }: ElectriciansProps) {
           { label: 'App Installed', value: installationStats.installed, filter: 'installed', color: '#047857', bg: '#D1FAE5' },
           { label: 'Not Installed', value: installationStats.notInstalled, filter: 'not_installed', color: '#B45309', bg: '#FEF3C7' },
         ].map(item => (
-          <button key={item.filter} onClick={() => handleAppStatusChange(item.filter)} style={{ background: C.card, borderRadius: 14, padding: '14px 18px', border: `1px solid ${filterAppInstalled === item.filter ? item.color : C.border}`, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left' }}>
+          <button type="button" key={item.filter} aria-pressed={filterAppInstalled === item.filter && filterTier === 'all'} onClick={() => selectAppSummary(item.filter)} style={{ background: C.card, borderRadius: 14, padding: '14px 18px', border: `1px solid ${filterAppInstalled === item.filter && filterTier === 'all' ? item.color : C.border}`, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left' }}>
             <span style={{ width: 38, height: 38, borderRadius: 10, background: item.bg, color: item.color, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><Smartphone size={19} /></span>
             <span><strong style={{ display: 'block', fontSize: 21, color: C.text }}>{item.value}</strong><span style={{ fontSize: 12, fontWeight: 700, color: item.color }}>{item.label}</span></span>
           </button>

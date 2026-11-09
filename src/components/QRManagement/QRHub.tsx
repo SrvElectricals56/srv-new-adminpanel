@@ -70,6 +70,7 @@ export default function QRHub({ role }: QRHubProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [hubSummary, setHubSummary] = useState({ totalQty: 0, usedQty: 0, activeQty: 0 });
+  const [batchSummaryFilter, setBatchSummaryFilter] = useState<'all' | 'with_qr' | 'used'>('all');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [selectedBatch, setSelectedBatch] = useState<QRBatch | null>(null);
@@ -103,6 +104,9 @@ export default function QRHub({ role }: QRHubProps) {
     message: '',
     type: 'success',
   });
+  const visibleBatches = batches.filter(batch => batchSummaryFilter === 'all'
+    || (batchSummaryFilter === 'with_qr' && batch.qty > 0)
+    || (batchSummaryFilter === 'used' && (batch.usedQty ?? 0) > 0));
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   const historyTotalPages = Math.max(1, Math.ceil(historyTotal / HISTORY_PAGE_SIZE));
@@ -268,7 +272,7 @@ export default function QRHub({ role }: QRHubProps) {
     if (canViewHistory) void loadDownloadHistory(1, '', '', '');
   }, [canViewHistory]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const getHubExportRows = (rows = batches) =>
+  const getHubExportRows = (rows = visibleBatches) =>
     rows.map((batch, index) => ({
       Id: (currentPage - 1) * PAGE_SIZE + index + 1,
       'Product Name': batch.productName,
@@ -314,10 +318,10 @@ export default function QRHub({ role }: QRHubProps) {
     setExportFileName('qr-hub');
     setExportRows(getHubExportRows());
     setShowExport(true);
-    if (batches.length) {
+    if (visibleBatches.length) {
       void qrCodeApi.recordDownloadHistory({
         productName: 'QR Hub Export',
-        quantity: batches.reduce((sum, batch) => sum + batch.qty, 0),
+        quantity: visibleBatches.reduce((sum, batch) => sum + batch.qty, 0),
         downloadType: 'hub_export',
       }).then(() => {
         if (canViewHistory) void loadDownloadHistory(1, historySearch, historyFromDate, historyToDate);
@@ -479,9 +483,9 @@ export default function QRHub({ role }: QRHubProps) {
   };
 
   const statCards = [
-    { label: 'Batches', value: totalCount.toLocaleString('en-IN'), color: '#60A5FA' },
-    { label: 'Total QR', value: hubSummary.totalQty.toLocaleString('en-IN'), color: '#10B981' },
-    { label: 'Used', value: hubSummary.usedQty.toLocaleString('en-IN'), color: '#F59E0B' },
+    { label: 'Batches', value: totalCount.toLocaleString('en-IN'), color: '#60A5FA', filter: 'all' },
+    { label: 'Total QR', value: hubSummary.totalQty.toLocaleString('en-IN'), color: '#10B981', filter: 'with_qr' },
+    { label: 'Used', value: hubSummary.usedQty.toLocaleString('en-IN'), color: '#F59E0B', filter: 'used' },
   ];
 
   return (
@@ -498,10 +502,10 @@ export default function QRHub({ role }: QRHubProps) {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           {statCards.map(stat => (
-            <div key={stat.label} style={{ textAlign: 'center', padding: '10px 18px', background: 'rgba(255,255,255,0.07)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)', minWidth: 92 }}>
+            <button type="button" key={stat.label} onClick={() => setBatchSummaryFilter(stat.filter as typeof batchSummaryFilter)} aria-pressed={batchSummaryFilter === stat.filter} style={{ textAlign: 'center', padding: '10px 18px', background: batchSummaryFilter === stat.filter ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.07)', borderRadius: 12, border: batchSummaryFilter === stat.filter ? '1px solid rgba(255,255,255,0.7)' : '1px solid rgba(255,255,255,0.1)', minWidth: 92, cursor: 'pointer' }}>
               <div style={{ fontSize: 22, fontWeight: 900, color: stat.color }}>{stat.value}</div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)' }}>{stat.label}</div>
-            </div>
+            </button>
           ))}
         </div>
       </div>
@@ -517,7 +521,7 @@ export default function QRHub({ role }: QRHubProps) {
           />
         </div>
         {permissions.canExport && (
-          <button onClick={openHubExport} disabled={!batches.length} style={{ background: C.red, color: 'white', border: 'none', borderRadius: 10, padding: '10px 16px', fontSize: 13, fontWeight: 700, cursor: batches.length ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 8, opacity: batches.length ? 1 : 0.6 }}>
+          <button onClick={openHubExport} disabled={!visibleBatches.length} style={{ background: C.red, color: 'white', border: 'none', borderRadius: 10, padding: '10px 16px', fontSize: 13, fontWeight: 700, cursor: visibleBatches.length ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 8, opacity: visibleBatches.length ? 1 : 0.6 }}>
             <FileSpreadsheet size={15} />
             Export
           </button>
@@ -543,7 +547,7 @@ export default function QRHub({ role }: QRHubProps) {
                   </td>
                 </tr>
               )}
-              {!loading && batches.length === 0 && (
+              {!loading && visibleBatches.length === 0 && (
                 <tr>
                   <td colSpan={9} style={{ padding: '54px 20px', textAlign: 'center', color: C.muted }}>
                     <QrCode size={44} style={{ marginBottom: 12, opacity: 0.35 }} />
@@ -551,8 +555,8 @@ export default function QRHub({ role }: QRHubProps) {
                   </td>
                 </tr>
               )}
-              {!loading && batches.map((batch, index) => (
-                <tr key={batch.batchId} style={{ borderBottom: index < batches.length - 1 ? `1px solid ${C.border}` : 'none' }}
+              {!loading && visibleBatches.map((batch, index) => (
+                <tr key={batch.batchId} style={{ borderBottom: index < visibleBatches.length - 1 ? `1px solid ${C.border}` : 'none' }}
                   onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = C.bg}
                   onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}
                 >

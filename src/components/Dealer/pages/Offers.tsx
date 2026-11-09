@@ -61,9 +61,9 @@ export default function DealerOffers() {
   const filtered = allOffers.filter(o => (filterStatus === 'all' || o.status === filterStatus) && (o.targetRole === 'dealer' || o.targetRole === 'all'));
 
   const stats = [
-    { label: 'Active Offers', value: allOffers.filter(o => o.status === 'active').length, color: '#10B981', bg: '#D1FAE5' },
-    { label: 'Scheduled', value: allOffers.filter(o => o.status === 'scheduled').length, color: '#F59E0B', bg: '#FFFBEB' },
-    { label: 'Expired', value: allOffers.filter(o => o.status === 'expired').length, color: '#EF4444', bg: '#FEE2E2' },
+    { label: 'Active Offers', value: allOffers.filter(o => o.status === 'active').length, color: '#10B981', bg: '#D1FAE5', filter: 'active' },
+    { label: 'Scheduled', value: allOffers.filter(o => o.status === 'scheduled').length, color: '#F59E0B', bg: '#FFFBEB', filter: 'scheduled' },
+    { label: 'Expired', value: allOffers.filter(o => o.status === 'expired').length, color: '#EF4444', bg: '#FEE2E2', filter: 'expired' },
   ];
 
   const openCreate = () => {
@@ -188,10 +188,10 @@ export default function DealerOffers() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, marginBottom: 24 }}>
         {stats.map((s, i) => (
-          <div key={i} style={{ background: C.card, borderRadius: 14, padding: '16px 18px', border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+          <button type="button" key={i} aria-pressed={filterStatus === s.filter} onClick={() => setFilterStatus(s.filter)} style={{ background: C.card, borderRadius: 14, padding: '16px 18px', border: `1px solid ${filterStatus === s.filter ? s.color : C.border}`, boxShadow: filterStatus === s.filter ? `0 0 0 3px ${s.color}18` : '0 2px 8px rgba(0,0,0,0.04)', cursor: 'pointer', textAlign: 'left', font: 'inherit' }}>
             <div style={{ fontSize: 28, fontWeight: 800, color: s.color, marginBottom: 4 }}>{s.value}</div>
             <div style={{ fontSize: 13, fontWeight: 700, color: C.muted }}>{s.label}</div>
-          </div>
+          </button>
         ))}
       </div>
 

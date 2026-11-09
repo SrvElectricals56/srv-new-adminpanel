@@ -182,12 +182,12 @@ export default function RoleRedemptionRequestsPage({
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14, marginBottom: 20 }}>
         {[
-          { label: `Approved Amount (${summary.approved?.count ?? 0} requests)`, value: `₹${totalApproved.toLocaleString('en-IN')}`, color: '#065F46', bg: '#D1FAE5', Icon: DollarSign },
-          { label: 'Pending Requests', value: String(exactPendingCount), color: '#92400E', bg: '#FEF3C7', Icon: Banknote },
-          { label: 'Requests', value: String(total), color: '#1D4ED8', bg: '#EFF6FF', Icon: CreditCard },
-          { label: 'Rejected', value: String(rejectedCount), color: '#991B1B', bg: '#FEE2E2', Icon: TrendingUp },
+          { label: `Approved Amount (${summary.approved?.count ?? 0} requests)`, value: `₹${totalApproved.toLocaleString('en-IN')}`, color: '#065F46', bg: '#D1FAE5', Icon: DollarSign, filter: 'approved' },
+          { label: 'Pending Requests', value: String(exactPendingCount), color: '#92400E', bg: '#FEF3C7', Icon: Banknote, filter: 'pending' },
+          { label: 'Requests', value: String(total), color: '#1D4ED8', bg: '#EFF6FF', Icon: CreditCard, filter: 'all' },
+          { label: 'Rejected', value: String(rejectedCount), color: '#991B1B', bg: '#FEE2E2', Icon: TrendingUp, filter: 'rejected' },
         ].map((card) => (
-          <div key={card.label} style={{ background: C.card, borderRadius: 14, padding: '16px 18px', border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button type="button" key={card.label} onClick={() => { setPage(1); setStatusFilter(card.filter as typeof statusFilter); }} aria-pressed={statusFilter === card.filter} style={{ background: C.card, borderRadius: 14, padding: '16px 18px', border: statusFilter === card.filter ? `2px solid ${card.color}` : `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', textAlign: 'left' }}>
             <div style={{ width: 42, height: 42, borderRadius: 12, background: card.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: card.color }}>
               <card.Icon size={20} />
             </div>
@@ -195,7 +195,7 @@ export default function RoleRedemptionRequestsPage({
               <div style={{ fontSize: 22, fontWeight: 800, color: C.text }}>{card.value}</div>
               <div style={{ fontSize: 12, color: card.color, fontWeight: 700 }}>{card.label}</div>
             </div>
-          </div>
+          </button>
         ))}
       </div>
 

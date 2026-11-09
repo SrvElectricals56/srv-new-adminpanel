@@ -442,6 +442,12 @@ export default function AllCounterBoys({ role }: AllCounterBoysProps) {
   const LIMIT = 20;
   const sanitizeOptions = (values: string[]) => Array.from(new Set(values.map(value => value.trim()).filter(value => value && value !== '?'))).sort((a, b) => a.localeCompare(b));
 
+  const handleSummaryCardClick = (status: string) => {
+    setStatusFilter(status);
+    setAppStatusFilter('');
+    setPage(1);
+  };
+
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedSearch(search.trim()), 300);
     return () => window.clearTimeout(timer);
@@ -673,15 +679,15 @@ export default function AllCounterBoys({ role }: AllCounterBoysProps) {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 28 }}>
         {[
-          { label: 'Total Counter Boys', value: stats.total, color: '#8B5CF6' },
-          { label: 'Active', value: stats.active, color: '#10B981' },
-          { label: 'Pending', value: stats.pending, color: '#F59E0B' },
-          { label: 'Inactive', value: stats.inactive, color: '#EF4444' },
+          { label: 'Total Counter Boys', value: stats.total, color: '#8B5CF6', status: '' },
+          { label: 'Active', value: stats.active, color: '#10B981', status: 'active' },
+          { label: 'Pending', value: stats.pending, color: '#F59E0B', status: 'pending' },
+          { label: 'Inactive', value: stats.inactive, color: '#EF4444', status: 'inactive' },
         ].map((item) => (
-          <div key={item.label} style={{ background: C.card, borderRadius: 14, padding: '18px 20px', border: `1px solid ${C.border}` }}>
+          <button type="button" key={item.label} aria-pressed={statusFilter === item.status && !appStatusFilter} onClick={() => handleSummaryCardClick(item.status)} style={{ background: C.card, borderRadius: 14, padding: '18px 20px', border: `1px solid ${statusFilter === item.status && !appStatusFilter ? item.color : C.border}`, boxShadow: statusFilter === item.status && !appStatusFilter ? `0 0 0 3px ${item.color}18` : 'none', cursor: 'pointer', textAlign: 'left', font: 'inherit', transition: 'border-color 0.2s, box-shadow 0.2s' }}>
             <div style={{ fontSize: 12, color: C.muted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>{item.label}</div>
             <div style={{ fontSize: 28, fontWeight: 800, color: item.color, marginTop: 6 }}>{item.value.toLocaleString('en-IN')}</div>
-          </div>
+          </button>
         ))}
       </div>
 

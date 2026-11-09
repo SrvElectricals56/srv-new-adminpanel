@@ -25,6 +25,7 @@ export default function ElectricianApprovals() {
   const [selected, setSelected] = useState<PendingElectrician | null>(null);
   const [confirmState, setConfirmState] = useState<{show: boolean; title: string; message: string; onConfirm: () => void; type: 'success' | 'danger'}>({show: false, title: '', message: '', onConfirm: () => {}, type: 'success'});
   const [showExport, setShowExport] = useState(false);
+  const [approvalFilter, setApprovalFilter] = useState<'pending' | 'active' | 'inactive'>('pending');
 
   useEffect(() => {
     electricianApi.getAll({ limit: '500' }).then(res => {
@@ -71,6 +72,8 @@ export default function ElectricianApprovals() {
   const pending = electricians.filter(d => d.status === 'pending');
   const approved = electricians.filter(d => d.status === 'active');
   const rejected = electricians.filter(d => d.status === 'inactive');
+  const visibleApplications = approvalFilter === 'pending' ? pending : approvalFilter === 'active' ? approved : rejected;
+  const visibleLabel = approvalFilter === 'pending' ? 'Pending' : approvalFilter === 'active' ? 'Approved' : 'Rejected';
 
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
@@ -87,21 +90,21 @@ export default function ElectricianApprovals() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, marginBottom: 24 }}>
         {[
-          { label: 'Pending', value: pending.length, color: '#F59E0B', bg: '#FFFBEB' },
-          { label: 'Approved', value: approved.length, color: '#10B981', bg: '#D1FAE5' },
-          { label: 'Rejected', value: rejected.length, color: '#EF4444', bg: '#FEE2E2' },
+          { label: 'Pending', value: pending.length, color: '#F59E0B', bg: '#FFFBEB', filter: 'pending' },
+          { label: 'Approved', value: approved.length, color: '#10B981', bg: '#D1FAE5', filter: 'active' },
+          { label: 'Rejected', value: rejected.length, color: '#EF4444', bg: '#FEE2E2', filter: 'inactive' },
         ].map((s, i) => (
-          <div key={i} style={{ background: C.card, borderRadius: 14, padding: '16px 18px', border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+          <button type="button" key={i} onClick={() => setApprovalFilter(s.filter as typeof approvalFilter)} aria-pressed={approvalFilter === s.filter} style={{ background: C.card, borderRadius: 14, padding: '16px 18px', border: approvalFilter === s.filter ? `2px solid ${s.color}` : `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', textAlign: 'left', cursor: 'pointer' }}>
             <div style={{ fontSize: 28, fontWeight: 800, color: s.color, marginBottom: 4 }}>{s.value}</div>
             <div style={{ fontSize: 13, fontWeight: 700, color: C.muted }}>{s.label}</div>
-          </div>
+          </button>
         ))}
       </div>
 
       <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
         <div style={{ padding: '18px 22px', borderBottom: `1px solid ${C.border}`, background: C.surface, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h2 style={{ fontSize: 16, fontWeight: 800, color: C.text }}>Pending Applications ({pending.length})</h2>
-          {pending.length > 0 && (
+          <h2 style={{ fontSize: 16, fontWeight: 800, color: C.text }}>{visibleLabel} Applications ({visibleApplications.length})</h2>
+          {approvalFilter === 'pending' && pending.length > 0 && (
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={() => {
                 setConfirmState({
@@ -131,19 +134,19 @@ export default function ElectricianApprovals() {
         <div style={{ padding: 0 }}>
           {loading ? (
             <div style={{ textAlign: 'center', padding: '40px', color: C.muted }}>Loading...</div>
-          ) : pending.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px', color: C.muted }}>No pending applications</div>
+          ) : visibleApplications.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: C.muted }}>No {visibleLabel.toLowerCase()} applications</div>
           ) : (
-            pending.map((item, i) => (
-              <div key={item.id} style={{ padding: '18px 22px', borderBottom: i < pending.length - 1 ? `1px solid ${C.border}` : 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            visibleApplications.map((item, i) => (
+              <div key={item.id} style={{ padding: '18px 22px', borderBottom: i < visibleApplications.length - 1 ? `1px solid ${C.border}` : 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div>
                   <div style={{ fontSize: 15, fontWeight: 700, color: C.text }}>{item.name}</div>
                   <div style={{ fontSize: 12, color: C.muted }}>{item.phone} · {item.town}, {item.state}</div>
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button onClick={() => setSelected(item)} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', color: C.muted, display: 'flex', alignItems: 'center', gap: 6 }}><Eye size={14} /> View</button>
-                  <button onClick={() => handleApprove(item)} style={{ background: '#D1FAE5', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 12, fontWeight: 600, cursor: 'pointer', color: '#065F46', display: 'flex', alignItems: 'center', gap: 6 }}><Check size={14} /> Approve</button>
-                  <button onClick={() => handleReject(item)} style={{ background: '#FEE2E2', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 12, fontWeight: 600, cursor: 'pointer', color: '#991B1B', display: 'flex', alignItems: 'center', gap: 6 }}><X size={14} /> Reject</button>
+                  {item.status === 'pending' && <button onClick={() => handleApprove(item)} style={{ background: '#D1FAE5', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 12, fontWeight: 600, cursor: 'pointer', color: '#065F46', display: 'flex', alignItems: 'center', gap: 6 }}><Check size={14} /> Approve</button>}
+                  {item.status === 'pending' && <button onClick={() => handleReject(item)} style={{ background: '#FEE2E2', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 12, fontWeight: 600, cursor: 'pointer', color: '#991B1B', display: 'flex', alignItems: 'center', gap: 6 }}><X size={14} /> Reject</button>}
                 </div>
               </div>
             ))
@@ -165,10 +168,10 @@ export default function ElectricianApprovals() {
               <div style={{ background: C.bg, borderRadius: 10, padding: 12, fontSize: 13 }}><strong>Location:</strong> {selected.town}, {selected.state}</div>
               <div style={{ background: C.bg, borderRadius: 10, padding: 12, fontSize: 13 }}><strong>Applied:</strong> {formatISTDate(selected.joinedDate)}</div>
             </div>
-            <div style={{ padding: '18px 22px', borderTop: `1px solid ${C.border}`, display: 'flex', gap: 12 }}>
+            {selected.status === 'pending' && <div style={{ padding: '18px 22px', borderTop: `1px solid ${C.border}`, display: 'flex', gap: 12 }}>
               <button onClick={() => handleApprove(selected)} style={{ flex: 1, background: '#D1FAE5', color: '#065F46', border: 'none', borderRadius: 8, padding: '12px 20px', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}><Check size={16} /> Approve</button>
               <button onClick={() => handleReject(selected)} style={{ flex: 1, background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 8, padding: '12px 20px', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}><X size={16} /> Reject</button>
-            </div>
+            </div>}
           </div>
         </div>
       )}

@@ -116,13 +116,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
           await hydrateProducts();
         })
         .catch(err => {
-          console.error('Failed to restore admin session:', err);
           if (isAuthenticationError(err)) {
             removeToken();
             setAuth({ isLoggedIn: false, role: 'staff', adminName: '', adminId: null });
             setProducts([]);
             setPointsConfig([]);
           } else {
+            console.error('Failed to restore admin session:', err);
             // Keep the stored session during a temporary outage. A later focus or
             // heartbeat will validate it without forcing the admin to log in again.
             setAuth({

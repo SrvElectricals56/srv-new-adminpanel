@@ -58,6 +58,7 @@ export default function Testimonials({ role }: { role?: import('@/lib/types').Ad
   const canEdit = isSuperAdmin || isAdmin;
   const canDelete = isSuperAdmin;
   const [activeTab, setActiveTab] = useState<UserCategory>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active'>('all');
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -99,8 +100,9 @@ export default function Testimonials({ role }: { role?: import('@/lib/types').Ad
   const filtered = useMemo(() =>
     testimonials
       .filter(t => activeTab === 'all' ? true : t.userCategory === activeTab)
+      .filter(t => statusFilter === 'all' || t.isActive)
       .sort((a, b) => a.displayOrder - b.displayOrder),
-    [testimonials, activeTab]
+    [testimonials, activeTab, statusFilter]
   );
 
   const stats = useMemo(() => ({
@@ -178,17 +180,17 @@ export default function Testimonials({ role }: { role?: import('@/lib/types').Ad
         </div>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
           {[
-            { label: 'Total', value: stats.all, bg: 'rgba(255,255,255,0.15)', color: '#fff' },
-            { label: 'Active', value: stats.active, bg: 'rgba(34,197,94,0.2)', color: '#86EFAC' },
-            { label: 'Electricians', value: stats.electrician, bg: 'rgba(59,130,246,0.2)', color: '#93C5FD' },
-            { label: 'Dealers', value: stats.dealer, bg: 'rgba(16,185,129,0.2)', color: '#6EE7B7' },
-            { label: 'Customers', value: stats.customer, bg: 'rgba(194,65,12,0.2)', color: '#FED7AA' },
-            { label: 'Counterboys', value: stats.counterboy, bg: 'rgba(15,118,110,0.2)', color: '#99F6E4' },
+            { label: 'Total', value: stats.all, bg: 'rgba(255,255,255,0.15)', color: '#fff', category: 'all' as UserCategory, status: 'all' as const },
+            { label: 'Active', value: stats.active, bg: 'rgba(34,197,94,0.2)', color: '#86EFAC', category: 'all' as UserCategory, status: 'active' as const },
+            { label: 'Electricians', value: stats.electrician, bg: 'rgba(59,130,246,0.2)', color: '#93C5FD', category: 'electrician' as UserCategory, status: 'all' as const },
+            { label: 'Dealers', value: stats.dealer, bg: 'rgba(16,185,129,0.2)', color: '#6EE7B7', category: 'dealer' as UserCategory, status: 'all' as const },
+            { label: 'Customers', value: stats.customer, bg: 'rgba(194,65,12,0.2)', color: '#FED7AA', category: 'customer' as UserCategory, status: 'all' as const },
+            { label: 'Counterboys', value: stats.counterboy, bg: 'rgba(15,118,110,0.2)', color: '#99F6E4', category: 'counterboy' as UserCategory, status: 'all' as const },
           ].map(s => (
-            <div key={s.label} style={{ background: s.bg, borderRadius: 10, padding: '10px 18px', textAlign: 'center', minWidth: 72 }}>
+            <button type="button" key={s.label} aria-pressed={activeTab === s.category && statusFilter === s.status} onClick={() => { setActiveTab(s.category); setStatusFilter(s.status); }} style={{ background: s.bg, borderRadius: 10, padding: '10px 18px', textAlign: 'center', minWidth: 72, border: `1px solid ${activeTab === s.category && statusFilter === s.status ? s.color : 'transparent'}`, cursor: 'pointer', font: 'inherit' }}>
               <div style={{ fontSize: 22, fontWeight: 800, color: s.color }}>{s.value}</div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 1 }}>{s.label}</div>
-            </div>
+            </button>
           ))}
           <button onClick={openAdd} style={{ padding: '10px 20px', borderRadius: 9, border: 'none', background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: canCreate ? 'flex' : 'none', alignItems: 'center', gap: 6 }}>
             <Plus size={15} /> Add Testimonial
@@ -199,7 +201,7 @@ export default function Testimonials({ role }: { role?: import('@/lib/types').Ad
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
         {TABS.map(tab => (
-          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+          <button key={tab.id} onClick={() => { setActiveTab(tab.id); setStatusFilter('all'); }}
             style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 12, border: `2px solid ${activeTab === tab.id ? tab.color : C.border}`, background: activeTab === tab.id ? tab.bg : C.card, color: activeTab === tab.id ? tab.color : C.muted, fontSize: 13, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s' }}>
             <tab.Icon size={15} />
             {tab.label}

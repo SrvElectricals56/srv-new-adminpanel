@@ -354,19 +354,19 @@ export default function RoleWalletHistoryPage({
       {/* Summary cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, marginBottom: 22 }}>
         {[
-          { label: 'Total Credits', value: totalCredits, color: '#065F46', bg: '#D1FAE5', Icon: ArrowDownLeft },
-          { label: 'Total Debits',  value: totalDebits,  color: '#991B1B', bg: '#FEE2E2', Icon: ArrowUpRight },
-          { label: 'Net Balance',   value: totalCredits - totalDebits, color: '#1D4ED8', bg: '#EFF6FF', Icon: Wallet },
+          { label: 'Total Credits', value: totalCredits, color: '#065F46', bg: '#D1FAE5', Icon: ArrowDownLeft, filter: 'credit' },
+          { label: 'Total Debits',  value: totalDebits,  color: '#991B1B', bg: '#FEE2E2', Icon: ArrowUpRight, filter: 'debit' },
+          { label: 'Net Balance',   value: totalCredits - totalDebits, color: '#1D4ED8', bg: '#EFF6FF', Icon: Wallet, filter: 'all' },
         ].map((card) => (
-          <div key={card.label} style={{ background: C.card, borderRadius: 14, padding: '16px 18px', border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 42, height: 42, borderRadius: 12, background: card.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: card.color }}>
+          <button type="button" key={card.label} aria-pressed={filterType === card.filter} onClick={() => setFilterType(card.filter)} style={{ background: C.card, borderRadius: 14, padding: '16px 18px', border: `1px solid ${filterType === card.filter ? card.color : C.border}`, boxShadow: filterType === card.filter ? `0 0 0 3px ${card.color}18` : 'none', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', textAlign: 'left', font: 'inherit' }}>
+            <span style={{ width: 42, height: 42, borderRadius: 12, background: card.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: card.color }}>
               <card.Icon size={20} />
-            </div>
-            <div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: C.text }}>₹{card.value.toLocaleString('en-IN')}</div>
-              <div style={{ fontSize: 12, color: card.color, fontWeight: 700 }}>{card.label}</div>
-            </div>
-          </div>
+            </span>
+            <span>
+              <span style={{ display: 'block', fontSize: 22, fontWeight: 800, color: C.text }}>₹{card.value.toLocaleString('en-IN')}</span>
+              <span style={{ display: 'block', fontSize: 12, color: card.color, fontWeight: 700 }}>{card.label}</span>
+            </span>
+          </button>
         ))}
       </div>
 

@@ -72,6 +72,7 @@ export default function NotificationsPage({ role }: { role?: import('@/lib/types
   const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
   const [form, setForm] = useState(EMPTY_FORM);
   const [search, setSearch] = useState('');
+  const [summaryFilter, setSummaryFilter] = useState<'all' | 'sent' | 'week' | 'scheduled'>('all');
   const [viewItem, setViewItem] = useState<NotificationRecord | null>(null);
   const [editItem, setEditItem] = useState<NotificationRecord | null>(null);
   const [editForm, setEditForm] = useState({ title: '', body: '', target: 'All Users', type: 'General', status: 'sent' as NotificationRecord['status'] });
@@ -126,10 +127,17 @@ export default function NotificationsPage({ role }: { role?: import('@/lib/types
   }, [userQuery, form.target]);
 
   const filtered = useMemo(() => {
-    if (!search) return notifications;
     const q = search.toLowerCase();
-    return notifications.filter(n => n.title.toLowerCase().includes(q) || n.target.toLowerCase().includes(q) || n.type.toLowerCase().includes(q));
-  }, [notifications, search]);
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    return notifications.filter(n => {
+      const matchesSummary = summaryFilter === 'all' ||
+        (summaryFilter === 'sent' && n.status === 'sent') ||
+        (summaryFilter === 'week' && n.status === 'sent' && n.sentOn >= weekAgo) ||
+        (summaryFilter === 'scheduled' && n.status === 'scheduled');
+      const matchesSearch = !q || n.title.toLowerCase().includes(q) || n.target.toLowerCase().includes(q) || n.type.toLowerCase().includes(q);
+      return matchesSummary && matchesSearch;
+    });
+  }, [notifications, search, summaryFilter]);
 
   const stats = useMemo(() => {
     const now = new Date();
@@ -236,14 +244,14 @@ export default function NotificationsPage({ role }: { role?: import('@/lib/types
         </div>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           {[
-            { label: 'Total Sent', value: stats.total, bg: 'rgba(255,255,255,0.15)', color: '#fff' },
-            { label: 'This Week', value: stats.thisWeek, bg: 'rgba(96,165,250,0.25)', color: '#BFDBFE' },
-            { label: 'Scheduled', value: stats.scheduled, bg: 'rgba(245,158,11,0.2)', color: '#FCD34D' },
+            { label: 'Total Sent', value: stats.total, bg: 'rgba(255,255,255,0.15)', color: '#fff', filter: 'sent' as const },
+            { label: 'This Week', value: stats.thisWeek, bg: 'rgba(96,165,250,0.25)', color: '#BFDBFE', filter: 'week' as const },
+            { label: 'Scheduled', value: stats.scheduled, bg: 'rgba(245,158,11,0.2)', color: '#FCD34D', filter: 'scheduled' as const },
           ].map(s => (
-            <div key={s.label} style={{ background: s.bg, borderRadius: 10, padding: '10px 18px', textAlign: 'center', minWidth: 80 }}>
+            <button type="button" key={s.label} aria-pressed={summaryFilter === s.filter} onClick={() => setSummaryFilter(s.filter)} style={{ background: s.bg, borderRadius: 10, padding: '10px 18px', textAlign: 'center', minWidth: 80, border: `1px solid ${summaryFilter === s.filter ? s.color : 'transparent'}`, cursor: 'pointer', font: 'inherit' }}>
               <div style={{ fontSize: 22, fontWeight: 800, color: s.color }}>{s.value}</div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 1 }}>{s.label}</div>
-            </div>
+            </button>
           ))}
         </div>
       </div>

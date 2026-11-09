@@ -13,6 +13,7 @@ export default function CounterBoyScanHistory() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [mode, setMode] = useState<'all' | 'single' | 'multi'>('all');
+  const [selectedSummary, setSelectedSummary] = useState<'total' | 'points' | 'single' | 'multi'>('total');
   const [showExport, setShowExport] = useState(false);
 
   const load = useCallback(async () => {
@@ -41,6 +42,11 @@ export default function CounterBoyScanHistory() {
 
   const inputStyle: React.CSSProperties = { width: '100%', padding: '9px 12px', border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 13, outline: 'none', background: C.surface, color: C.text, boxSizing: 'border-box' };
 
+  const handleSummaryCardClick = (summary: 'total' | 'points' | 'single' | 'multi') => {
+    setSelectedSummary(summary);
+    setMode(summary === 'single' || summary === 'multi' ? summary : 'all');
+  };
+
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
       <ExportModal show={showExport} onClose={() => setShowExport(false)} title="Counter Boy Scans" fileName="counterboy-scans" getData={() => rows.map(row => ({ CounterBoy: row.userName, UserId: row.userId, Product: row.productName, ScanType: row.mode, Points: row.points, DateTime: row.scannedAt }))} />
@@ -53,17 +59,17 @@ export default function CounterBoyScanHistory() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 22 }}>
-        {[{ label: 'Total Scans', value: stats.total }, { label: 'Total Points', value: stats.points }, { label: 'Single Scans', value: stats.single }, { label: 'Multi Scans', value: stats.multi }].map(card => (
-          <div key={card.label} style={{ background: C.card, borderRadius: 14, padding: '16px 18px', border: `1px solid ${C.border}` }}>
+        {[{ label: 'Total Scans', value: stats.total, summary: 'total' as const }, { label: 'Total Points', value: stats.points, summary: 'points' as const }, { label: 'Single Scans', value: stats.single, summary: 'single' as const }, { label: 'Multi Scans', value: stats.multi, summary: 'multi' as const }].map(card => (
+          <button type="button" key={card.label} aria-pressed={selectedSummary === card.summary} onClick={() => handleSummaryCardClick(card.summary)} style={{ background: C.card, borderRadius: 14, padding: '16px 18px', border: `1px solid ${selectedSummary === card.summary ? C.red : C.border}`, boxShadow: selectedSummary === card.summary ? `0 0 0 3px ${C.red}18` : 'none', cursor: 'pointer', textAlign: 'left', font: 'inherit' }}>
             <div style={{ fontSize: 22, fontWeight: 800, color: C.text }}>{card.value.toLocaleString('en-IN')}</div>
             <div style={{ fontSize: 12, color: C.muted, fontWeight: 700 }}>{card.label}</div>
-          </div>
+          </button>
         ))}
       </div>
 
       <div style={{ background: C.card, borderRadius: 14, padding: '14px 18px', border: `1px solid ${C.border}`, marginBottom: 18, display: 'flex', gap: 12, alignItems: 'center' }}>
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search counter boy or product..." style={{ ...inputStyle, flex: 1 }} />
-        <select value={mode} onChange={e => setMode(e.target.value as any)} style={{ ...inputStyle, width: 'auto' }}>
+        <select value={mode} onChange={e => { const next = e.target.value as 'all' | 'single' | 'multi'; setMode(next); setSelectedSummary(next === 'all' ? 'total' : next); }} style={{ ...inputStyle, width: 'auto' }}>
           <option value="all">All Types</option>
           <option value="single">Single Scan</option>
           <option value="multi">Multi Scan</option>

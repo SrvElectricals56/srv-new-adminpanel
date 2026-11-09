@@ -118,7 +118,8 @@ export default function TransferPoints({ role }: { role?: import('@/lib/types').
 
   const filtered = useMemo(() => {
     let list = transfers;
-    if (statusFilter !== 'all') list = list.filter(t => t.status === statusFilter);
+    if (statusFilter === 'not_reversed') list = list.filter(t => t.status !== 'reversed');
+    else if (statusFilter !== 'all') list = list.filter(t => t.status === statusFilter);
     if (dateFrom) list = list.filter(t => t.date >= dateFrom);
     if (dateTo) list = list.filter(t => t.date <= dateTo);
     if (search) {
@@ -276,15 +277,15 @@ export default function TransferPoints({ role }: { role?: import('@/lib/types').
         </div>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
           {[
-            { label: 'Total Transfers', value: stats.total, bg: 'rgba(255,255,255,0.15)', color: '#fff' },
-            { label: 'Points Transferred', value: stats.totalPoints.toLocaleString(), bg: 'rgba(20,184,166,0.3)', color: '#99F6E4' },
-            { label: 'Pending', value: stats.pending, bg: 'rgba(245,158,11,0.25)', color: '#FCD34D' },
-            { label: 'Completed', value: stats.completed, bg: 'rgba(34,197,94,0.2)', color: '#86EFAC' },
+            { label: 'Total Transfers', value: stats.total, bg: 'rgba(255,255,255,0.15)', color: '#fff', filter: 'all' },
+            { label: 'Points Transferred', value: stats.totalPoints.toLocaleString(), bg: 'rgba(20,184,166,0.3)', color: '#99F6E4', filter: 'not_reversed' },
+            { label: 'Pending', value: stats.pending, bg: 'rgba(245,158,11,0.25)', color: '#FCD34D', filter: 'pending' },
+            { label: 'Completed', value: stats.completed, bg: 'rgba(34,197,94,0.2)', color: '#86EFAC', filter: 'completed' },
           ].map(s => (
-            <div key={s.label} style={{ background: s.bg, borderRadius: 10, padding: '10px 18px', textAlign: 'center', minWidth: 72 }}>
+            <button type="button" key={s.label} aria-pressed={statusFilter === s.filter} onClick={() => setStatusFilter(s.filter)} style={{ background: s.bg, borderRadius: 10, padding: '10px 18px', textAlign: 'center', minWidth: 72, border: `1px solid ${statusFilter === s.filter ? s.color : 'transparent'}`, cursor: 'pointer', font: 'inherit' }}>
               <div style={{ fontSize: 20, fontWeight: 800, color: s.color }}>{s.value}</div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 1 }}>{s.label}</div>
-            </div>
+            </button>
           ))}
           {canCreate && <button onClick={() => { setForm(EMPTY_FORM); setSelectedFromUser(null); setSelectedToUser(null); setFromSearchResults([]); setToSearchResults([]); setShowTransferModal(true); }} style={{ padding: '10px 18px', borderRadius: 9, border: 'none', background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
             <ArrowLeftRight size={14} /> Manual Transfer
@@ -309,6 +310,7 @@ export default function TransferPoints({ role }: { role?: import('@/lib/types').
               <div style={labelStyle}>Status</div>
               <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ ...inputStyle, width: '100%' }}>
                 <option value="all">All Statuses</option>
+                <option value="not_reversed">Transferred (Not Reversed)</option>
                 <option value="pending">Pending</option>
                 <option value="completed">Completed</option>
                 <option value="reversed">Reversed</option>

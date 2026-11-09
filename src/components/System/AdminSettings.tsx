@@ -54,6 +54,7 @@ export default function AdminSettings() {
   const [showPass, setShowPass] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'users' | 'roles' | 'password'>('users');
+  const [adminSummaryFilter, setAdminSummaryFilter] = useState<'all' | 'active' | 'super_admin'>('all');
   const [saved, setSaved] = useState(false);
   const [showExport, setShowExport] = useState(false);
   // Password Change Modal State
@@ -100,6 +101,7 @@ export default function AdminSettings() {
     lockoutDuration: 30,
   });
   const [passwordPolicySaved, setPasswordPolicySaved] = useState(false);
+  const filteredAdmins = admins.filter(admin => adminSummaryFilter === 'all' || (adminSummaryFilter === 'active' ? admin.status === 'active' : admin.role === 'super_admin'));
 
   const loadAdmins = async () => {
     try {
@@ -487,14 +489,14 @@ export default function AdminSettings() {
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
           {[
-            { label: 'Total Admins', value: admins.length, color: '#fff', bg: 'rgba(255,255,255,0.15)' },
-            { label: 'Active', value: admins.filter(a => a.status === 'active').length, color: '#86EFAC', bg: 'rgba(34,197,94,0.2)' },
-            { label: 'Super Admins', value: admins.filter(a => a.role === 'super_admin').length, color: '#FCA5A5', bg: 'rgba(239,68,68,0.2)' },
+            { label: 'Total Admins', value: admins.length, color: '#fff', bg: 'rgba(255,255,255,0.15)', filter: 'all' },
+            { label: 'Active', value: admins.filter(a => a.status === 'active').length, color: '#86EFAC', bg: 'rgba(34,197,94,0.2)', filter: 'active' },
+            { label: 'Super Admins', value: admins.filter(a => a.role === 'super_admin').length, color: '#FCA5A5', bg: 'rgba(239,68,68,0.2)', filter: 'super_admin' },
           ].map(s => (
-            <div key={s.label} style={{ background: s.bg, borderRadius: 10, padding: '10px 16px', textAlign: 'center' }}>
+            <button type="button" key={s.label} onClick={() => { setActiveTab('users'); setAdminSummaryFilter(s.filter as typeof adminSummaryFilter); }} aria-pressed={adminSummaryFilter === s.filter} style={{ background: s.bg, borderRadius: 10, padding: '10px 16px', textAlign: 'center', border: adminSummaryFilter === s.filter ? '1px solid rgba(255,255,255,0.8)' : '1px solid transparent', cursor: 'pointer' }}>
               <div style={{ fontSize: 20, fontWeight: 800, color: s.color }}>{s.value}</div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>{s.label}</div>
-            </div>
+            </button>
           ))}
           <button onClick={() => setShowExport(true)} disabled={!admins.length} style={{ padding: '10px 18px', borderRadius: 9, border: '1px solid rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.1)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: admins.length ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 6, opacity: admins.length ? 1 : 0.55 }}>
             <Download size={14} /> Export
@@ -525,7 +527,7 @@ export default function AdminSettings() {
               </tr>
             </thead>
             <tbody>
-              {admins.map(a => {
+              {filteredAdmins.map(a => {
                 const rc = ROLE_CONFIG[a.role];
                 return (
                   <tr key={a.id} style={{ borderBottom: `1px solid ${C.border}`, transition: 'background 0.15s' }}

@@ -31,6 +31,7 @@ export function ScanHistory() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterRole, setFilterRole] = useState('all');
+  const [summaryFilter, setSummaryFilter] = useState<'all' | 'electrician' | 'customer' | 'multi'>('all');
 
   useEffect(() => {
     scanApi.getAll({ limit: '200' }).then(res => {
@@ -44,7 +45,8 @@ export function ScanHistory() {
       (s.userName || '').toLowerCase().includes(q) ||
       (s.productName || '').toLowerCase().includes(q) ||
       (s.location || '').toLowerCase().includes(q)
-    ) && (filterRole === 'all' || s.role === filterRole);
+    ) && (filterRole === 'all' || s.role === filterRole)
+      && (summaryFilter === 'all' || (summaryFilter === 'multi' ? s.mode === 'multi' : s.role === summaryFilter));
   });
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
@@ -54,15 +56,15 @@ export function ScanHistory() {
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 22 }}>
         {[
-          { label: 'Total Scans', value: data.length, icon: 'Camera', color: '#3B82F6', bg: '#EFF6FF' },
-          { label: 'By Electricians', value: data.filter(s => s.role === 'electrician').length, icon: 'Bolt', color: '#C2410C', bg: '#FFF7ED' },
-          { label: 'By Customers', value: data.filter(s => s.role === 'customer').length, icon: 'User', color: '#15803D', bg: '#F0FDF4' },
-          { label: 'Multi-Scan', value: data.filter(s => s.mode === 'multi').length, icon: 'Repeat', color: '#065F46', bg: '#D1FAE5' },
+          { label: 'Total Scans', value: data.length, icon: 'Camera', color: '#3B82F6', bg: '#EFF6FF', filter: 'all' },
+          { label: 'By Electricians', value: data.filter(s => s.role === 'electrician').length, icon: 'Bolt', color: '#C2410C', bg: '#FFF7ED', filter: 'electrician' },
+          { label: 'By Customers', value: data.filter(s => s.role === 'customer').length, icon: 'User', color: '#15803D', bg: '#F0FDF4', filter: 'customer' },
+          { label: 'Multi-Scan', value: data.filter(s => s.mode === 'multi').length, icon: 'Repeat', color: '#065F46', bg: '#D1FAE5', filter: 'multi' },
         ].map((s, i) => (
-          <div key={i} style={{ background: C.card, borderRadius: 14, padding: '16px 18px', border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+          <button type="button" key={i} onClick={() => setSummaryFilter(s.filter as typeof summaryFilter)} aria-pressed={summaryFilter === s.filter} style={{ background: C.card, borderRadius: 14, padding: '16px 18px', border: summaryFilter === s.filter ? `2px solid ${s.color}` : `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', cursor: 'pointer', textAlign: 'left' }}>
             <div style={{ width: 42, height: 42, borderRadius: 12, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><I name={s.icon} size={20} /></div>
             <div><div style={{ fontSize: 22, fontWeight: 800, color: C.text }}>{s.value}</div><div style={{ fontSize: 12, color: s.color, fontWeight: 700 }}>{s.label}</div></div>
-          </div>
+          </button>
         ))}
       </div>
       <div style={{ background: C.card, borderRadius: 14, padding: '14px 18px', border: `1px solid ${C.border}`, marginBottom: 16, display: 'flex', gap: 12, alignItems: 'center' }}>
@@ -163,10 +165,10 @@ export function Redemptions() {
           { label: 'Approved', value: data.filter(r => r.status === 'approved').length, icon: 'Check', color: '#065F46', bg: '#D1FAE5' },
           { label: 'Rejected', value: data.filter(r => r.status === 'rejected').length, icon: 'XCircle', color: '#991B1B', bg: '#FEE2E2' },
         ].map((s, i) => (
-          <div key={i} onClick={() => setFilter(s.label.toLowerCase())} style={{ background: C.card, borderRadius: 14, padding: '18px 20px', border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+          <button type="button" key={i} onClick={() => setFilter(s.label.toLowerCase())} aria-pressed={filter === s.label.toLowerCase()} style={{ background: C.card, borderRadius: 14, padding: '18px 20px', border: filter === s.label.toLowerCase() ? `2px solid ${s.color}` : `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', textAlign: 'left' }}>
             <div style={{ width: 48, height: 48, borderRadius: 14, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><I name={s.icon} size={22} /></div>
             <div><div style={{ fontSize: 28, fontWeight: 900, color: C.text }}>{s.value}</div><div style={{ fontSize: 12, color: s.color, fontWeight: 700 }}>{s.label}</div></div>
-          </div>
+          </button>
         ))}
       </div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>

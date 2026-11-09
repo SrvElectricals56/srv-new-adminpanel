@@ -67,6 +67,7 @@ export default function BannersPage({ role }: { role?: import('@/lib/types').Adm
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [alertDialog, setAlertDialog] = useState<{ show: boolean; title: string; message: string; type: 'error' | 'success' | 'warning' | 'info' }>({ show: false, title: '', message: '', type: 'error' });
 
   const loadBanners = async () => {
@@ -98,6 +99,10 @@ export default function BannersPage({ role }: { role?: import('@/lib/types').Adm
     active: banners.filter(b => b.isActive).length,
     inactive: banners.filter(b => !b.isActive).length,
   }), [banners]);
+
+  const filteredBanners = useMemo(() => banners
+    .filter(banner => statusFilter === 'all' || (statusFilter === 'active' ? banner.isActive : !banner.isActive))
+    .sort((a, b) => a.displayOrder - b.displayOrder), [banners, statusFilter]);
 
   const openAdd = () => { setEditingId(null); setForm({ ...EMPTY_FORM, displayOrder: banners.length + 1 }); setShowModal(true); };
   const openEdit = (b: Banner) => { setEditingId(b.id); setForm({ title: b.title, imageUrl: normalizeBannerImageUrl(b.imageUrl), bgColor: b.bgColor, resizeMode: b.resizeMode, isActive: b.isActive, displayOrder: b.displayOrder, targetRole: [...b.targetRole] }); setShowModal(true); };
@@ -171,14 +176,14 @@ export default function BannersPage({ role }: { role?: import('@/lib/types').Adm
         </div>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
           {[
-            { label: 'Total', value: stats.total, bg: 'rgba(255,255,255,0.15)', color: '#fff' },
-            { label: 'Active', value: stats.active, bg: 'rgba(34,197,94,0.2)', color: '#86EFAC' },
-            { label: 'Inactive', value: stats.inactive, bg: 'rgba(239,68,68,0.2)', color: '#FCA5A5' },
+            { label: 'Total', value: stats.total, bg: 'rgba(255,255,255,0.15)', color: '#fff', filter: 'all' as const },
+            { label: 'Active', value: stats.active, bg: 'rgba(34,197,94,0.2)', color: '#86EFAC', filter: 'active' as const },
+            { label: 'Inactive', value: stats.inactive, bg: 'rgba(239,68,68,0.2)', color: '#FCA5A5', filter: 'inactive' as const },
           ].map(s => (
-            <div key={s.label} style={{ background: s.bg, borderRadius: 10, padding: '10px 18px', textAlign: 'center', minWidth: 72 }}>
+            <button type="button" key={s.label} aria-pressed={statusFilter === s.filter} onClick={() => setStatusFilter(s.filter)} style={{ background: s.bg, borderRadius: 10, padding: '10px 18px', textAlign: 'center', minWidth: 72, border: `1px solid ${statusFilter === s.filter ? s.color : 'transparent'}`, cursor: 'pointer', font: 'inherit' }}>
               <div style={{ fontSize: 22, fontWeight: 800, color: s.color }}>{s.value}</div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 1 }}>{s.label}</div>
-            </div>
+            </button>
           ))}
           <button onClick={openAdd} style={{ padding: '10px 20px', borderRadius: 9, border: 'none', background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: canCreate ? 'flex' : 'none', alignItems: 'center', gap: 6, backdropFilter: 'blur(4px)' }}>
             <Plus size={15} /> Add Banner
@@ -188,7 +193,7 @@ export default function BannersPage({ role }: { role?: import('@/lib/types').Adm
 
       {/* Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 18 }}>
-        {banners.sort((a, b) => a.displayOrder - b.displayOrder).map(banner => (
+        {filteredBanners.map(banner => (
           <div key={banner.id} style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden', boxShadow: C.shadow }}>
             {/* Image Preview */}
             <div style={{ height: 160, background: banner.bgColor, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>

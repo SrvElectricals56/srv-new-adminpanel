@@ -33,6 +33,7 @@ export default function ElectricianScanHistory() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterScanMode, setFilterScanMode] = useState<'all' | 'single' | 'multi'>('all');
+  const [selectedSummary, setSelectedSummary] = useState<'total' | 'points' | 'single' | 'multi'>('total');
   const [showExport, setShowExport] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [userLoading, setUserLoading] = useState(false);
@@ -119,6 +120,12 @@ export default function ElectricianScanHistory() {
     color: C.text, boxSizing: 'border-box',
   };
 
+  const handleSummaryCardClick = (summary: 'total' | 'points' | 'single' | 'multi') => {
+    setSelectedSummary(summary);
+    setFilterScanMode(summary === 'single' || summary === 'multi' ? summary : 'all');
+    setCurrentPage(1);
+  };
+
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
       {selectedUser && (
@@ -155,15 +162,15 @@ export default function ElectricianScanHistory() {
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 22 }}>
         {[
-          { label: 'Total Scans', value: totalCount.toLocaleString('en-IN'), color: '#3B82F6', bg: '#EFF6FF' },
-          { label: 'Total Points', value: totalPoints.toLocaleString('en-IN'), color: '#F59E0B', bg: '#FFFBEB' },
-          { label: 'Single Scans', value: totalSingle.toLocaleString('en-IN'), color: '#10B981', bg: '#D1FAE5' },
-          { label: 'Multi Scans', value: totalMulti.toLocaleString('en-IN'), color: '#8B5CF6', bg: '#F5F3FF' },
+          { label: 'Total Scans', value: totalCount.toLocaleString('en-IN'), color: '#3B82F6', bg: '#EFF6FF', summary: 'total' as const },
+          { label: 'Total Points', value: totalPoints.toLocaleString('en-IN'), color: '#F59E0B', bg: '#FFFBEB', summary: 'points' as const },
+          { label: 'Single Scans', value: totalSingle.toLocaleString('en-IN'), color: '#10B981', bg: '#D1FAE5', summary: 'single' as const },
+          { label: 'Multi Scans', value: totalMulti.toLocaleString('en-IN'), color: '#8B5CF6', bg: '#F5F3FF', summary: 'multi' as const },
         ].map((s, i) => (
-          <div key={i} style={{ background: C.card, borderRadius: 14, padding: '16px 18px', border: `1px solid ${C.border}` }}>
+          <button type="button" key={i} aria-pressed={selectedSummary === s.summary} onClick={() => handleSummaryCardClick(s.summary)} style={{ background: C.card, borderRadius: 14, padding: '16px 18px', border: `1px solid ${selectedSummary === s.summary ? s.color : C.border}`, boxShadow: selectedSummary === s.summary ? `0 0 0 3px ${s.color}18` : 'none', cursor: 'pointer', textAlign: 'left', font: 'inherit' }}>
             <div style={{ fontSize: 22, fontWeight: 800, color: C.text }}>{s.value}</div>
             <div style={{ fontSize: 12, color: C.muted, fontWeight: 700 }}>{s.label}</div>
-          </div>
+          </button>
         ))}
       </div>
 
@@ -175,7 +182,7 @@ export default function ElectricianScanHistory() {
           placeholder="Search name, phone, electrician code, ID, or product..."
           style={{ ...inputStyle, flex: 1, minWidth: 220 }}
         />
-        <select value={filterScanMode} onChange={e => setFilterScanMode(e.target.value as any)} style={{ ...inputStyle, width: 'auto', minWidth: 140 }}>
+        <select value={filterScanMode} onChange={e => { const next = e.target.value as 'all' | 'single' | 'multi'; setFilterScanMode(next); setSelectedSummary(next === 'all' ? 'total' : next); }} style={{ ...inputStyle, width: 'auto', minWidth: 140 }}>
           <option value="all">All Scan Types</option>
           <option value="single">Single Scan</option>
           <option value="multi">Multi Scan</option>

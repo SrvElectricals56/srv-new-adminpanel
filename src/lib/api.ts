@@ -374,9 +374,35 @@ export const dealerApi = {
     const q = params ? '?' + new URLSearchParams(params).toString() : '';
     return request<{ cities: string[] }>(`/dealers/distinct-cities${q}`);
   },
-  getDistinctDistricts: (params?: Record<string, string>) => {
-    const q = params ? '?' + new URLSearchParams(params).toString() : '';
-    return request<{ districts: string[] }>(`/dealers/distinct-districts${q}`);
+  getDistinctDistricts: async (params?: Record<string, string>) => {
+    // The backend does not expose a distinct-districts route. Requesting that
+    // path falls through to /dealers/:id and produces "Invalid ID format".
+    // Build the same filter options from the supported paginated dealer list.
+    const districts = new Set<string>();
+    const limit = 250;
+    let page = 1;
+    let loaded = 0;
+
+    while (true) {
+      const query = new URLSearchParams({
+        ...(params ?? {}),
+        page: String(page),
+        limit: String(limit),
+      });
+      const result = await request<{ data: any[]; total: number }>(`/dealers?${query}`);
+      const dealers = result.data ?? [];
+
+      for (const dealer of dealers) {
+        const district = typeof dealer.district === 'string' ? dealer.district.trim() : '';
+        if (district) districts.add(district);
+      }
+
+      loaded += dealers.length;
+      if (dealers.length === 0 || loaded >= (result.total ?? loaded)) break;
+      page += 1;
+    }
+
+    return { districts: Array.from(districts) };
   },
   getOne: (id: string) => request<any>(`/dealers/${id}`),
   getActivity: (id: string) => request<any>(`/dealers/${id}/activity`),

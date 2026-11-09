@@ -20,6 +20,7 @@ export default function CounterBoyBankLinked() {
   const [rows, setRows] = useState<CounterBoy[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [bankFilter, setBankFilter] = useState<'all' | 'linked' | 'not_linked'>('all');
   const [editing, setEditing] = useState<CounterBoy | null>(null);
   const [viewing, setViewing] = useState<CounterBoy | null>(null);
   const [confirmState, setConfirmState] = useState<{ show: boolean; row: CounterBoy | null }>({ show: false, row: null });
@@ -57,7 +58,9 @@ export default function CounterBoyBankLinked() {
 
   const filtered = rows.filter(row => {
     const q = search.toLowerCase();
-    return row.name.toLowerCase().includes(q) || row.phone.includes(q) || row.counterboyCode.toLowerCase().includes(q);
+    const matchesSearch = row.name.toLowerCase().includes(q) || row.phone.includes(q) || row.counterboyCode.toLowerCase().includes(q);
+    const matchesBank = bankFilter === 'all' || (bankFilter === 'linked' ? row.bankLinked : !row.bankLinked);
+    return matchesSearch && matchesBank;
   });
 
   const linkedCount = rows.filter(row => row.bankLinked).length;
@@ -128,11 +131,11 @@ export default function CounterBoyBankLinked() {
           <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 4 }}>Manage counter boy bank account and UPI details</div>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          {[{ label: 'Total', value: rows.length }, { label: 'Linked', value: linkedCount }, { label: 'Not Linked', value: rows.length - linkedCount }].map(card => (
-            <div key={card.label} style={{ textAlign: 'center', padding: '10px 16px', background: 'rgba(255,255,255,0.12)', borderRadius: 12 }}>
+          {[{ label: 'Total', value: rows.length, filter: 'all' }, { label: 'Linked', value: linkedCount, filter: 'linked' }, { label: 'Not Linked', value: rows.length - linkedCount, filter: 'not_linked' }].map(card => (
+            <button type="button" key={card.label} onClick={() => setBankFilter(card.filter as typeof bankFilter)} aria-pressed={bankFilter === card.filter} style={{ textAlign: 'center', padding: '10px 16px', background: bankFilter === card.filter ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.12)', border: bankFilter === card.filter ? '1px solid rgba(255,255,255,0.75)' : '1px solid transparent', borderRadius: 12, cursor: 'pointer' }}>
               <div style={{ fontSize: 20, fontWeight: 900, color: 'white' }}>{card.value}</div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>{card.label}</div>
-            </div>
+            </button>
           ))}
         </div>
       </div>

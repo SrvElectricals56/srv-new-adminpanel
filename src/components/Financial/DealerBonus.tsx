@@ -173,14 +173,14 @@ export default function DealerBonus({ role }: { role?: import('@/lib/types').Adm
         </div>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           {[
-            { label: 'Total Earned', value: `₹${stats.totalEarned.toLocaleString()}`, bg: 'rgba(255,255,255,0.15)', color: '#fff' },
-            { label: 'Total Paid', value: `₹${stats.totalPaid.toLocaleString()}`, bg: 'rgba(34,197,94,0.25)', color: '#86EFAC' },
-            { label: 'Pending', value: `₹${stats.pending.toLocaleString()}`, bg: 'rgba(245,158,11,0.25)', color: '#FCD34D' },
+            { label: 'Total Earned', value: `₹${stats.totalEarned.toLocaleString()}`, bg: 'rgba(255,255,255,0.15)', color: '#fff', filter: 'all' },
+            { label: 'Total Paid', value: `₹${stats.totalPaid.toLocaleString()}`, bg: 'rgba(34,197,94,0.25)', color: '#86EFAC', filter: 'paid' },
+            { label: 'Pending', value: `₹${stats.pending.toLocaleString()}`, bg: 'rgba(245,158,11,0.25)', color: '#FCD34D', filter: 'pending' },
           ].map(s => (
-            <div key={s.label} style={{ background: s.bg, borderRadius: 10, padding: '10px 18px', textAlign: 'center', minWidth: 80 }}>
+            <button type="button" key={s.label} aria-pressed={statusFilter === s.filter} onClick={() => setStatusFilter(s.filter)} style={{ background: s.bg, borderRadius: 10, padding: '10px 18px', textAlign: 'center', minWidth: 80, border: `1px solid ${statusFilter === s.filter ? s.color : 'transparent'}`, cursor: 'pointer', font: 'inherit' }}>
               <div style={{ fontSize: 18, fontWeight: 800, color: s.color }}>{s.value}</div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 1 }}>{s.label}</div>
-            </div>
+            </button>
           ))}
         </div>
       </div>

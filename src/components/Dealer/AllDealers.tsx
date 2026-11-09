@@ -422,6 +422,12 @@ export default function Dealers({ role }: DealersProps) {
     setFilterAppInstalled(next);
   };
 
+  const handleSummaryCardClick = (status: string, appStatus: string) => {
+    setFilterStatus(status);
+    setFilterAppInstalled(appStatus);
+    setCurrentPage(1);
+  };
+
   const handleInstallDateChange = (next: typeof dateFilter) => {
     setDateFilter(next);
   };
@@ -760,17 +766,27 @@ export default function Dealers({ role }: DealersProps) {
         {[
           // `totalCount` is the full matching count returned by the API, not
           // only the dealers visible on the current pagination page.
-          { label: 'Total Dealers', value: isDateRangeApplied ? totalCount : dealerStats.total, subtitle: isDateRangeApplied ? dateRangeLabel : 'All time', Icon: Store, color: '#3B82F6', bg: '#EFF6FF' },
-          { label: 'Active', value: dealerStats.active, Icon: CheckCircle, color: '#065F46', bg: '#D1FAE5' },
-          { label: 'Pending Approval', value: dealerStats.pending, Icon: Clock, color: '#92400E', bg: '#FEF3C7' },
-          { label: 'App Installed', value: dealerStats.installed, Icon: Smartphone, color: '#047857', bg: '#D1FAE5', appFilter: 'installed' },
-          { label: 'Not Installed', value: dealerStats.notInstalled, Icon: Smartphone, color: '#B45309', bg: '#FEF3C7', appFilter: 'not_installed' },
-        ].map((s, i) => (
-          <div key={i} onClick={() => s.appFilter && handleAppStatusChange(s.appFilter)} style={{ background: C.card, borderRadius: 14, padding: '16px 18px', border: `1px solid ${s.appFilter && filterAppInstalled === s.appFilter ? s.color : C.border}`, display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', cursor: s.appFilter ? 'pointer' : 'default' }}>
-            <div style={{ width: 42, height: 42, borderRadius: 12, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.color }}><s.Icon size={20} /></div>
-            <div><div style={{ fontSize: 22, fontWeight: 800, color: C.text }}>{s.value}</div><div style={{ fontSize: 12, color: s.color, fontWeight: 700 }}>{s.label}</div>{s.subtitle && <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{s.subtitle}</div>}</div>
-          </div>
-        ))}
+          { label: 'Total Dealers', value: isDateRangeApplied ? totalCount : dealerStats.total, subtitle: isDateRangeApplied ? dateRangeLabel : 'All time', Icon: Store, color: '#3B82F6', bg: '#EFF6FF', statusFilter: 'all', appFilter: 'all' },
+          { label: 'Active', value: dealerStats.active, Icon: CheckCircle, color: '#065F46', bg: '#D1FAE5', statusFilter: 'active', appFilter: 'all' },
+          { label: 'Pending Approval', value: dealerStats.pending, Icon: Clock, color: '#92400E', bg: '#FEF3C7', statusFilter: 'pending', appFilter: 'all' },
+          { label: 'App Installed', value: dealerStats.installed, Icon: Smartphone, color: '#047857', bg: '#D1FAE5', statusFilter: 'all', appFilter: 'installed' },
+          { label: 'Not Installed', value: dealerStats.notInstalled, Icon: Smartphone, color: '#B45309', bg: '#FEF3C7', statusFilter: 'all', appFilter: 'not_installed' },
+        ].map((s, i) => {
+          const isSelected = filterStatus === s.statusFilter && filterAppInstalled === s.appFilter;
+          return (
+            <button
+              type="button"
+              key={i}
+              aria-pressed={isSelected}
+              aria-label={`Show ${s.label.toLowerCase()}`}
+              onClick={() => handleSummaryCardClick(s.statusFilter, s.appFilter)}
+              style={{ width: '100%', background: C.card, borderRadius: 14, padding: '16px 18px', border: `1px solid ${isSelected ? s.color : C.border}`, display: 'flex', alignItems: 'center', gap: 12, boxShadow: isSelected ? `0 0 0 3px ${s.color}18` : '0 2px 8px rgba(0,0,0,0.04)', cursor: 'pointer', textAlign: 'left', font: 'inherit', transition: 'border-color 0.2s, box-shadow 0.2s, transform 0.2s' }}
+            >
+              <span style={{ width: 42, height: 42, borderRadius: 12, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.color, flexShrink: 0 }}><s.Icon size={20} /></span>
+              <span><span style={{ display: 'block', fontSize: 22, fontWeight: 800, color: C.text }}>{s.value}</span><span style={{ display: 'block', fontSize: 12, color: s.color, fontWeight: 700 }}>{s.label}</span>{s.subtitle && <span style={{ display: 'block', fontSize: 10, color: C.muted, marginTop: 2 }}>{s.subtitle}</span>}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Filters */}

@@ -199,15 +199,15 @@ export default function ElectricianOffers() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 22 }}>
         {[
-          { label: 'Total Offers', value: offers.length },
-          { label: 'Active', value: offers.filter(o => o.status === 'active').length },
-          { label: 'Scheduled', value: offers.filter(o => o.status === 'scheduled').length },
-          { label: 'Expired', value: offers.filter(o => o.status === 'expired').length },
+          { label: 'Total Offers', value: offers.length, filter: 'all' },
+          { label: 'Active', value: offers.filter(o => o.status === 'active').length, filter: 'active' },
+          { label: 'Scheduled', value: offers.filter(o => o.status === 'scheduled').length, filter: 'scheduled' },
+          { label: 'Expired', value: offers.filter(o => o.status === 'expired').length, filter: 'expired' },
         ].map((s, i) => (
-          <div key={i} style={{ background: C.card, borderRadius: 14, padding: '16px 18px', border: `1px solid ${C.border}` }}>
+          <button type="button" key={i} aria-pressed={filterStatus === s.filter} onClick={() => setFilterStatus(s.filter)} style={{ background: C.card, borderRadius: 14, padding: '16px 18px', border: `1px solid ${filterStatus === s.filter ? C.red : C.border}`, boxShadow: filterStatus === s.filter ? `0 0 0 3px ${C.red}18` : 'none', cursor: 'pointer', textAlign: 'left', font: 'inherit' }}>
             <div style={{ fontSize: 22, fontWeight: 800, color: C.text }}>{s.value}</div>
             <div style={{ fontSize: 12, color: C.muted, fontWeight: 700 }}>{s.label}</div>
-          </div>
+          </button>
         ))}
       </div>
 
