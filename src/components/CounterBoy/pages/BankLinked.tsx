@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { Check, Eye, FileSpreadsheet, Landmark, Pencil, Trash2, X } from 'lucide-react';
-import { counterboyApi } from '@/lib/api';
+import { counterboyApi, documentUrl } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
 import type { CounterBoy } from '@/lib/types';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
@@ -41,7 +41,7 @@ export default function CounterBoyBankLinked() {
 
   const load = async () => {
     try {
-      const res = await counterboyApi.getAll({ limit: '500' });
+      const res = await counterboyApi.getAll({ limit: '500', includeMedia: 'true' });
       setRows(Array.isArray(res) ? res : (res as any).data ?? []);
     } catch (error) {
       console.error(error);
@@ -50,7 +50,13 @@ export default function CounterBoyBankLinked() {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    void load();
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void load();
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const viewDetails = async (id: string) => {
     try { setViewing(await counterboyApi.getOne(id)); } catch (error) { console.error(error); }
@@ -93,6 +99,7 @@ export default function CounterBoyBankLinked() {
       ...row,
       bankLinked: false,
       upiId: undefined,
+      upiQrCodeImage: undefined,
       bankAccount: undefined,
       ifsc: undefined,
       bankName: undefined,
@@ -101,6 +108,7 @@ export default function CounterBoyBankLinked() {
     await counterboyApi.update(row.id, {
       bankLinked: false,
       upiId: null,
+      upiQrCodeImage: null,
       bankAccount: null,
       ifsc: null,
       bankName: null,
@@ -190,7 +198,7 @@ export default function CounterBoyBankLinked() {
             {[['Name', viewing.name], ['Code', viewing.counterboyCode], ['Phone', viewing.phone], ['Dealer', viewing.dealerName ?? '—'], ['Bank Linked', viewing.bankLinked ? 'Yes' : 'No'], ['UPI ID', viewing.upiId ?? '—'], ['Bank Name', viewing.bankName ?? '—'], ['Account Holder', viewing.accountHolderName ?? '—'], ['Bank Account', viewing.bankAccount ?? '—'], ['IFSC', viewing.ifsc ?? '—'], ['Wallet Balance', `₹${(viewing.walletBalance ?? 0).toLocaleString('en-IN')}`]].map(([key, value]) => (
               <div key={String(key)} style={{ background: C.bg, borderRadius: 10, padding: 12, fontSize: 13, marginBottom: 8 }}><strong>{key}:</strong> {value}</div>
             ))}
-            {viewing.upiQrCodeImage ? <a href={viewing.upiQrCodeImage} target="_blank" rel="noreferrer"><img src={viewing.upiQrCodeImage} alt="Counter boy UPI QR code" style={{ width: 180, height: 180, objectFit: 'contain', display: 'block', margin: '14px auto 0', borderRadius: 10, background: '#fff', border: `1px solid ${C.border}` }} /></a> : null}
+            {viewing.upiQrCodeImage ? <a href={documentUrl(viewing.upiQrCodeImage)} target="_blank" rel="noreferrer"><img src={documentUrl(viewing.upiQrCodeImage)} alt="Counter boy UPI QR code" style={{ width: 180, height: 180, objectFit: 'contain', display: 'block', margin: '14px auto 0', borderRadius: 10, background: '#fff', border: `1px solid ${C.border}` }} /></a> : null}
           </div>
         </div>
       )}

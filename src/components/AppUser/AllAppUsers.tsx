@@ -781,54 +781,64 @@ export default function AllAppUsers({ role }: AllAppUsersProps) {
           })}
         </div>
       ) : (
-      <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+        <div style={{ width: '100%', overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 980 }}>
+            <colgroup>
+              <col style={{ width: 220 }} />
+              <col style={{ width: 118 }} />
+              <col style={{ width: 78 }} />
+              <col style={{ width: 70 }} />
+              <col style={{ width: 88 }} />
+              <col style={{ width: 108 }} />
+              <col style={{ width: 96 }} />
+              <col style={{ width: 102 }} />
+              <col style={{ width: 170 }} />
+            </colgroup>
             <thead>
               <tr style={{ background: C.bg, borderBottom: `1px solid ${C.border}` }}>
-                {['Customer', 'Email', 'Code', 'Location', 'Tier', 'Points', 'Wallet', 'App Status', 'Status', 'Joined', 'Actions'].map(header => (
-                  <th key={header} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: 0.5, whiteSpace: 'nowrap' }}>{header}</th>
+                {['Customer', 'Location', 'Tier', 'Points', 'Wallet', 'App Status', 'Status', 'Joined', 'Actions'].map(header => (
+                  <th key={header} style={{ padding: '12px 10px', textAlign: 'left', fontSize: 10.5, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: 0.35, whiteSpace: 'nowrap', overflow: 'hidden' }}>{header}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {!loading && users.length === 0 ? (
-                <tr><td colSpan={11} style={{ padding: 40, textAlign: 'center', color: C.muted }}>No customers found</td></tr>
+                <tr><td colSpan={9} style={{ padding: 40, textAlign: 'center', color: C.muted }}>No customers found</td></tr>
               ) : users.map((user, index) => {
                 const status = STATUS_CONFIG[user.status] ?? STATUS_CONFIG.pending;
                 const tier = TIER_CONFIG[user.tier] ?? TIER_CONFIG.Silver;
                 return (
                   <tr key={user.id} onClick={event => { if (!(event.target as HTMLElement).closest('button,select,input,a')) void loadOne(user.id, 'view'); }} style={{ borderBottom: `1px solid ${C.border}`, background: index % 2 === 0 ? C.card : C.bg, cursor: 'pointer' }}>
-                    <td style={{ padding: '14px 16px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div style={{ width: 36, height: 36, borderRadius: 10, background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 700, color: '#3B82F6', overflow: 'hidden', flexShrink: 0 }}>
+                    <td style={{ padding: '12px 10px', overflow: 'hidden' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
+                        <div style={{ width: 34, height: 34, borderRadius: 10, background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: '#3B82F6', overflow: 'hidden', flexShrink: 0 }}>
                           {user.profileImage ? <img src={user.profileImage} alt={user.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (user.name || '?').charAt(0).toUpperCase()}
                         </div>
-                        <div>
-                          <div style={{ fontWeight: 700, color: C.text, fontSize: 13 }}>{user.name}</div>
-                          <div style={{ fontSize: 11, color: C.muted }}>{user.phone}</div>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div title={user.name} style={{ fontWeight: 700, color: C.text, fontSize: 12.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.name}</div>
+                          <div title={`${user.phone} • ${user.userCode}`} style={{ fontSize: 10.5, color: C.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.phone} • {user.userCode}</div>
+                          <div title={user.email || 'No email added'} style={{ fontSize: 10, color: C.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.email || 'No email added'}</div>
                         </div>
                       </div>
                     </td>
-                    <td style={{ padding: '14px 16px', fontSize: 12, color: C.muted, whiteSpace: 'nowrap' }}>{user.email || '-'}</td>
-                    <td style={{ padding: '14px 16px', fontSize: 12, color: C.muted, fontFamily: 'monospace' }}>{user.userCode}</td>
-                    <td style={{ padding: '14px 16px', fontSize: 12, color: C.muted }}>{[user.city, user.state].filter(Boolean).join(', ') || '-'}</td>
-                    <td style={{ padding: '14px 16px' }}>
-                      <span style={{ background: tier.bg, color: tier.color, fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 999 }}>{user.tier}</span>
+                    <td title={[user.city, user.state].filter(Boolean).join(', ') || '-'} style={{ padding: '12px 10px', fontSize: 11.5, color: C.muted, overflow: 'hidden', textOverflow: 'ellipsis' }}>{[user.city, user.state].filter(Boolean).join(', ') || '-'}</td>
+                    <td style={{ padding: '12px 8px', overflow: 'hidden' }}>
+                      <span style={{ background: tier.bg, color: tier.color, fontSize: 10.5, fontWeight: 700, padding: '3px 8px', borderRadius: 999, whiteSpace: 'nowrap' }}>{user.tier}</span>
                     </td>
-                    <td style={{ padding: '14px 16px', fontSize: 13, fontWeight: 700, color: '#16A34A' }}>{(user.totalPoints ?? 0).toLocaleString('en-IN')}</td>
-                    <td style={{ padding: '14px 16px', fontSize: 13, fontWeight: 700, color: '#10B981' }}>Rs {(user.walletBalance ?? 0).toLocaleString('en-IN')}</td>
-                    <td style={{ padding: '14px 16px' }}>
-                      <span style={{ background: user.appInstalled ? '#D1FAE5' : '#FEF3C7', color: user.appInstalled ? '#065F46' : '#92400E', fontSize: 11, fontWeight: 800, padding: '4px 10px', borderRadius: 999, whiteSpace: 'nowrap' }}>
+                    <td style={{ padding: '12px 8px', fontSize: 12, fontWeight: 700, color: '#16A34A' }}>{(user.totalPoints ?? 0).toLocaleString('en-IN')}</td>
+                    <td style={{ padding: '12px 8px', fontSize: 12, fontWeight: 700, color: '#10B981', whiteSpace: 'nowrap' }}>Rs {(user.walletBalance ?? 0).toLocaleString('en-IN')}</td>
+                    <td style={{ padding: '12px 8px' }}>
+                      <span style={{ background: user.appInstalled ? '#D1FAE5' : '#FEF3C7', color: user.appInstalled ? '#065F46' : '#92400E', fontSize: 10, fontWeight: 800, padding: '3px 7px', borderRadius: 999, whiteSpace: 'nowrap' }}>
                         {user.appInstalled ? 'Installed' : 'Not Installed'}
                       </span>
                     </td>
-                    <td style={{ padding: '14px 16px' }}>
+                    <td style={{ padding: '12px 8px' }}>
                       {canEdit ? (
                         <select
                           value={user.status}
                           onChange={e => handleStatusChange(user.id, e.target.value)}
-                          style={{ padding: '4px 8px', borderRadius: 8, border: `1px solid ${C.border}`, background: status.bg, color: status.color, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+                          style={{ width: '100%', padding: '4px 5px', borderRadius: 8, border: `1px solid ${C.border}`, background: status.bg, color: status.color, fontSize: 10.5, fontWeight: 700, cursor: 'pointer' }}
                         >
                           {SELECTABLE_USER_STATUSES.map((statusOption) => (
                             <option key={statusOption} value={statusOption}>{statusOption}</option>
@@ -838,22 +848,22 @@ export default function AllAppUsers({ role }: AllAppUsersProps) {
                         <span style={{ background: status.bg, color: status.color, fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 999 }}>{status.label}</span>
                       )}
                     </td>
-                    <td style={{ padding: '14px 16px', fontSize: 12, color: C.muted, whiteSpace: 'nowrap' }}>
+                    <td style={{ padding: '12px 8px', fontSize: 11, color: C.muted, whiteSpace: 'nowrap' }}>
                       {user.joinedDate ? formatISTDate(user.joinedDate) : '-'}
                     </td>
-                    <td style={{ padding: '14px 16px' }}>
-                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                        <button onClick={() => loadOne(user.id, 'view')} style={{ background: '#EFF6FF', color: '#1D4ED8', border: 'none', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <Eye size={13} /> View
+                    <td style={{ padding: '12px 8px' }}>
+                      <div style={{ display: 'flex', gap: 5, alignItems: 'center', whiteSpace: 'nowrap' }}>
+                        <button onClick={() => loadOne(user.id, 'view')} style={{ background: '#EFF6FF', color: '#1D4ED8', border: 'none', borderRadius: 7, padding: '6px 8px', fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3 }}>
+                          <Eye size={12} /> View
                         </button>
                         {canEdit && (
-                          <button onClick={() => loadOne(user.id, 'edit')} style={{ background: '#FFF7ED', color: '#C2410C', border: 'none', borderRadius: 8, padding: '6px 11px', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <Pencil size={13} /> Edit
+                          <button onClick={() => loadOne(user.id, 'edit')} style={{ background: '#FFF7ED', color: '#C2410C', border: 'none', borderRadius: 7, padding: '6px 8px', fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3 }}>
+                            <Pencil size={12} /> Edit
                           </button>
                         )}
                         {canDelete && (
-                          <button onClick={() => { setDeleteTarget(user); setConfirmDelete(true); }} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 8, padding: '6px 8px', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-                            <Trash2 size={13} />
+                          <button aria-label={`Delete ${user.name}`} title="Delete customer" onClick={() => { setDeleteTarget(user); setConfirmDelete(true); }} style={{ background: '#FEE2E2', color: '#991B1B', border: 'none', borderRadius: 7, padding: '6px 7px', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                            <Trash2 size={12} />
                           </button>
                         )}
                       </div>

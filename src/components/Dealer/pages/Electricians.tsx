@@ -1,10 +1,11 @@
 'use client';
-import { useMemo, useState, useEffect } from 'react';
+import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import { Users, Award, Eye, FileSpreadsheet, Plus, IdCard, Phone, MapPin, Building2, Wallet, ScanLine, Star, Pencil } from 'lucide-react';
 import { electricianApi, dealerApi } from '@/lib/api';
 import type { Electrician, MemberTier, UserStatus } from '@/lib/types';
 import { useThemePalette } from '@/lib/theme';
 import ExportModal from '@/components/Shared/ExportModal';
+import ImportModal from '@/components/Shared/ImportModal';
 import AlertDialog from '@/components/Shared/AlertDialog';
 import { I } from '@/lib/iconMap';
 import { formatISTDate } from '@/lib/dateIST';
@@ -229,7 +230,7 @@ function AddModal({ dealers = [], onClose, onSave }: { dealers?: {id: string; na
             <input style={inputStyle} value={form.name ?? ''} onChange={e => {
               const val = e.target.value;
               if (/^[a-zA-Z\s]*$/.test(val) || val === '') f('name', val);
-            }} placeholder="e.g. Harshvardhan Singh" />
+            }} placeholder="e.g. Radhe Rahde" />
           </div>
           <div>
             <label style={{ fontSize: 12, fontWeight: 700, color: C.muted, display: 'block', marginBottom: 6, textTransform: 'uppercase' }}>Phone *</label>
@@ -478,99 +479,123 @@ export default function AssociatedElectricians({ initialSearch = '' }: { initial
   const [electricians, setElectricians] = useState<Electrician[]>([]);
   const [dealers, setDealers] = useState<{id: string; name: string; phone?: string; dealerCode?: string}[]>([]);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        // Searching a dealer should not download every electrician before the
-        // result can be shown. The API already searches dealer name, number and
-        // code, so request only the matching associated electricians.
-        const search = initialSearch.trim();
-        const [dealRes, elecRes] = await Promise.all([
-          dealerApi.getOptions(),
-          electricianApi.getAll({
-            page: '1',
-            limit: '500',
-            ...(search ? { search } : {}),
-          }),
-        ]);
-
-        if (cancelled) return;
-        const dealData = Array.isArray(dealRes) ? dealRes : [];
-        setDealers(dealData.map((d: any) => ({ id: d.id, name: d.name, phone: d.phone ?? '', dealerCode: d.dealerCode ?? '' })));
-        const dealerMap = new Map(dealData.map((d: any) => [d.id, d.name]));
-        const rawElecs = Array.isArray(elecRes) ? elecRes : (elecRes as any).data ?? [];
-
-        setElectricians(rawElecs.map((e: any) => ({
-          ...e,
-          dealerName: e.dealerName ?? e.dealer?.name ?? (e.dealerId ? dealerMap.get(e.dealerId) : null) ?? 'Unknown',
-          recentActivity: e.recentActivity ?? e.lastActivityAt ?? 'N/A',
-        })));
-      } catch (err) {
-        console.error('Failed to load data:', err);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-    void loadData();
-    return () => { cancelled = true; };
-  }, [initialSearch]);
   const [filterDealer, setFilterDealer] = useState('all');
   const [filterStatus, setFilterStatus] = useState<'all' | UserStatus>('all');
   const [showExport, setShowExport] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [dealerSearch, setDealerSearch] = useState(initialSearch);
   const [filterInstall, setFilterInstall] = useState('all');
-  useEffect(() => setDealerSearch(initialSearch), [initialSearch]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const latestRequestId = useRef(0);
+  const pageSize = 50;
+  useEffect(() => {
+    setDealerSearch(initialSearch);
+    setCurrentPage(1);
+  }, [initialSearch]);
   const [viewing, setViewing] = useState<Electrician | null>(null);
   const [editing, setEditing] = useState<Electrician | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [alertDialog, setAlertDialog] = useState<{ show: boolean; title: string; message: string; type: 'error' | 'success' | 'warning' | 'info' }>({ show: false, title: '', message: '', type: 'error' });
 
   const dealerSearchQuery = dealerSearch.trim().toLowerCase();
-  const dealerCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    electricians.forEach(e => {
-      const name = e.dealerName || 'Unknown';
-      counts[name] = (counts[name] || 0) + 1;
-    });
-    return counts;
-  }, [electricians]);
-  const dealerNames = Array.from(new Set([
-    ...dealers.map(dealer => dealer.name).filter(Boolean),
-    ...Object.keys(dealerCounts),
-  ])).sort((a, b) => a.localeCompare(b));
-  const visibleDealers = dealerNames.filter(dealer => {
-    if (!dealerSearchQuery) return true;
-    if (dealer.toLowerCase().includes(dealerSearchQuery)) return true;
-    return electricians.some(e =>
-      e.dealerName === dealer &&
-      (
-        (e.dealerPhone ?? '').includes(dealerSearchQuery) ||
-        (e.dealerCode ?? '').toLowerCase().includes(dealerSearchQuery)
-      )
-    );
-  });
-
-  const filtered = electricians.filter(e =>
-    (!dealerSearchQuery || e.dealerName.toLowerCase().includes(dealerSearchQuery) || (e.dealerPhone ?? '').includes(dealerSearchQuery) || (e.dealerCode ?? '').toLowerCase().includes(dealerSearchQuery) || e.name.toLowerCase().includes(dealerSearchQuery) || e.phone.includes(dealerSearchQuery) || e.electricianCode.toLowerCase().includes(dealerSearchQuery)) &&
-    (filterDealer === 'all' || e.dealerName === filterDealer) &&
-    (filterStatus === 'all' || e.status === filterStatus) &&
-    (filterInstall === 'all' || Boolean(e.appInstalled) === (filterInstall === 'installed'))
+  const selectedDealerId = useMemo(
+    () => filterDealer === 'all' ? undefined : dealers.find(dealer => dealer.name === filterDealer)?.id,
+    [dealers, filterDealer],
   );
 
-  const selectedDealerCount = filterDealer === 'all' ? filtered.length : filtered.filter(e => e.dealerName === filterDealer).length;
+  const buildRequestParams = useCallback((page: number, limit: number) => {
+    const params: Record<string, string> = {
+      page: String(page),
+      limit: String(limit),
+    };
+    if (dealerSearch.trim()) params.search = dealerSearch.trim();
+    if (filterStatus !== 'all') params.status = filterStatus;
+    if (filterInstall !== 'all') params.appInstalled = String(filterInstall === 'installed');
+    if (selectedDealerId) params.dealerId = selectedDealerId;
+    return params;
+  }, [dealerSearch, filterInstall, filterStatus, selectedDealerId]);
+
+  const normalizeRows = useCallback((rows: any[]): Electrician[] => rows.map((e: any) => ({
+    ...e,
+    dealerName: e.dealerName ?? e.dealer?.name ?? e.fallbackDealerName ?? 'Unknown',
+    dealerPhone: e.dealerPhone ?? e.dealer?.phone ?? e.fallbackDealerPhone ?? '',
+    dealerCode: e.dealerCode ?? e.dealer?.dealerCode ?? e.fallbackDealerCode ?? '',
+    recentActivity: e.recentActivity ?? e.lastActivityAt ?? 'N/A',
+  })), []);
+
+  const loadData = useCallback(async (page: number) => {
+    const requestId = ++latestRequestId.current;
+    setLoading(true);
+    try {
+      const response = await electricianApi.getAll(buildRequestParams(page, pageSize));
+      const rawRows = Array.isArray(response) ? response : (response as any).data ?? [];
+      if (requestId !== latestRequestId.current) return;
+      setElectricians(normalizeRows(rawRows));
+      setTotalCount(Array.isArray(response) ? rawRows.length : Number((response as any).total ?? rawRows.length));
+    } catch (err) {
+      if (requestId !== latestRequestId.current) return;
+      console.error('Failed to load associated electricians:', err);
+      setElectricians([]);
+      setTotalCount(0);
+      setAlertDialog({ show: true, title: 'Loading Failed', message: err instanceof Error ? err.message : 'Failed to load associated electricians.', type: 'error' });
+    } finally {
+      if (requestId === latestRequestId.current) setLoading(false);
+    }
+  }, [buildRequestParams, normalizeRows]);
+
+  useEffect(() => {
+    dealerApi.getOptions()
+      .then(data => setDealers(data.map(d => ({ id: d.id, name: d.name, phone: d.phone ?? '', dealerCode: d.dealerCode ?? '' }))))
+      .catch(err => console.error('Failed to load dealer options:', err));
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void loadData(currentPage); }, dealerSearch.trim() ? 250 : 0);
+    return () => window.clearTimeout(timer);
+  }, [currentPage, dealerSearch, loadData]);
+
+  const dealerNames = useMemo(() => dealers.map(dealer => dealer.name).sort((a, b) => a.localeCompare(b)), [dealers]);
+  const visibleDealers = useMemo(() => dealerNames.filter(dealer => {
+    if (!dealerSearchQuery) return true;
+    if (dealer.toLowerCase().includes(dealerSearchQuery)) return true;
+    const dealerInfo = dealers.find(item => item.name === dealer);
+    return (dealerInfo?.phone ?? '').includes(dealerSearchQuery) || (dealerInfo?.dealerCode ?? '').toLowerCase().includes(dealerSearchQuery);
+  }), [dealerNames, dealerSearchQuery, dealers]);
+
+  // Filtering and pagination happen in the API so the browser renders only one small page.
+  const filtered = electricians;
+  const selectedDealerCount = totalCount;
   const activeSelectedDealerCount = filtered.filter(e => e.status === 'active').length;
 
-  const searchedDealerGroups = visibleDealers.map(dealer => ({
+  const searchedDealerGroups = useMemo(() => visibleDealers.map(dealer => ({
     dealer,
     electricians: filtered.filter(e => e.dealerName === dealer),
-  })).filter(group => group.electricians.length > 0);
+  })).filter(group => group.electricians.length > 0), [filtered, visibleDealers]);
 
-  const exportRows = filterDealer === 'all'
-    ? filtered
-    : filtered.filter(e => e.dealerName === filterDealer);
+  const fetchAllFilteredRows = useCallback(async () => {
+    const exportPageSize = 1000;
+    const firstResponse = await electricianApi.getAll(buildRequestParams(1, exportPageSize));
+    const firstRows = Array.isArray(firstResponse) ? firstResponse : (firstResponse as any).data ?? [];
+    const total = Array.isArray(firstResponse) ? firstRows.length : Number((firstResponse as any).total ?? firstRows.length);
+    const allRows = [...firstRows];
+    const pageCount = Math.ceil(total / exportPageSize);
+
+    for (let startPage = 2; startPage <= pageCount; startPage += 4) {
+      const pages = Array.from({ length: Math.min(4, pageCount - startPage + 1) }, (_, index) => startPage + index);
+      const responses = await Promise.all(pages.map(page => electricianApi.getAll(buildRequestParams(page, exportPageSize))));
+      responses.forEach(response => {
+        allRows.push(...(Array.isArray(response) ? response : (response as any).data ?? []));
+      });
+    }
+
+    return normalizeRows(allRows);
+  }, [buildRequestParams, normalizeRows]);
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
 
   const handleSaveEdit = async (updatedElectrician: Electrician) => {
     const electricianData: Record<string, any> = {};
@@ -594,7 +619,7 @@ export default function AssociatedElectricians({ initialSearch = '' }: { initial
     
     try {
       await electricianApi.update(updatedElectrician.id, electricianData);
-      setElectricians(prev => prev.map(item => item.id === updatedElectrician.id ? updatedElectrician : item));
+      await loadData(currentPage);
       setAlertDialog({ show: true, title: 'Success', message: 'Electrician updated successfully.', type: 'success' });
     } catch (err: any) {
       console.error('Failed to update electrician:', err);
@@ -631,10 +656,9 @@ export default function AssociatedElectricians({ initialSearch = '' }: { initial
     if ((newE as any).electricianCode) electricianData.electricianCode = (newE as any).electricianCode;
 
     try {
-      const created: any = await electricianApi.create(electricianData);
-      // Resolve dealerName from dealers list
-      const dealerName = dealers.find(d => d.id === created.dealerId)?.name ?? 'Unknown';
-      setElectricians(prev => [{ ...created, dealerName, recentActivity: 'Just joined' }, ...prev]);
+      await electricianApi.create(electricianData);
+      setCurrentPage(1);
+      await loadData(1);
       setAlertDialog({ show: true, title: 'Success', message: 'Electrician added successfully.', type: 'success' });
     } catch (err: any) {
       console.error('Failed to add electrician:', err);
@@ -675,39 +699,39 @@ export default function AssociatedElectricians({ initialSearch = '' }: { initial
         <div style={{ background: C.card, borderRadius: 14, padding: '18px 20px', border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Active Electricians</div>
           <div style={{ fontSize: 32, fontWeight: 900, color: '#10B981', marginBottom: 4 }}>{activeSelectedDealerCount}</div>
-          <div style={{ fontSize: 12, color: C.muted }}>Active in current view</div>
+          <div style={{ fontSize: 12, color: C.muted }}>Active on this page</div>
         </div>
       </div>
 
       <div style={{ background: C.card, borderRadius: 14, padding: '14px 18px', border: `1px solid ${C.border}`, marginBottom: 18, display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
         <input
           value={dealerSearch}
-          onChange={e => setDealerSearch(e.target.value)}
+          onChange={e => { setDealerSearch(e.target.value); setCurrentPage(1); }}
           placeholder="Search dealer, electrician, phone, code..."
           style={{ padding: '9px 12px', border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 13.5, outline: 'none', background: C.surface, color: C.text, boxSizing: 'border-box', minWidth: 240, flex: 1 }}
         />
-        <select aria-label="App installation" value={filterInstall} onChange={e => setFilterInstall(e.target.value)} style={{ padding: '9px 12px', border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, background: C.surface }}>
+        <select aria-label="App installation" value={filterInstall} onChange={e => { setFilterInstall(e.target.value); setCurrentPage(1); }} style={{ padding: '9px 12px', border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, background: C.surface }}>
           <option value="all">All App Statuses</option><option value="installed">App Installed</option><option value="not_installed">App Not Installed</option>
         </select>
         <SearchableSelect
           value={filterDealer}
-          placeholder={`All Dealers (${electricians.length})`}
+          placeholder={`All Dealers (${totalCount})`}
           searchPlaceholder="Search by name, phone or code..."
           minWidth={240}
           options={[
-            { value: 'all', label: `All Dealers (${electricians.length})` },
+            { value: 'all', label: `All Dealers (${totalCount})` },
             ...visibleDealers.map(d => {
               const dealerInfo = dealers.find(dl => dl.name === d);
               return {
                 value: d,
-                label: `${d} (${dealerCounts[d]})`,
+                label: d,
                 searchValue: [d, dealerInfo?.phone ?? '', dealerInfo?.dealerCode ?? ''].join(' '),
               };
             }),
           ]}
-          onChange={setFilterDealer}
+          onChange={value => { setFilterDealer(value); setCurrentPage(1); }}
         />
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as 'all' | UserStatus)} style={{ padding: '9px 12px', border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 13.5, outline: 'none', background: C.surface, color: C.text, boxSizing: 'border-box' }}>
+        <select value={filterStatus} onChange={e => { setFilterStatus(e.target.value as 'all' | UserStatus); setCurrentPage(1); }} style={{ padding: '9px 12px', border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 13.5, outline: 'none', background: C.surface, color: C.text, boxSizing: 'border-box' }}>
           <option value="all">All Status</option>
           <option value="active">Active</option>
           <option value="pending">Pending</option>
@@ -715,16 +739,56 @@ export default function AssociatedElectricians({ initialSearch = '' }: { initial
         </select>
         <button
           onClick={() => setShowExport(true)}
-          disabled={exportRows.length === 0}
-          style={{ background: exportRows.length === 0 ? '#CBD5E1' : `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 10, padding: '10px 14px', fontSize: 13, fontWeight: 700, cursor: exportRows.length === 0 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
+          disabled={totalCount === 0 || loading}
+          style={{ background: totalCount === 0 || loading ? '#CBD5E1' : `linear-gradient(135deg, ${C.red}, ${C.redDark})`, color: 'white', border: 'none', borderRadius: 10, padding: '10px 14px', fontSize: 13, fontWeight: 700, cursor: totalCount === 0 || loading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
         >
           <FileSpreadsheet size={15} />
           Export
         </button>
+        <button
+          onClick={() => setShowImport(true)}
+          style={{ background: C.surface, color: C.text, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: '9px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
+        >
+          <FileSpreadsheet size={15} />
+          Import
+        </button>
         <span style={{ fontSize: 12, color: C.muted }}>{visibleDealers.length} dealers found</span>
-        <span style={{ fontSize: 13, color: C.muted, marginLeft: 'auto' }}>{filtered.length} electricians</span>
+        <span style={{ fontSize: 13, color: C.muted, marginLeft: 'auto' }}>{totalCount} electricians</span>
       </div>
-      <ExportModal show={showExport} onClose={() => setShowExport(false)} title="Associated Electricians" fileName="dealer-electricians" getData={() => exportRows.map(e => ({ Name: e.name, Code: e.electricianCode, Phone: e.phone, Category: e.subCategory, Tier: e.tier, Status: e.status, AppInstallationStatus: e.appInstalled ? 'App Installed' : 'Not Installed', City: e.city, State: e.state, Dealer: e.dealerName, Scans: e.totalScans, Points: e.totalPoints, Wallet: e.walletBalance }))} />
+      <ExportModal
+        show={showExport}
+        onClose={() => setShowExport(false)}
+        title="Associated Electricians"
+        fileName="dealer-electricians"
+        getData={async () => (await fetchAllFilteredRows()).map(e => ({
+          Name: e.name,
+          Code: e.electricianCode,
+          Phone: e.phone,
+          Dealer: e.dealerName,
+          'App Status': e.appInstalled ? 'App Installed' : 'App Not Installed',
+          Status: e.status,
+          Tier: e.tier,
+          Category: e.subCategory,
+          City: e.city,
+          District: e.district,
+          State: e.state,
+          Scans: e.totalScans,
+          Points: e.totalPoints,
+          Wallet: e.walletBalance,
+        }))}
+      />
+      <ImportModal
+        show={showImport}
+        onClose={() => setShowImport(false)}
+        title="Associated Electricians"
+        sampleHeaders={['Electrician','Mobile Number','Location','Tier','Points','Scans','Wallet','Status','App Installed','EMAIL','CITY','DISTRICT','STATE','PINCODE','ADDRESS','ELECTRICIAN CODE','DEALER CODE','DEALER NAME','SUB CATEGORY','BANK LINKED','UPI ID']}
+        onImport={async records => {
+          const result = await electricianApi.importMany(records);
+          setCurrentPage(1);
+          await loadData(1);
+          return result;
+        }}
+      />
 
       {dealerSearchQuery && (
         <div style={{ display: 'grid', gap: 14, marginBottom: 20 }}>
@@ -841,6 +905,30 @@ export default function AssociatedElectricians({ initialSearch = '' }: { initial
           </tbody>
         </table>
       </div>
+      {totalCount > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 14, padding: '0 4px' }}>
+          <span style={{ fontSize: 12, color: C.muted }}>
+            Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, totalCount)} of {totalCount}
+          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button
+              onClick={() => setCurrentPage(page => Math.max(1, page - 1))}
+              disabled={currentPage === 1 || loading}
+              style={{ padding: '8px 12px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.surface, color: C.text, fontSize: 12, fontWeight: 700, cursor: currentPage === 1 || loading ? 'not-allowed' : 'pointer', opacity: currentPage === 1 || loading ? 0.55 : 1 }}
+            >
+              Previous
+            </button>
+            <span style={{ minWidth: 90, textAlign: 'center', fontSize: 12, fontWeight: 700, color: C.text }}>Page {currentPage} of {totalPages}</span>
+            <button
+              onClick={() => setCurrentPage(page => Math.min(totalPages, page + 1))}
+              disabled={currentPage >= totalPages || loading}
+              style={{ padding: '8px 12px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.surface, color: C.text, fontSize: 12, fontWeight: 700, cursor: currentPage >= totalPages || loading ? 'not-allowed' : 'pointer', opacity: currentPage >= totalPages || loading ? 0.55 : 1 }}
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { Landmark, Search, Eye, Pencil, Check, X, SlidersHorizontal, FileSpreadsheet, Trash2 } from 'lucide-react';
-import { dealerApi } from '@/lib/api';
+import { dealerApi, documentUrl } from '@/lib/api';
 import type { Dealer, MemberTier } from '@/lib/types';
 import { useThemePalette } from '@/lib/theme';
 import ExportModal from '@/components/Shared/ExportModal';
@@ -47,9 +47,9 @@ function ViewModal({ d, onClose, C }: { d: Dealer; onClose: () => void; C: any }
             </div>
           ))}
           {d.upiQrCodeImage ? (
-            <a href={d.upiQrCodeImage} target="_blank" rel="noreferrer" style={{ gridColumn: '1/-1', background: C.bg, borderRadius: 10, padding: 14, color: C.text, textDecoration: 'none' }}>
+            <a href={documentUrl(d.upiQrCodeImage)} target="_blank" rel="noreferrer" style={{ gridColumn: '1/-1', background: C.bg, borderRadius: 10, padding: 14, color: C.text, textDecoration: 'none' }}>
               <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textTransform: 'uppercase', marginBottom: 8 }}>UPI QR Code · click to open</div>
-              <img src={d.upiQrCodeImage} alt="Dealer UPI QR code" style={{ width: 180, height: 180, display: 'block', margin: '0 auto', objectFit: 'contain', borderRadius: 10, background: '#fff' }} />
+              <img src={documentUrl(d.upiQrCodeImage)} alt="Dealer UPI QR code" style={{ width: 180, height: 180, display: 'block', margin: '0 auto', objectFit: 'contain', borderRadius: 10, background: '#fff' }} />
             </a>
           ) : null}
         </div>
@@ -152,9 +152,15 @@ export default function DealerBankLinked() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    dealerApi.getAll({ limit: '500' }).then(res => {
+    dealerApi.getAll({ limit: '500', includeMedia: 'true' }).then(res => {
       setData(Array.isArray(res) ? res : (res as any).data ?? []);
     }).catch(console.error).finally(() => setLoading(false));
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        dealerApi.getAll({ limit: '500', includeMedia: 'true' }).then(res => setData(Array.isArray(res) ? res : (res as any).data ?? [])).catch(console.error);
+      }
+    }, 1000);
+    return () => window.clearInterval(timer);
   }, []);
   const [search, setSearch] = useState('');
   const [filterBank, setFilterBank] = useState<'all' | 'linked' | 'not_linked'>('all');
@@ -197,9 +203,9 @@ export default function DealerBankLinked() {
   const clearBankDetails = async () => {
     const row = clearState.row;
     if (!row) return;
-    const cleared = { ...row, bankLinked: false, upiId: undefined, bankAccount: undefined, ifsc: undefined, bankName: undefined, accountHolderName: undefined } as Dealer;
+    const cleared = { ...row, bankLinked: false, upiId: undefined, upiQrCodeImage: undefined, bankAccount: undefined, ifsc: undefined, bankName: undefined, accountHolderName: undefined } as Dealer;
     try {
-      await dealerApi.update(row.id, { bankLinked: false, upiId: null, bankAccount: null, ifsc: null, bankName: null, accountHolderName: null });
+      await dealerApi.update(row.id, { bankLinked: false, upiId: null, upiQrCodeImage: null, bankAccount: null, ifsc: null, bankName: null, accountHolderName: null });
       setData(prev => prev.map(d => d.id === row.id ? cleared : d));
     } catch (err) { console.error(err); }
     setClearState({ show: false, row: null });

@@ -97,7 +97,13 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
     };
   }, []);
 
-  const activeProducts = useMemo(() => products, [products]);
+  // A QR can only be redeemed while its linked product is active. Keeping
+  // archived products out of this picker prevents creating unusable QR/barcode
+  // labels that the mobile scanner must correctly reject.
+  const activeProducts = useMemo(
+    () => products.filter((product: any) => product.isActive !== false),
+    [products],
+  );
 
   const matchingProducts = useMemo(() => {
     const query = productSearch.trim().toLowerCase();
@@ -114,7 +120,15 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
   const generateQRCode = async () => {
     if (!selectedProduct || !canGenerateQr) return;
     const product = products.find((p: any) => String(p.id) === selectedProduct || p.sku === selectedProduct);
-    if (!product) return;
+    if (!product || product.isActive === false) {
+      setAlertDialog({
+        show: true,
+        title: 'Active Product Required',
+        message: 'Activate this product before generating QR codes or barcode labels for it.',
+        type: 'warning',
+      });
+      return;
+    }
 
     setGenerating(true);
     setProgress(10);

@@ -5,6 +5,7 @@ import { dealerApi } from '@/lib/api';
 import { approveAllKyc, getStoredAdmin, documentUrl } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
+import AlertDialog from '@/components/Shared/AlertDialog';
 import { DocThumb, ImageUploadBox } from '@/components/Shared/KycDocument';
 import ExportModal from '@/components/Shared/ExportModal';
 
@@ -110,6 +111,7 @@ export default function KYCManagement() {
   const [bulkBusy, setBulkBusy] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const bulkLock = useRef(false);
+  const [alertDialog, setAlertDialog] = useState<{ show: boolean; title: string; message: string; type: 'error' | 'success' | 'warning' | 'info' }>({ show: false, title: '', message: '', type: 'success' });
   const handleApproveAll = () => setConfirmState({
     show: true, title: 'Approve All KYC', type: 'success',
     message: 'Verify all pending KYC records across every page, regardless of search filters or whether documents are uploaded.',
@@ -143,7 +145,6 @@ export default function KYCManagement() {
         panNumber: d.panNumber,
         gstNumber: d.gstNumber,
         aadharFrontImage: normalizeUrl(d.aadharFrontImage),
-        aadharBackImage: normalizeUrl(d.aadharBackImage),
         panDocument: normalizeUrl(d.panDocument),
         gstDocument: normalizeUrl(d.gstDocument),
         kycRejectionReason: d.kycRejectionReason,
@@ -242,20 +243,29 @@ export default function KYCManagement() {
       onConfirm: async () => {
         try {
           await dealerApi.update(doc.id, {
-            kycStatus: 'not_submitted',
+            kycStatus: 'pending',
             aadharNumber: null, panNumber: null, gstNumber: null,
             aadharFrontImage: null,
             panDocument: null, gstDocument: null,
             kycRejectionReason: null,
           });
           setDocuments(prev => prev.map(d => d.id === doc.id ? {
-            ...d, kycStatus: 'not_submitted',
-            aadharNumber: undefined, panNumber: undefined, gstNumber: undefined,
+            ...d,
+            kycStatus: 'pending',
+            aadharNumber: undefined,
+            panNumber: undefined,
+            gstNumber: undefined,
             aadharFrontImage: undefined,
-            panDocument: undefined, gstDocument: undefined,
+            panDocument: undefined,
+            gstDocument: undefined,
             kycRejectionReason: undefined,
           } : d));
-        } catch (err) { console.error(err); window.alert(err instanceof Error ? err.message : 'Unable to save KYC'); }
+          setRefreshKey(value => value + 1);
+          setAlertDialog({ show: true, title: 'KYC Deleted', message: 'KYC data deleted successfully and moved to the pending list.', type: 'success' });
+        } catch (err) {
+          console.error(err);
+          setAlertDialog({ show: true, title: 'Delete Failed', message: err instanceof Error ? err.message : 'Unable to delete KYC data.', type: 'error' });
+        }
         setConfirmState(s => ({ ...s, show: false }));
       }
     });
@@ -278,6 +288,7 @@ export default function KYCManagement() {
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
       <ConfirmDialog show={confirmState.show} title={confirmState.title} message={confirmState.message} onConfirm={confirmState.onConfirm} onCancel={() => setConfirmState(s => ({ ...s, show: false }))} type={confirmState.type} />
+      <AlertDialog show={alertDialog.show} title={alertDialog.title} message={alertDialog.message} type={alertDialog.type} onClose={() => setAlertDialog(prev => ({ ...prev, show: false }))} />
       {editingDoc && <EditKYCModal doc={editingDoc} onClose={() => setEditingDoc(null)} onSave={handleEditSave} C={C} />}
 
       <div style={{ marginBottom: 28, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>

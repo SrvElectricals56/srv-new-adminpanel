@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { FileCheck, Eye, Check, X, Upload, ImageIcon, Pencil, Trash2, FileSpreadsheet } from 'lucide-react';
-import { counterboyApi } from '@/lib/api';
+import { counterboyApi, documentUrl } from '@/lib/api';
 import { useThemePalette } from '@/lib/theme';
 import type { CounterBoy } from '@/lib/types';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
@@ -13,10 +13,7 @@ type CounterBoyKYCItem = CounterBoy & {
 
 function normalizeUrl(url?: string | null) {
   if (!url) return url ?? undefined;
-  return url.replace(
-    /http:\/\/(10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.\d+\.\d+\.\d+)(:\d+)?/g,
-    (_, _ip, port) => `http://localhost${port || ''}`,
-  );
+  return documentUrl(url) ?? url;
 }
 
 function ImageUploadBox({
