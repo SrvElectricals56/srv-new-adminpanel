@@ -376,6 +376,36 @@ export const dealerApi = {
     const q = params ? '?' + new URLSearchParams(params).toString() : '';
     return request<{ cities: string[] }>(`/dealers/distinct-cities${q}`);
   },
+  getDistinctDistricts: async (params?: Record<string, string>) => {
+    // The backend does not expose a distinct-districts route. Requesting that
+    // path falls through to /dealers/:id and produces "Invalid ID format".
+    // Build the same filter options from the supported paginated dealer list.
+    const districts = new Set<string>();
+    const limit = 250;
+    let page = 1;
+    let loaded = 0;
+
+    while (true) {
+      const query = new URLSearchParams({
+        ...(params ?? {}),
+        page: String(page),
+        limit: String(limit),
+      });
+      const result = await request<{ data: any[]; total: number }>(`/dealers?${query}`);
+      const dealers = result.data ?? [];
+
+      for (const dealer of dealers) {
+        const district = typeof dealer.district === 'string' ? dealer.district.trim() : '';
+        if (district) districts.add(district);
+      }
+
+      loaded += dealers.length;
+      if (dealers.length === 0 || loaded >= (result.total ?? loaded)) break;
+      page += 1;
+    }
+
+    return { districts: Array.from(districts) };
+  },
   getOne: (id: string) => request<any>(`/dealers/${id}`),
   getActivity: (id: string) => request<any>(`/dealers/${id}/activity`),
   create: (body: object) => request<any>('/dealers', { method: 'POST', body: JSON.stringify(body) }),
@@ -873,8 +903,33 @@ export const referralApi = {
   getStats: () => request<any>('/referrals/stats'),
 };
 
-export const approveAllKyc = (role: 'electrician' | 'dealer') =>
-  request<{ approved: number }>(`/${role}s/kyc/approve-all`, { method: 'POST' });
+export async function approveAllKyc(role: 'electrician' | 'dealer'): Promise<{ approved: number }> {
+  const api = role === 'dealer' ? dealerApi : electricianApi;
+
+  // Collect every page before updating: approvals remove rows from the pending
+  // result set, so updating while paginating would skip records.
+  const ids = new Set<string>();
+  const limit = 50;
+  for (let page = 1; ; page++) {
+    const result = await api.getAll({
+      page: String(page), limit: String(limit), kycStatus: 'pending',
+    });
+    for (const item of result.data) {
+      // Also check locally in case the API ignores the status filter.
+      if (item.kycStatus === 'pending') ids.add(item.id);
+    }
+    if (result.data.length === 0 || page * limit >= result.total) break;
+  }
+
+  let approved = 0;
+  for (const id of ids) {
+    const item = await api.getOne(id);
+    if (item.kycStatus !== 'pending') continue;
+    await api.update(id, { kycStatus: 'verified', kycRejectionReason: null });
+    approved++;
+  }
+  return { approved };
+}
 
 export async function uploadKycDocument(file: File): Promise<string> {
   const body = new FormData();

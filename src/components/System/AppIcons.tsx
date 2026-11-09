@@ -39,6 +39,7 @@ export default function AppIcons({ role }: { role?: import('@/lib/types').AdminR
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [alertDialog, setAlertDialog] = useState<{ show: boolean; title: string; message: string; type: 'error' | 'success' | 'warning' | 'info' }>({ show: false, title: '', message: '', type: 'error' });
 
   const loadIcons = async () => {
@@ -155,17 +156,18 @@ export default function AppIcons({ role }: { role?: import('@/lib/types').AdminR
       {/* Stats */}
       <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
         {[
-          { label: 'Total Icons', value: stats.total, color: '#6366F1', bg: '#EEF2FF' },
-          { label: 'Active', value: stats.active, color: '#059669', bg: '#D1FAE5' },
-          { label: 'Inactive', value: stats.inactive, color: '#DC2626', bg: '#FEE2E2' },
+          { label: 'Total Icons', value: stats.total, color: '#6366F1', bg: '#EEF2FF', filter: 'all' as const },
+          { label: 'Active', value: stats.active, color: '#059669', bg: '#D1FAE5', filter: 'active' as const },
+          { label: 'Inactive', value: stats.inactive, color: '#DC2626', bg: '#FEE2E2', filter: 'inactive' as const },
         ].map(s => (
-          <div key={s.label} style={{
+          <button type="button" key={s.label} aria-pressed={statusFilter === s.filter} onClick={() => setStatusFilter(s.filter)} style={{
             background: C.surface, borderRadius: 14, padding: '16px 20px',
-            flex: 1, border: `1px solid ${C.border}`,
+            flex: 1, border: `1px solid ${statusFilter === s.filter ? s.color : C.border}`,
+            boxShadow: statusFilter === s.filter ? `0 0 0 3px ${s.color}18` : 'none', cursor: 'pointer', textAlign: 'left', font: 'inherit',
           }}>
             <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 4 }}>{s.label}</div>
             <div style={{ fontSize: 28, fontWeight: 800, color: C.text }}>{s.value}</div>
-          </div>
+          </button>
         ))}
       </div>
 
@@ -180,7 +182,7 @@ export default function AppIcons({ role }: { role?: import('@/lib/types').AdminR
         </div>
       ) : (
         <div style={{ display: 'grid', gap: 12 }}>
-          {icons.map(icon => (
+          {filteredIcons.map(icon => (
             <div key={icon.id} style={{
               display: 'flex', alignItems: 'center', gap: 16,
               background: C.surface, borderRadius: 14, padding: '16px 20px',

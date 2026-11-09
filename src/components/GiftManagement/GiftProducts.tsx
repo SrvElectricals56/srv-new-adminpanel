@@ -292,15 +292,15 @@ export default function GiftProducts({ role }: { role?: import('@/lib/types').Ad
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           {[
-            { label: 'Electrician Gifts', value: gifts.filter(g => g.type === 'electrician').length },
-            { label: 'Dealer Gifts',      value: gifts.filter(g => g.type === 'dealer').length },
-            { label: 'Customer Gifts',    value: gifts.filter(g => g.type === 'customer').length },
-            { label: 'Counterboy Gifts',  value: gifts.filter(g => g.type === 'counterboy').length },
+            { label: 'Electrician Gifts', value: gifts.filter(g => g.type === 'electrician').length, role: 'electrician' },
+            { label: 'Dealer Gifts',      value: gifts.filter(g => g.type === 'dealer').length, role: 'dealer' },
+            { label: 'Customer Gifts',    value: gifts.filter(g => g.type === 'customer').length, role: 'customer' },
+            { label: 'Counterboy Gifts',  value: gifts.filter(g => g.type === 'counterboy').length, role: 'counterboy' },
           ].map(s => (
-            <div key={s.label} style={{ textAlign: 'center', padding: '10px 18px', background: 'rgba(255,255,255,0.15)', borderRadius: 12 }}>
+            <button type="button" key={s.label} onClick={() => { setTab(s.role as typeof tab); setFilterStatus('all'); }} aria-pressed={tab === s.role} style={{ textAlign: 'center', padding: '10px 18px', background: tab === s.role ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.15)', border: tab === s.role ? '1px solid rgba(255,255,255,0.75)' : '1px solid transparent', borderRadius: 12, cursor: 'pointer' }}>
               <div style={{ fontSize: 22, fontWeight: 900, color: 'white' }}>{s.value}</div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>{s.label}</div>
-            </div>
+            </button>
           ))}
         </div>
       </div>

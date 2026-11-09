@@ -250,11 +250,11 @@ export default function DealerBankLinked() {
           <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 4 }}>Manage dealer bank account & UPI details</div>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          {[{ label: 'Total', value: data.length, color: 'white' }, { label: 'Linked', value: linked, color: '#6EE7B7' }, { label: 'Not Linked', value: notLinked, color: '#FCA5A5' }].map(s => (
-            <div key={s.label} style={{ textAlign: 'center', padding: '10px 16px', background: 'rgba(255,255,255,0.12)', borderRadius: 12 }}>
+          {[{ label: 'Total', value: data.length, color: 'white', filter: 'all' }, { label: 'Linked', value: linked, color: '#6EE7B7', filter: 'linked' }, { label: 'Not Linked', value: notLinked, color: '#FCA5A5', filter: 'not_linked' }].map(s => (
+            <button type="button" key={s.label} onClick={() => setFilterBank(s.filter as typeof filterBank)} aria-pressed={filterBank === s.filter} style={{ textAlign: 'center', padding: '10px 16px', background: filterBank === s.filter ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.12)', border: filterBank === s.filter ? '1px solid rgba(255,255,255,0.75)' : '1px solid transparent', borderRadius: 12, cursor: 'pointer' }}>
               <div style={{ fontSize: 20, fontWeight: 900, color: s.color }}>{s.value}</div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.65)' }}>{s.label}</div>
-            </div>
+            </button>
           ))}
         </div>
       </div>

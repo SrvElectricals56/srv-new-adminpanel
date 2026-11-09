@@ -59,8 +59,10 @@ export default function ProductCategories({ role, onNavigate }: { role?: import(
   const canEdit = isSuperAdmin || isAdmin;
   const canDelete = isSuperAdmin;
   const [categories, setCategories] = useState<Category[]>([]);
+  const [failedCategoryImages, setFailedCategoryImages] = useState<Set<string | number>>(() => new Set());
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | number | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -127,12 +129,12 @@ export default function ProductCategories({ role, onNavigate }: { role?: import(
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    return categories.filter(c =>
-      c.name.toLowerCase().includes(q) ||
-      c.slug.toLowerCase().includes(q) ||
-      c.description.toLowerCase().includes(q)
-    );
-  }, [categories, search]);
+    return categories.filter(c => {
+      const matchesSearch = c.name.toLowerCase().includes(q) || c.slug.toLowerCase().includes(q) || c.description.toLowerCase().includes(q);
+      const matchesStatus = statusFilter === 'all' || (statusFilter === 'active' ? c.isActive : !c.isActive);
+      return matchesSearch && matchesStatus;
+    });
+  }, [categories, search, statusFilter]);
 
   const totalCount = categories.length;
   const activeCount = categories.filter(c => c.isActive).length;
@@ -287,20 +289,22 @@ export default function ProductCategories({ role, onNavigate }: { role?: import(
         </div>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           {[
-            { label: 'Total', value: totalCount, bg: 'rgba(255,255,255,0.15)', color: '#fff' },
-            { label: 'Active', value: activeCount, bg: 'rgba(34,197,94,0.2)', color: '#86efac' },
-            { label: 'Inactive', value: inactiveCount, bg: 'rgba(239,68,68,0.2)', color: '#fca5a5' },
+            { label: 'Total', value: totalCount, bg: 'rgba(255,255,255,0.15)', color: '#fff', filter: 'all' },
+            { label: 'Active', value: activeCount, bg: 'rgba(34,197,94,0.2)', color: '#86efac', filter: 'active' },
+            { label: 'Inactive', value: inactiveCount, bg: 'rgba(239,68,68,0.2)', color: '#fca5a5', filter: 'inactive' },
           ].map(stat => (
-            <div key={stat.label} style={{
+            <button type="button" key={stat.label} onClick={() => setStatusFilter(stat.filter as typeof statusFilter)} aria-pressed={statusFilter === stat.filter} style={{
               background: stat.bg,
               borderRadius: 10,
               padding: '10px 18px',
               textAlign: 'center',
               minWidth: 72,
+              border: statusFilter === stat.filter ? '1px solid rgba(255,255,255,0.8)' : '1px solid transparent',
+              cursor: 'pointer',
             }}>
               <div style={{ fontSize: 22, fontWeight: 800, color: stat.color }}>{stat.value}</div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 1 }}>{stat.label}</div>
-            </div>
+            </button>
           ))}
         </div>
       </div>
@@ -366,12 +370,14 @@ export default function ProductCategories({ role, onNavigate }: { role?: import(
               style={{ position: 'relative', height: 140, background: C.inputBg, overflow: 'hidden', cursor: onNavigate ? 'pointer' : 'default' }}
               title={`View ${cat.name} products`}
             >
-              {cat.image ? (
+              {cat.image && !failedCategoryImages.has(cat.id) ? (
                 <img
                   src={cat.image}
                   alt={cat.name}
                   style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 8 }}
-                  onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                  loading="lazy"
+                  decoding="async"
+                  onError={() => setFailedCategoryImages(previous => new Set(previous).add(cat.id))}
                 />
               ) : (
                 <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

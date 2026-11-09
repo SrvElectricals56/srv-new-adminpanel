@@ -100,7 +100,7 @@ export default function ElectricianKYC() {
   const bulkLock = useRef(false);
   const handleApproveAll = () => setConfirmState({
     show: true, title: 'Approve All KYC', type: 'success',
-    message: 'Approve ALL unverified KYC records across every page, including pending, rejected and not submitted records, regardless of search filters? This is an explicit Super Admin approval even for accounts without uploaded documents.',
+    message: 'Verify all pending KYC records across every page, regardless of search filters or whether documents are uploaded.',
     onConfirm: async () => {
       if (bulkLock.current) return;
       bulkLock.current = true; setBulkBusy(true);
@@ -175,7 +175,20 @@ export default function ElectricianKYC() {
       void loadDocuments(1);
     }, search.trim() ? 300 : 0);
     return () => window.clearTimeout(timer);
-  }, [loadDocuments, search]);
+  }, [loadDocuments, search, refreshKey]);
+
+  // A document can be uploaded from the mobile app after this page is open.
+  // Re-read the media fields when the admin returns so verified KYC rows do
+  // not keep showing the old "Not uploaded" state.
+  useEffect(() => {
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') {
+        void Promise.all([loadDocuments(currentPage), loadStats()]);
+      }
+    };
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    return () => document.removeEventListener('visibilitychange', refreshWhenVisible);
+  }, [currentPage, loadDocuments, loadStats]);
 
   // Sort: pending first (latest resubmit on top), then rejected, not_submitted, verified last
   // Within same status: most recently updated first
@@ -295,8 +308,11 @@ export default function ElectricianKYC() {
           <h1 style={{ fontSize: 26, fontWeight: 800, color: C.text, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}><FileCheck size={24} style={{ color: C.red }} /> KYC Management</h1>
           <p style={{ color: C.muted, fontSize: 14 }}>Verify and manage electrician KYC documents</p>
         </div>
-        {getStoredAdmin()?.role === 'super_admin' && <button disabled={bulkBusy || loading} onClick={handleApproveAll} style={{ background: '#065F46', color: 'white', border: 'none', borderRadius: 10, padding: '10px 20px', cursor: 'pointer' }}>{bulkBusy ? 'Approving...' : 'Approve All'}</button>}
-        <button onClick={() => setShowExport(true)} style={{ background: C.red, color: 'white', border: 'none', borderRadius: 10, padding: '10px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}><FileSpreadsheet size={14} /> Export</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button disabled={loading} onClick={() => { void Promise.all([loadDocuments(currentPage), loadStats()]); }} style={{ background: C.surface, color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 16px', fontSize: 13, fontWeight: 600, cursor: loading ? 'wait' : 'pointer' }}>Refresh</button>
+          {getStoredAdmin()?.role === 'super_admin' && <button disabled={bulkBusy || loading} onClick={handleApproveAll} style={{ background: '#065F46', color: 'white', border: 'none', borderRadius: 10, padding: '10px 20px', cursor: 'pointer' }}>{bulkBusy ? 'Approving...' : 'Approve All'}</button>}
+          <button onClick={() => setShowExport(true)} style={{ background: C.red, color: 'white', border: 'none', borderRadius: 10, padding: '10px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}><FileSpreadsheet size={14} /> Export</button>
+        </div>
       </div>
       <ExportModal show={showExport} onClose={() => setShowExport(false)} title="Electrician KYC" fileName="electrician-kyc" getData={() => documents.map(d => ({ Name: d.name, Code: d.electricianCode, KYCStatus: d.kycStatus, Aadhar: d.aadharNumber ?? '' }))} />
 

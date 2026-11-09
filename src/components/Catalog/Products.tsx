@@ -282,6 +282,8 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterStock, setFilterStock] = useState('all');
   const [filterBadge, setFilterBadge] = useState('all');
+  const [selectedSummary, setSelectedSummary] = useState<'total' | 'active' | 'scanned' | 'low' | null>('total');
+  const [uniqueBadges, setUniqueBadges] = useState<string[]>([]);
   
   // â”€â”€ Server-side pagination state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [currentPage, setCurrentPage] = useState(1);
@@ -312,7 +314,7 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
     total: products.length,
     active: products.filter((p) => p.isActive).length,
     totalScanned: products.reduce((sum, p) => sum + (p.totalScanned || 0), 0),
-    lowStock: products.filter((p) => (p.stock || 0) < 500).length,
+    lowStock: products.filter((p) => (p.stock || 0) > 0 && (p.stock || 0) < 500).length,
   });
 
   const loadProducts = async (page = currentPage, searchQuery = search) => {
@@ -343,6 +345,7 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
           productCategoryApi.getAll().catch(() => []),
         ]);
         const allProducts = (Array.isArray(allRes) ? allRes : (allRes as { data?: Record<string, unknown>[] }).data ?? []) as Record<string, unknown>[];
+        setUniqueBadges(Array.from(new Set(allProducts.map(p => String(p.badge ?? '')).filter(Boolean))));
         const productCats = allProducts.map((p: any) => String(p.category ?? '').trim()).filter(Boolean);
         const masterCats = (Array.isArray(categoryRows) ? categoryRows : [])
           .filter((c: any) => c?.isActive !== false)
@@ -399,6 +402,14 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
   const [alertDialog, setAlertDialog] = useState<{ show: boolean; title: string; message: string; type: 'error' | 'success' | 'warning' | 'info' }>({ show: false, title: '', message: '', type: 'error' });
 
+  const handleSummaryCardClick = (summary: 'total' | 'active' | 'scanned' | 'low') => {
+    setSelectedSummary(summary);
+    setFilterStatus(summary === 'active' ? 'active' : 'all');
+    setFilterStock(summary === 'low' ? 'low' : 'all');
+    setFilterBadge('all');
+    setCurrentPage(1);
+  };
+
   // Get auth context for adminId
   const { auth } = useAppContext();
   
@@ -410,8 +421,6 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
   
   // Debug logging
   const inputStyle: React.CSSProperties = { width: '100%', padding: '9px 12px', border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 13.5, outline: 'none', background: C.surface, color: C.text, boxSizing: 'border-box' };
-
-  const uniqueBadges = Array.from(new Set(data.map((p: Product) => p.badge).filter(Boolean)));
 
   const filtered = data.filter((p: Product) => {
     const q = search.toLowerCase();
@@ -626,15 +635,15 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 22 }}>
         {[
-          { label: 'Total Products', value: productStats.total || totalCount, Icon: Package, color: '#3B82F6', bg: '#EFF6FF' },
-          { label: 'Active', value: productStats.active, Icon: CheckCircle, color: '#065F46', bg: '#D1FAE5' },
-          { label: 'Total Scanned', value: productStats.totalScanned.toLocaleString('en-IN'), Icon: ScanLine, color: '#7C3AED', bg: '#F5F3FF' },
-          { label: 'Low Stock (<500)', value: productStats.lowStock, Icon: AlertTriangle, color: '#92400E', bg: '#FEF3C7' },
+          { label: 'Total Products', value: productStats.total || totalCount, Icon: Package, color: '#3B82F6', bg: '#EFF6FF', summary: 'total' as const },
+          { label: 'Active', value: productStats.active, Icon: CheckCircle, color: '#065F46', bg: '#D1FAE5', summary: 'active' as const },
+          { label: 'Total Scanned', value: productStats.totalScanned.toLocaleString('en-IN'), Icon: ScanLine, color: '#7C3AED', bg: '#F5F3FF', summary: 'scanned' as const },
+          { label: 'Low Stock (<500)', value: productStats.lowStock, Icon: AlertTriangle, color: '#92400E', bg: '#FEF3C7', summary: 'low' as const },
         ].map((s, i) => (
-          <div key={i} style={{ background: C.card, borderRadius: 14, padding: '16px 18px', border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-            <div style={{ width: 42, height: 42, borderRadius: 12, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.color }}><s.Icon size={20} /></div>
-            <div><div style={{ fontSize: 22, fontWeight: 800, color: C.text }}>{s.value}</div><div style={{ fontSize: 12, color: s.color, fontWeight: 700 }}>{s.label}</div></div>
-          </div>
+          <button type="button" key={i} aria-pressed={selectedSummary === s.summary} onClick={() => handleSummaryCardClick(s.summary)} style={{ background: C.card, borderRadius: 14, padding: '16px 18px', border: `1px solid ${selectedSummary === s.summary ? s.color : C.border}`, display: 'flex', alignItems: 'center', gap: 12, boxShadow: selectedSummary === s.summary ? `0 0 0 3px ${s.color}18` : '0 2px 8px rgba(0,0,0,0.04)', cursor: 'pointer', textAlign: 'left', font: 'inherit' }}>
+            <span style={{ width: 42, height: 42, borderRadius: 12, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.color }}><s.Icon size={20} /></span>
+            <span><span style={{ display: 'block', fontSize: 22, fontWeight: 800, color: C.text }}>{s.value}</span><span style={{ display: 'block', fontSize: 12, color: s.color, fontWeight: 700 }}>{s.label}</span></span>
+          </button>
         ))}
       </div>
 
@@ -650,7 +659,7 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search product name, category, SKU..." style={{ ...inputStyle, flex: 1 }} onFocus={e => (e.target as HTMLInputElement).style.borderColor = C.red} onBlur={e => (e.target as HTMLInputElement).style.borderColor = C.border} />
 
         {(filterStatus !== 'all' || filterStock !== 'all' || filterBadge !== 'all') && (
-          <button onClick={() => { setFilterStatus('all'); setFilterStock('all'); setFilterBadge('all'); }}
+          <button onClick={() => { setFilterStatus('all'); setFilterStock('all'); setFilterBadge('all'); setSelectedSummary('total'); }}
             style={{ padding: '8px 12px', borderRadius: 8, border: `1px solid ${C.red}`, background: '#FFF0F0', color: C.red, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
             Clear Filters
           </button>
@@ -699,7 +708,7 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
                   ].map(f => (
                     <div key={f.label}>
                       <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>{f.label}</div>
-                      <select value={f.value} onChange={e => f.set(e.target.value)}
+                      <select value={f.value} onChange={e => { f.set(e.target.value); setSelectedSummary(null); }}
                         style={{ width: '100%', padding: '9px 12px', border: `1.5px solid ${f.value !== 'all' ? C.red : C.border}`, borderRadius: 10, fontSize: 13, outline: 'none', background: C.inputBg, color: C.text, cursor: 'pointer' }}>
                         {f.options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                       </select>
@@ -707,7 +716,7 @@ export default function Products({ role, initialCategory, onCategoryUsed }: Prod
                   ))}
                 </div>
                 <div style={{ padding: '16px 24px', borderTop: `1px solid ${C.border}`, display: 'flex', gap: 10 }}>
-                  <button onClick={() => { setFilterStatus('all'); setFilterStock('all'); setFilterBadge('all'); }}
+                  <button onClick={() => { setFilterStatus('all'); setFilterStock('all'); setFilterBadge('all'); setSelectedSummary('total'); }}
                     style={{ flex: 1, padding: '10px', borderRadius: 10, border: `1px solid ${C.border}`, background: C.bg, color: C.muted, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                     Reset All
                   </button>

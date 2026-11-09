@@ -52,61 +52,18 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
 
     const load = async () => {
       try {
-        const [
-          dashData,
-          scansData,
-          redemptionsData,
-          scanStatsData,
-          userStatsData,
-          supportData,
-          dealerStats,
-          customerStats,
-          counterboyStats,
-          installedElectricians,
-          notInstalledElectricians,
-          installedDealers,
-          notInstalledDealers,
-          installedCustomers,
-          notInstalledCustomers,
-          installedCounterboys,
-          notInstalledCounterboys,
-        ] = await Promise.all([
-          analyticsApi.getDashboard(),
+        const dashData = await analyticsApi.getDashboard();
+        setStats(dashData);
+        setRoleCounts({ dealers: Number(dashData?.totalDealers ?? 0), customers: 0, counterboys: 0 });
+        setLoading(false);
+
+        const [scansData, redemptionsData, scanStatsData, userStatsData, supportData] = await Promise.all([
           scanApi.getAll({ limit: '5' }),
           redemptionApi.getAll({ status: 'pending', limit: '5' }),
           analyticsApi.getScanStats(),
           analyticsApi.getUserStats(),
           supportApi.getAll({ status: 'open', limit: '1' }),
-          dealerApi.getStats().catch(() => null),
-          appUserApi.getStats().catch(() => null),
-          counterboyApi.getStats().catch(() => null),
-          electricianApi.getAll({ page: '1', limit: '1', appInstalled: 'true' }).catch(() => null),
-          electricianApi.getAll({ page: '1', limit: '1', appInstalled: 'false' }).catch(() => null),
-          dealerApi.getAll({ page: '1', limit: '1', appInstalled: 'true' }).catch(() => null),
-          dealerApi.getAll({ page: '1', limit: '1', appInstalled: 'false' }).catch(() => null),
-          appUserApi.getAll({ page: '1', limit: '1', appInstalled: 'true' }).catch(() => null),
-          appUserApi.getAll({ page: '1', limit: '1', appInstalled: 'false' }).catch(() => null),
-          counterboyApi.getAll({ page: '1', limit: '1', appInstalled: 'true' }).catch(() => null),
-          counterboyApi.getAll({ page: '1', limit: '1', appInstalled: 'false' }).catch(() => null),
         ]);
-        setStats(dashData);
-        setRoleCounts({
-          dealers: Number(dealerStats?.total ?? dashData?.totalDealers ?? 0),
-          customers: Number(customerStats?.total ?? 0),
-          counterboys: Number(counterboyStats?.total ?? 0),
-        });
-        setAppInstallCounts({
-          installed:
-            Number((installedElectricians as any)?.total ?? 0) +
-            Number((installedDealers as any)?.total ?? 0) +
-            Number((installedCustomers as any)?.total ?? 0) +
-            Number((installedCounterboys as any)?.total ?? 0),
-          notInstalled:
-            Number((notInstalledElectricians as any)?.total ?? 0) +
-            Number((notInstalledDealers as any)?.total ?? 0) +
-            Number((notInstalledCustomers as any)?.total ?? 0) +
-            Number((notInstalledCounterboys as any)?.total ?? 0),
-        });
         setRecentScans(Array.isArray(scansData) ? scansData : (scansData as any).data ?? []);
         setPendingRedemptions(Array.isArray(redemptionsData) ? redemptionsData : (redemptionsData as any).data ?? []);
 
@@ -124,6 +81,32 @@ export default function Dashboard({ role, adminName = 'Admin', onNavigate }: Das
 
         // Pending enquiries count
         setPendingEnquiries((supportData as any)?.total ?? 0);
+
+        // Show the main dashboard as soon as its visible data is ready. Counts
+        // that use secondary role endpoints can fill in without blocking it.
+        setLoading(false);
+        const [dealerStats, customerStats, counterboyStats, installedElectricians, notInstalledElectricians, installedDealers, notInstalledDealers, installedCustomers, notInstalledCustomers, installedCounterboys, notInstalledCounterboys] = await Promise.all([
+          dealerApi.getStats().catch(() => null),
+          appUserApi.getStats().catch(() => null),
+          counterboyApi.getStats().catch(() => null),
+          electricianApi.getAll({ page: '1', limit: '1', appInstalled: 'true' }).catch(() => null),
+          electricianApi.getAll({ page: '1', limit: '1', appInstalled: 'false' }).catch(() => null),
+          dealerApi.getAll({ page: '1', limit: '1', appInstalled: 'true' }).catch(() => null),
+          dealerApi.getAll({ page: '1', limit: '1', appInstalled: 'false' }).catch(() => null),
+          appUserApi.getAll({ page: '1', limit: '1', appInstalled: 'true' }).catch(() => null),
+          appUserApi.getAll({ page: '1', limit: '1', appInstalled: 'false' }).catch(() => null),
+          counterboyApi.getAll({ page: '1', limit: '1', appInstalled: 'true' }).catch(() => null),
+          counterboyApi.getAll({ page: '1', limit: '1', appInstalled: 'false' }).catch(() => null),
+        ]);
+        setRoleCounts({
+          dealers: Number(dealerStats?.total ?? dashData?.totalDealers ?? 0),
+          customers: Number(customerStats?.total ?? 0),
+          counterboys: Number(counterboyStats?.total ?? 0),
+        });
+        setAppInstallCounts({
+          installed: Number((installedElectricians as any)?.total ?? 0) + Number((installedDealers as any)?.total ?? 0) + Number((installedCustomers as any)?.total ?? 0) + Number((installedCounterboys as any)?.total ?? 0),
+          notInstalled: Number((notInstalledElectricians as any)?.total ?? 0) + Number((notInstalledDealers as any)?.total ?? 0) + Number((notInstalledCustomers as any)?.total ?? 0) + Number((notInstalledCounterboys as any)?.total ?? 0),
+        });
       } catch (err) {
         console.error('Dashboard load error:', err);
       } finally {

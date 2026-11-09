@@ -37,13 +37,13 @@ export default function SearchableSelect({ value, options, onChange, placeholder
   useEffect(() => { if (open) window.setTimeout(() => inputRef.current?.focus(), 0); }, [open]);
 
   return (
-    <div ref={rootRef} style={{ position: 'relative', minWidth }}>
+    <div ref={rootRef} style={{ position: 'relative', minWidth: `min(${minWidth}px, 100%)`, maxWidth: '100%' }}>
       <button type="button" onClick={() => { setOpen((current) => !current); setQuery(''); }} aria-expanded={open}
         style={{ width: '100%', padding: '9px 11px', borderRadius: 10, border: `1px solid ${value ? C.red : C.border}`, background: C.bg, color: C.text, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selected?.label ?? placeholder}</span>
         <ChevronDown size={15} style={{ flexShrink: 0, transform: open ? 'rotate(180deg)' : undefined }} />
       </button>
-      {open && <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, width: 'max(100%, 240px)', zIndex: 1200, background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, boxShadow: '0 16px 40px rgba(15,23,42,0.18)', overflow: 'hidden' }}>
+      {open && <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, width: 'max(100%, 240px)', maxWidth: 'min(360px, calc(100vw - 32px))', zIndex: 1200, background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, boxShadow: '0 16px 40px rgba(15,23,42,0.18)', overflow: 'hidden' }}>
         <div style={{ padding: 9, borderBottom: `1px solid ${C.border}`, position: 'relative' }}>
           <Search size={15} style={{ position: 'absolute', left: 20, top: 20, color: C.muted }} />
           <input ref={inputRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder={searchPlaceholder ?? `Search ${placeholder.toLowerCase()}...`}

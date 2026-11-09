@@ -280,14 +280,14 @@ export default function GiftOrders({ role }: { role?: import('@/lib/types').Admi
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
           {[
-            { label: 'Total', value: total, color: 'white' },
-            { label: 'Pending', value: orders.filter(o => o.type === tab && o.status === 'pending').length, color: '#FCD34D' },
-            { label: 'Delivered', value: orders.filter(o => o.type === tab && o.status === 'delivered').length, color: '#6EE7B7' },
+            { label: 'Total', value: total, color: 'white', filter: 'all' },
+            { label: 'Pending', value: orders.filter(o => o.type === tab && o.status === 'pending').length, color: '#FCD34D', filter: 'pending' },
+            { label: 'Delivered', value: orders.filter(o => o.type === tab && o.status === 'delivered').length, color: '#6EE7B7', filter: 'delivered' },
           ].map(s => (
-            <div key={s.label} style={{ textAlign: 'center', padding: '10px 16px', background: 'rgba(255,255,255,0.12)', borderRadius: 12 }}>
+            <button type="button" key={s.label} onClick={() => { setPage(1); setFilterStatus(s.filter as typeof filterStatus); }} aria-pressed={filterStatus === s.filter} style={{ textAlign: 'center', padding: '10px 16px', background: filterStatus === s.filter ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.12)', border: filterStatus === s.filter ? '1px solid rgba(255,255,255,0.75)' : '1px solid transparent', borderRadius: 12, cursor: 'pointer' }}>
               <div style={{ fontSize: 20, fontWeight: 900, color: s.color }}>{s.value}</div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.65)' }}>{s.label}</div>
-            </div>
+            </button>
           ))}
         </div>
       </div>

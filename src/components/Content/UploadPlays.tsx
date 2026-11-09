@@ -59,6 +59,7 @@ type PlayItem = {
   isActive: boolean;
   targetRoles?: string[];
   viewCount: number;
+  commentCount?: number;
   createdAt: string;
 };
 
@@ -347,6 +348,7 @@ export default function UploadPlays({ role }: { role?: string }) {
 
   const [filterCat, setFilterCat] = useState('all');
   const [audienceFilter, setAudienceFilter] = useState('all');
+  const [summaryFilter, setSummaryFilter] = useState<'all' | 'active' | 'viewed' | 'engaged'>('all');
 
   const load = async () => {
     setLoading(true);
@@ -533,8 +535,12 @@ export default function UploadPlays({ role }: { role?: string }) {
     const audienceMatch =
       audienceFilter === 'all' ||
       normalizeTargetRoles(play.targetRoles?.length ? play.targetRoles : INDIVIDUAL_ROLE_IDS).includes(audienceFilter);
+    const summaryMatch = summaryFilter === 'all' ||
+      (summaryFilter === 'active' && play.isActive) ||
+      (summaryFilter === 'viewed' && Number(play.viewCount ?? 0) > 0) ||
+      (summaryFilter === 'engaged' && Number(play.commentCount ?? 0) > 0);
 
-    return categoryMatch && audienceMatch;
+    return categoryMatch && audienceMatch && summaryMatch;
   });
 
   return (
@@ -574,22 +580,23 @@ export default function UploadPlays({ role }: { role?: string }) {
       {stats && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 24 }}>
           {[
-              { label: 'Total Videos', value: stats.totalPlays, icon: 'Clapperboard', color: '#1D4ED8', bg: '#EFF6FF' },
-            { label: 'Active Videos', value: stats.activePlays, icon: 'Check', color: '#059669', bg: '#D1FAE5' },
-            { label: 'Total Views', value: stats.totalViews, icon: 'Eye', color: '#7C3AED', bg: '#F5F3FF' },
+              { label: 'Total Videos', value: stats.totalPlays, icon: 'Clapperboard', color: '#1D4ED8', bg: '#EFF6FF', filter: 'all' as const },
+            { label: 'Active Videos', value: stats.activePlays, icon: 'Check', color: '#059669', bg: '#D1FAE5', filter: 'active' as const },
+            { label: 'Total Views', value: stats.totalViews, icon: 'Eye', color: '#7C3AED', bg: '#F5F3FF', filter: 'viewed' as const },
             {
               label: stats.totalComments !== undefined ? 'Comments & Replies' : 'Unique Viewers',
               value: stats.totalComments ?? stats.uniqueViewers,
               icon: stats.totalComments !== undefined ? 'MessageCircle' : 'Users',
               color: '#D97706',
               bg: '#FEF3C7',
+              filter: 'engaged' as const,
             },
           ].map(s => (
-            <div key={s.label} style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, padding: '18px 20px', boxShadow: C.shadow }}>
+            <button type="button" key={s.label} aria-pressed={summaryFilter === s.filter} onClick={() => setSummaryFilter(s.filter)} style={{ background: C.card, borderRadius: 14, border: `1px solid ${summaryFilter === s.filter ? s.color : C.border}`, padding: '18px 20px', boxShadow: summaryFilter === s.filter ? `0 0 0 3px ${s.color}18` : C.shadow, cursor: 'pointer', textAlign: 'left', font: 'inherit' }}>
               <div style={{ width: 42, height: 42, borderRadius: 12, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}><I name={s.icon} size={22} style={{ color: s.color }} /></div>
               <div style={{ fontSize: 26, fontWeight: 900, color: s.color }}>{s.value}</div>
               <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{s.label}</div>
-            </div>
+            </button>
           ))}
         </div>
       )}

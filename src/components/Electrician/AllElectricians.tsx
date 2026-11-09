@@ -563,8 +563,27 @@ export default function Electricians({ role }: ElectriciansProps) {
     setFilterAppInstalled(next);
   };
 
+  const selectAppSummary = (next: string) => {
+    setFilterTier('all');
+    setFilterAppInstalled(next);
+  };
+
   const handleInstallDateChange = (next: typeof dateFilter) => {
     setDateFilter(next);
+  };
+
+  const selectTierSummary = (tier: string) => {
+    setFilterTier(tier);
+    setFilterStatus('all');
+    setFilterActivityStatus('all');
+    setFilterState('all');
+    setFilterCity('all');
+    setFilterCategory('all');
+    setFilterBank('all');
+    setFilterWelcomeBonus('all');
+    setFilterAppInstalled('all');
+    setDateFilter('all');
+    setCustomDateRange({ from: '', to: '' });
   };
 
   // ── Tier counts (fetched separately for accurate totals across all pages) ──
@@ -574,7 +593,9 @@ export default function Electricians({ role }: ElectriciansProps) {
   const [allCities, setAllCities] = useState<string[]>([]);
   const [allCategories, setAllCategories] = useState<string[]>([]);
   const sanitizeOptions = (values: string[]) => Array.from(
-    values.map(value => value.trim()).filter(value => value && value !== '?')
+    values.map(value => value.trim().replace(/\s+/g, ' ')).filter(value =>
+      value && !['?', 'unknown', 'n/a', 'na', 'null', 'undefined', 'not provided', '-'].includes(value.toLocaleLowerCase())
+    )
       .reduce((options, value) => {
         const key = value.toLocaleLowerCase();
         const previous = options.get(key);
@@ -648,10 +669,9 @@ export default function Electricians({ role }: ElectriciansProps) {
 
       // Date filter → convert to dateFrom / dateTo
       if (dateFilter !== 'all') {
-        // Installed accounts are filtered by their first app login. Accounts
-        // without an install timestamp use their joined date, otherwise every
-        // "Not Installed" date range would necessarily be empty.
-        params.dateField = filterAppInstalled === 'installed' ? 'installed' : 'joined';
+        // Date presets always represent when this electrician was added.
+        // App-install status remains an independent filter.
+        params.dateField = 'joined';
         if (dateFilter !== 'custom') {
           const range = getISTDatePresetRange(dateFilter);
           params.dateFrom = range.from;
@@ -760,6 +780,15 @@ export default function Electricians({ role }: ElectriciansProps) {
   const uniqueCategories = ['all', ...sanitizeOptions(allCategories)];
 
   const filtered = data; // All filters apply before server-side pagination.
+  const hasCompleteCustomDateRange = customDateRange.from !== '' && customDateRange.to !== '';
+  const isDateRangeApplied = dateFilter !== 'all' && (dateFilter !== 'custom' || hasCompleteCustomDateRange);
+  const dateRangeLabel = dateFilter === 'all' ? 'All time' : {
+    today: 'Added today',
+    yesterday: 'Added yesterday',
+    week: 'Added this week',
+    month: 'Added this month',
+    custom: 'Added in custom range',
+  }[dateFilter];
 
   const handleSave = async (form: Partial<Electrician>) => {
     if (!form.name?.trim() || !form.phone?.trim() || !form.city?.trim() || !form.state?.trim()) {
@@ -913,7 +942,7 @@ export default function Electricians({ role }: ElectriciansProps) {
       {/* Summary Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 12, marginBottom: 22 }}>
         {[
-          { label: 'Total', value: totalCount, Icon: Users, color: '#3B82F6', bg: '#EFF6FF' },
+          { label: 'Total Electricians', value: totalCount, subtitle: isDateRangeApplied ? dateRangeLabel : 'All time', Icon: Users, color: '#3B82F6', bg: '#EFF6FF' },
           ...(['Silver','Gold','Platinum','Diamond'] as MemberTier[]).map(t => {
             const tierIcons: Record<string, React.ReactNode> = { Silver: <Medal size={18} />, Gold: <Award size={18} />, Platinum: <Trophy size={18} />, Diamond: <Gem size={18} /> };
             return {
@@ -922,21 +951,25 @@ export default function Electricians({ role }: ElectriciansProps) {
               Icon: () => <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{tierIcons[t]}</span>, 
               color: TIER_CONFIG[t].color, 
               bg: TIER_CONFIG[t].bg,
+              subtitle: undefined,
             };
           }),
-        ].map((s, i) => (
-          <div key={i} onClick={() => setFilterTier(i === 0 ? 'all' : s.label)} style={{ background: C.card, borderRadius: 14, padding: '16px 18px', border: `1px solid ${C.border}`, cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
-            onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'}
-            onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)'}>
+        ].map((s, i) => {
+          const tierFilter = i === 0 ? 'all' : s.label;
+          const selected = filterTier === tierFilter && filterAppInstalled === 'all';
+          return <button type="button" key={i} aria-pressed={selected} onClick={() => selectTierSummary(tierFilter)} style={{ width: '100%', background: C.card, borderRadius: 14, padding: '16px 18px', border: `1px solid ${selected ? s.color : C.border}`, cursor: 'pointer', transition: 'all 0.2s', boxShadow: selected ? `0 0 0 3px ${s.color}18` : '0 2px 8px rgba(0,0,0,0.04)', textAlign: 'left' }}
+            onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-2px)'}
+            onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)'}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{ width: 36, height: 36, borderRadius: 10, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.color }}><s.Icon size={18} /></div>
               <div>
                 <div style={{ fontSize: 22, fontWeight: 800, color: C.text }}>{s.value}</div>
                 <div style={{ fontSize: 11, color: s.color, fontWeight: 700 }}>{s.label}</div>
+                {s.subtitle && <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{s.subtitle}</div>}
               </div>
             </div>
-          </div>
-        ))}
+          </button>;
+        })}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(180px,1fr))', gap: 12, marginBottom: 22 }}>
@@ -944,7 +977,7 @@ export default function Electricians({ role }: ElectriciansProps) {
           { label: 'App Installed', value: installationStats.installed, filter: 'installed', color: '#047857', bg: '#D1FAE5' },
           { label: 'Not Installed', value: installationStats.notInstalled, filter: 'not_installed', color: '#B45309', bg: '#FEF3C7' },
         ].map(item => (
-          <button key={item.filter} onClick={() => handleAppStatusChange(item.filter)} style={{ background: C.card, borderRadius: 14, padding: '14px 18px', border: `1px solid ${filterAppInstalled === item.filter ? item.color : C.border}`, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left' }}>
+          <button type="button" key={item.filter} aria-pressed={filterAppInstalled === item.filter && filterTier === 'all'} onClick={() => selectAppSummary(item.filter)} style={{ background: C.card, borderRadius: 14, padding: '14px 18px', border: `1px solid ${filterAppInstalled === item.filter && filterTier === 'all' ? item.color : C.border}`, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left' }}>
             <span style={{ width: 38, height: 38, borderRadius: 10, background: item.bg, color: item.color, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><Smartphone size={19} /></span>
             <span><strong style={{ display: 'block', fontSize: 21, color: C.text }}>{item.value}</strong><span style={{ fontSize: 12, fontWeight: 700, color: item.color }}>{item.label}</span></span>
           </button>
@@ -1005,7 +1038,7 @@ export default function Electricians({ role }: ElectriciansProps) {
           <Calendar size={14} style={{ color: dateFilter !== 'all' ? C.red : C.muted }} />
           <select className={layoutStyles.dateSelect} value={dateFilter} aria-label="Account date" title={filterAppInstalled === 'installed' ? 'Filter by first app login date' : 'Filter by account joined date'} onChange={e => handleInstallDateChange(e.target.value as typeof dateFilter)}
             style={{ padding: '9px 12px', border: `1.5px solid ${dateFilter !== 'all' ? C.red : C.border}`, borderRadius: 8, fontSize: 13, outline: 'none', background: C.surface, color: C.text, cursor: 'pointer', minWidth: 120 }}>
-            <option value="all">{filterAppInstalled === 'installed' ? 'Install Date' : 'Joined Date'}: All Time</option>
+            <option value="all">Added Date: All Time</option>
             <option value="today">Today</option>
             <option value="yesterday">Yesterday</option>
             <option value="week">This Week</option>

@@ -46,8 +46,8 @@ export default function PlayEngagement({ canEdit }: { canEdit: boolean }) {
   const [deleteTarget, setDeleteTarget] = useState<PlayComment | null>(null);
 
   const selectedPlay = useMemo(
-    () => plays.find((play) => play.id === selectedId) ?? plays[0],
-    [plays, selectedId],
+    () => filteredPlays.find((play) => play.id === selectedId) ?? filteredPlays[0],
+    [filteredPlays, selectedId],
   );
 
   const load = async () => {
@@ -112,10 +112,10 @@ export default function PlayEngagement({ canEdit }: { canEdit: boolean }) {
   };
 
   const statCards = [
-    { label: 'Videos', value: stats?.totalPlays ?? plays.length, Icon: Video, color: '#2563EB', bg: '#DBEAFE' },
-    { label: 'Views', value: stats?.totalViews ?? 0, Icon: RefreshCw, color: '#0F766E', bg: '#CCFBF1' },
-    { label: 'Likes', value: stats?.totalLikes ?? 0, Icon: Heart, color: '#BE123C', bg: '#FFE4E6' },
-    { label: 'Shares', value: stats?.totalShares ?? 0, Icon: Share2, color: '#7C3AED', bg: '#EDE9FE' },
+    { label: 'Videos', value: stats?.totalPlays ?? plays.length, Icon: Video, color: '#2563EB', bg: '#DBEAFE', filter: 'all' },
+    { label: 'Views', value: stats?.totalViews ?? 0, Icon: RefreshCw, color: '#0F766E', bg: '#CCFBF1', filter: 'viewed' },
+    { label: 'Likes', value: stats?.totalLikes ?? 0, Icon: Heart, color: '#BE123C', bg: '#FFE4E6', filter: 'liked' },
+    { label: 'Shares', value: stats?.totalShares ?? 0, Icon: Share2, color: '#7C3AED', bg: '#EDE9FE', filter: 'shared' },
   ];
 
   return (
@@ -152,25 +152,25 @@ export default function PlayEngagement({ canEdit }: { canEdit: boolean }) {
       ) : null}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(120px, 1fr))', gap: 12 }}>
-        {statCards.map(({ label, value, Icon, color, bg }) => (
-          <div key={label} style={{ border: `1px solid ${C.border}`, background: C.bg, borderRadius: 12, padding: 14 }}>
+        {statCards.map(({ label, value, Icon, color, bg, filter }) => (
+          <button type="button" key={label} onClick={() => setEngagementFilter(filter as typeof engagementFilter)} aria-pressed={engagementFilter === filter} style={{ border: engagementFilter === filter ? `2px solid ${color}` : `1px solid ${C.border}`, background: C.bg, borderRadius: 12, padding: 14, cursor: 'pointer', textAlign: 'left' }}>
             <div style={{ width: 34, height: 34, borderRadius: 10, background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color }}>
               <Icon size={17} />
             </div>
             <div style={{ marginTop: 10, fontSize: 21, fontWeight: 900, color: C.text }}>{value}</div>
             <div style={{ fontSize: 11, fontWeight: 800, color: C.muted, textTransform: 'uppercase' }}>{label}</div>
-          </div>
+          </button>
         ))}
       </div>
 
       {loading ? (
         <div style={{ padding: 34, textAlign: 'center', color: C.muted, fontSize: 13 }}>Loading video engagement...</div>
-      ) : plays.length === 0 ? (
+      ) : filteredPlays.length === 0 ? (
         <div style={{ padding: 34, textAlign: 'center', color: C.muted, fontSize: 13, border: `1px solid ${C.border}`, borderRadius: 12, background: C.bg }}>No uploaded videos yet.</div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 16, alignItems: 'start' }}>
           <div style={{ border: `1px solid ${C.border}`, borderRadius: 12, overflow: 'hidden', background: C.bg }}>
-            {plays.map((play) => {
+            {filteredPlays.map((play) => {
               const active = selectedPlay?.id === play.id;
               return (
                 <button

@@ -300,16 +300,16 @@ export default function ProductOrders({ role }: { role?: import('@/lib/types').A
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
           {[
-            { label: 'Total', value: stats.total, color: 'white' },
-            { label: 'Pending', value: stats.pending, color: '#FCD34D' },
-            { label: 'Out Delivery', value: stats.outForDelivery, color: '#BAE6FD' },
-            { label: 'Shipped', value: stats.shipped, color: '#93C5FD' },
-            { label: 'Delivered', value: stats.delivered, color: '#6EE7B7' },
+            { label: 'Total', value: stats.total, color: 'white', filter: 'all' as const },
+            { label: 'Pending', value: stats.pending, color: '#FCD34D', filter: 'pending' as const },
+            { label: 'Out Delivery', value: stats.outForDelivery, color: '#BAE6FD', filter: 'out_for_delivery' as const },
+            { label: 'Shipped', value: stats.shipped, color: '#93C5FD', filter: 'shipped' as const },
+            { label: 'Delivered', value: stats.delivered, color: '#6EE7B7', filter: 'delivered' as const },
           ].map(s => (
-            <div key={s.label} style={{ textAlign: 'center', padding: '10px 16px', background: 'rgba(255,255,255,0.12)', borderRadius: 12 }}>
+            <button type="button" key={s.label} aria-pressed={filterStatus === s.filter} onClick={() => setFilterStatus(s.filter)} style={{ textAlign: 'center', padding: '10px 16px', background: filterStatus === s.filter ? 'rgba(255,255,255,0.24)' : 'rgba(255,255,255,0.12)', borderRadius: 12, border: `1px solid ${filterStatus === s.filter ? s.color : 'transparent'}`, cursor: 'pointer', font: 'inherit' }}>
               <div style={{ fontSize: 20, fontWeight: 900, color: s.color }}>{s.value}</div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.65)' }}>{s.label}</div>
-            </div>
+            </button>
           ))}
         </div>
       </div>
