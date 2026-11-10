@@ -44,6 +44,14 @@ export default function PlayEngagement({ canEdit }: { canEdit: boolean }) {
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [error, setError] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<PlayComment | null>(null);
+  const [engagementFilter, setEngagementFilter] = useState<'all' | 'viewed' | 'liked' | 'shared'>('all');
+
+  const filteredPlays = useMemo(() => {
+    if (engagementFilter === 'viewed') return plays.filter(play => (play.viewCount ?? 0) > 0);
+    if (engagementFilter === 'liked') return plays.filter(play => (play.likeCount ?? 0) > 0);
+    if (engagementFilter === 'shared') return plays.filter(play => (play.shareCount ?? 0) > 0);
+    return plays;
+  }, [engagementFilter, plays]);
 
   const selectedPlay = useMemo(
     () => filteredPlays.find((play) => play.id === selectedId) ?? filteredPlays[0],

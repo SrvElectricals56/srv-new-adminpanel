@@ -63,6 +63,12 @@ export default function AppIcons({ role }: { role?: import('@/lib/types').AdminR
     inactive: icons.filter(i => !i.isActive).length,
   }), [icons]);
 
+  const filteredIcons = useMemo(() => {
+    if (statusFilter === 'active') return icons.filter(icon => icon.isActive);
+    if (statusFilter === 'inactive') return icons.filter(icon => !icon.isActive);
+    return icons;
+  }, [icons, statusFilter]);
+
   const openEdit = (icon: AppIcon) => {
     setForm({ name: icon.name, imageUrl: icon.imageUrl ?? '', nativeKey: icon.nativeKey ?? null, isActive: icon.isActive, displayOrder: icon.displayOrder });
     setEditingId(icon.id);
