@@ -80,6 +80,7 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [downloadProgress, setDownloadProgress] = useState(0);
   const [qrStats, setQrStats] = useState({ total: 0, scanned: 0, active: 0 });
   const [alertDialog, setAlertDialog] = useState<{ show: boolean; title: string; message: string; type: 'error' | 'success' | 'warning' | 'info' }>({ show: false, title: '', message: '', type: 'error' });
   const canGenerateQr = role === 'super_admin' || role === 'admin' || role === 'staff';
@@ -381,29 +382,45 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
   };
 
   // ── Helper: ensure QR image exists, generate if missing ──────────
-  const ensureQrData = async (qr: GeneratedQR): Promise<string> => {
-    if (qr.qrData) return qr.qrData;
+  const ensureQrData = async (
+    qr: GeneratedQR,
+    width = 220,
+    outputType: 'image/png' | 'image/jpeg' = 'image/png',
+    reuseExisting = true,
+  ): Promise<string> => {
+    if (reuseExisting && qr.qrData) return qr.qrData;
     const QRCodeLib = await loadQrCodeLibrary();
-    return QRCodeLib.toDataURL(qr.id, {
-      width: 300, margin: 2,
+    const common = {
+      width,
+      margin: 1,
       color: { dark: '#000000', light: '#FFFFFF' },
-      errorCorrectionLevel: 'M',
-    }).catch(() => '');
+      errorCorrectionLevel: 'M' as const,
+    };
+    return outputType === 'image/jpeg'
+      ? QRCodeLib.toDataURL(qr.id, { ...common, type: 'image/jpeg', rendererOpts: { quality: 1 } }).catch(() => '')
+      : QRCodeLib.toDataURL(qr.id, { ...common, type: 'image/png' }).catch(() => '');
   };
 
   const resolveAllQrData = async (
     qrs: GeneratedQR[],
+    imageWidth = 220,
     onProgress?: (pct: number) => void,
+    outputType: 'image/png' | 'image/jpeg' = 'image/png',
+    reuseExisting = true,
   ): Promise<GeneratedQR[]> => {
-    const CHUNK = 100;
+    const CHUNK = 25;
     const result: GeneratedQR[] = [];
     for (let i = 0; i < qrs.length; i += CHUNK) {
       const slice = qrs.slice(i, i + CHUNK);
       const resolved = await Promise.all(slice.map(async (q) => ({
-        ...q, qrData: await ensureQrData(q),
+        ...q, qrData: await ensureQrData(q, imageWidth, outputType, reuseExisting),
       })));
       result.push(...resolved);
-      onProgress?.(Math.round(((i + CHUNK) / qrs.length) * 100));
+      onProgress?.(Math.round((Math.min(i + CHUNK, qrs.length) / qrs.length) * 100));
+      // Give React and the browser a frame between chunks. Large PDF/ZIP
+      // exports no longer freeze the entire admin panel while 1,000+ QR
+      // images are rendered.
+      await new Promise<void>(resolve => window.requestAnimationFrame(() => resolve()));
     }
     return result;
   };
@@ -482,6 +499,7 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
   const downloadZip = async () => {
     if (!generatedQRs.length) return;
     setDownloading('zip');
+    setDownloadProgress(1);
     try {
       const [JSZipModule, XLSX] = await Promise.all([
         import('jszip').then(m => m.default),
@@ -492,7 +510,7 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
 
       // Resolve QR images (generate missing ones)
       const completeBatch = await loadCompleteBatch();
-      const resolved = await resolveAllQrData(completeBatch);
+      const resolved = await resolveAllQrData(completeBatch, 240, setDownloadProgress);
 
       // 1. Images folder
       const imgFolder = zip.folder('QR_Images')!;
@@ -520,19 +538,21 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       await recordQrDownload(completeBatch, 'zip');
     } catch (err) {
       console.error('ZIP error:', err);
       setAlertDialog({ show: true, title: 'Download Failed', message: 'ZIP download failed. Try fewer QR codes.', type: 'error' });
     }
     setDownloading(null);
+    setDownloadProgress(0);
   };
 
   // ── Download All as CSV ────────────────────────────────────────────
   const downloadCSV = async () => {
     if (!generatedQRs.length) return;
     setDownloading('csv');
+    setDownloadProgress(1);
     try {
       const completeBatch = await loadCompleteBatch();
       const escape = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
@@ -548,6 +568,7 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
       setAlertDialog({ show: true, title: 'CSV Download Failed', message: err instanceof Error ? err.message : 'Unable to download all QR codes.', type: 'error' });
     } finally {
       setDownloading(null);
+      setDownloadProgress(0);
     }
   };
 
@@ -555,6 +576,7 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
   const downloadExcel = async () => {
     if (!generatedQRs.length) return;
     setDownloading('excel');
+    setDownloadProgress(1);
     try {
       const batches = groupQrExcelItemsByBatch(generatedQRs);
       let downloadHistoryRecordedByBackend = false;
@@ -577,17 +599,19 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
       setAlertDialog({ show: true, title: 'Excel Download Failed', message: err instanceof Error ? err.message : 'Unable to download QR Excel file.', type: 'error' });
     }
     setDownloading(null);
+    setDownloadProgress(0);
   };
 
   // ── Download All as PDF ────────────────────────────────────────────
   const downloadPDF = async () => {
     if (!generatedQRs.length) return;
     setDownloading('pdf');
+    setDownloadProgress(1);
     try {
       const completeBatch = await loadCompleteBatch();
       const [{ jsPDF }, resolvedQRs] = await Promise.all([
         import('jspdf'),
-        resolveAllQrData(completeBatch),
+        resolveAllQrData(completeBatch, 180, setDownloadProgress, 'image/jpeg', false),
       ]);
       if (resolvedQRs.some(qr => !qr.qrData.startsWith('data:image'))) {
         throw new Error('Some QR images could not be generated. Please try the PDF download again.');
@@ -616,7 +640,7 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
         const y = marginY + row * cellH + 2;
         const qr = resolvedQRs[i];
 
-        doc.addImage(qr.qrData, 'PNG', x, y, imgSize, imgSize);
+        doc.addImage(qr.qrData, 'JPEG', x, y, imgSize, imgSize, undefined, 'FAST');
 
         doc.setFontSize(5.5);
         doc.setTextColor(80, 80, 80);
@@ -639,6 +663,7 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
       setAlertDialog({ show: true, title: 'PDF Generation Failed', message: err instanceof Error ? err.message : 'PDF generation failed. Please try again.', type: 'error' });
     }
     setDownloading(null);
+    setDownloadProgress(0);
   };
 
   const DOWNLOAD_BTNS = [
@@ -813,7 +838,7 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
                   <button key={btn.key} onClick={btn.fn} disabled={downloading !== null}
                     style={{ background: btn.bg, color: btn.color, border: `1px solid ${btn.color}30`, borderRadius: 8, padding: '7px 12px', fontSize: 12, fontWeight: 700, cursor: downloading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 5, opacity: downloading && downloading !== btn.key ? 0.5 : 1 }}>
                     {downloading === btn.key ? <RefreshCw size={12} style={{ animation: 'spin 1s linear infinite' }} /> : btn.icon}
-                    {downloading === btn.key ? 'Preparing...' : `Download ${btn.label}`}
+                    {downloading === btn.key ? `Preparing ${downloadProgress}%` : `Download ${btn.label}`}
                   </button>
                 ))}
               </div>

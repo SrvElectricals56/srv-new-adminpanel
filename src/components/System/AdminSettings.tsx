@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { ShieldCheck, Plus, Pencil, Trash2, Eye, EyeOff, Key, UserCheck, Users, Lock, Download } from 'lucide-react';
 import { useThemePalette } from '@/lib/theme';
+import { showAdminAlert } from '@/lib/adminDialog';
 import { adminApi } from '@/lib/api';
 import { useAppContext } from '@/lib/appContext';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
@@ -670,7 +671,7 @@ export default function AdminSettings() {
                             await loadAdmins(); // Reload to show updated permissions
                           } catch (err: any) {
                             console.error('Failed to save permissions:', err);
-                            alert(`Failed to save permissions: ${err.message || 'Please try again.'}`);
+                            showAdminAlert(`Failed to save permissions: ${err.message || 'Please try again.'}`, { title: 'Permission Save Failed', type: 'error' });
                           } finally {
                             setSaving(false);
                           }

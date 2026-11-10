@@ -7,6 +7,7 @@ import { useThemePalette } from '@/lib/theme';
 import ExportModal from '@/components/Shared/ExportModal';
 import ImportModal from '@/components/Shared/ImportModal';
 import AlertDialog from '@/components/Shared/AlertDialog';
+import { showAdminAlert } from '@/lib/adminDialog';
 import { I } from '@/lib/iconMap';
 import { formatISTDate } from '@/lib/dateIST';
 import SearchableSelect from '@/components/Shared/SearchableSelect';
@@ -630,7 +631,7 @@ export default function AssociatedElectricians({ initialSearch = '' }: { initial
 
   const handleAdd = async (newE: Electrician) => {
     if (!newE.name?.trim() || !newE.phone?.trim()) {
-      alert('Name and phone are required');
+      showAdminAlert('Name and phone are required.', { title: 'Required Fields', type: 'warning' });
       return;
     }
     const electricianData: Record<string, any> = {

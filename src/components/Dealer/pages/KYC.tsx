@@ -112,6 +112,8 @@ export default function KYCManagement() {
   const [refreshKey, setRefreshKey] = useState(0);
   const bulkLock = useRef(false);
   const [alertDialog, setAlertDialog] = useState<{ show: boolean; title: string; message: string; type: 'error' | 'success' | 'warning' | 'info' }>({ show: false, title: '', message: '', type: 'success' });
+  const [rejectTarget, setRejectTarget] = useState<DealerKYC | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
   const handleApproveAll = () => setConfirmState({
     show: true, title: 'Approve All KYC', type: 'success',
     message: 'Verify all pending KYC records across every page, regardless of search filters or whether documents are uploaded.',
@@ -121,8 +123,8 @@ export default function KYCManagement() {
       try {
         const result = await approveAllKyc('dealer');
         setRefreshKey(value => value + 1);
-        window.alert(`${result.approved} KYC records approved.`);
-      } catch (error) { window.alert(error instanceof Error ? error.message : 'Bulk approval failed'); }
+        setAlertDialog({ show: true, title: 'KYC Approved', message: `${result.approved} KYC records approved.`, type: 'success' });
+      } catch (error) { setAlertDialog({ show: true, title: 'Approval Failed', message: error instanceof Error ? error.message : 'Bulk approval failed', type: 'error' }); }
       finally { bulkLock.current = false; setBulkBusy(false); setConfirmState(s => ({ ...s, show: false })); }
     },
   });
@@ -199,28 +201,35 @@ export default function KYCManagement() {
         try {
           await dealerApi.update(doc.id, { kycStatus: 'verified', kycRejectionReason: null });
           setDocuments(prev => prev.map(d => d.id === doc.id ? { ...d, kycStatus: 'verified', kycRejectionReason: undefined } : d));
-        } catch (err) { console.error(err); window.alert(err instanceof Error ? err.message : 'Unable to save KYC'); }
+        } catch (err) { console.error(err); setAlertDialog({ show: true, title: 'KYC Update Failed', message: err instanceof Error ? err.message : 'Unable to save KYC', type: 'error' }); }
         setConfirmState(s => ({ ...s, show: false }));
       }
     });
   };
 
   const handleReject = (doc: DealerKYC) => {
-    const reason = window.prompt(`Rejection reason for ${doc.dealerName} (required):`);
-    if (reason === null) return; // cancelled
-    if (!reason.trim()) {
-      window.alert('Please enter a rejection reason so the user knows what to fix.');
+    setRejectTarget(doc);
+    setRejectionReason(doc.kycRejectionReason || '');
+  };
+
+  const prepareRejectConfirmation = () => {
+    if (!rejectTarget) return;
+    const reason = rejectionReason.trim();
+    if (!reason) {
+      setAlertDialog({ show: true, title: 'Rejection Reason Required', message: 'Please enter a rejection reason so the user knows what to fix.', type: 'warning' });
       return;
     }
+    const doc = rejectTarget;
+    setRejectTarget(null);
     setConfirmState({
       show: true, title: 'Reject KYC',
-      message: `Reject KYC for ${doc.dealerName}? Reason: "${reason.trim()}"`,
+      message: `Reject KYC for ${doc.dealerName}? Reason: "${reason}"`,
       type: 'danger',
       onConfirm: async () => {
         try {
-          await dealerApi.update(doc.id, { kycStatus: 'rejected', kycRejectionReason: reason.trim() });
-          setDocuments(prev => prev.map(d => d.id === doc.id ? { ...d, kycStatus: 'rejected', kycRejectionReason: reason.trim() } : d));
-        } catch (err) { console.error(err); window.alert(err instanceof Error ? err.message : 'Unable to save KYC'); }
+          await dealerApi.update(doc.id, { kycStatus: 'rejected', kycRejectionReason: reason });
+          setDocuments(prev => prev.map(d => d.id === doc.id ? { ...d, kycStatus: 'rejected', kycRejectionReason: reason } : d));
+        } catch (err) { console.error(err); setAlertDialog({ show: true, title: 'KYC Rejection Failed', message: err instanceof Error ? err.message : 'Unable to save KYC', type: 'error' }); }
         setConfirmState(s => ({ ...s, show: false }));
       }
     });
@@ -232,7 +241,7 @@ export default function KYCManagement() {
       const updated = await dealerApi.update(editingDoc.id, { ...data, kycRejectionReason: data.kycStatus === 'rejected' ? data.kycRejectionReason : null });
       setDocuments(prev => prev.map(d => d.id === editingDoc.id ? { ...d, ...updated } : d));
       setEditingDoc(null);
-    } catch (err) { console.error(err); window.alert(err instanceof Error ? err.message : 'Unable to save KYC'); }
+    } catch (err) { console.error(err); setAlertDialog({ show: true, title: 'KYC Update Failed', message: err instanceof Error ? err.message : 'Unable to save KYC', type: 'error' }); }
   };
 
   const handleDelete = (doc: DealerKYC) => {
@@ -287,6 +296,19 @@ export default function KYCManagement() {
 
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
+      {rejectTarget && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 2100, background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={() => setRejectTarget(null)}>
+          <div style={{ width: 440, maxWidth: '95vw', background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, padding: 26, boxShadow: '0 25px 70px rgba(0,0,0,0.3)' }} onClick={event => event.stopPropagation()}>
+            <div style={{ fontSize: 19, fontWeight: 800, color: C.text, textAlign: 'center' }}>Reject KYC</div>
+            <div style={{ fontSize: 13, color: C.muted, textAlign: 'center', margin: '8px 0 18px' }}>Explain what {rejectTarget.dealerName} needs to correct.</div>
+            <textarea autoFocus value={rejectionReason} onChange={event => setRejectionReason(event.target.value)} rows={4} placeholder="Enter required rejection reason" style={{ width: '100%', resize: 'vertical', boxSizing: 'border-box', padding: 12, borderRadius: 10, border: `1.5px solid ${C.border}`, background: C.surface, color: C.text, fontSize: 13, outline: 'none' }} />
+            <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
+              <button onClick={() => setRejectTarget(null)} style={{ flex: 1, border: `1px solid ${C.border}`, borderRadius: 10, padding: 11, background: C.surface, color: C.text, fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={prepareRejectConfirmation} style={{ flex: 1, border: 'none', borderRadius: 10, padding: 11, background: '#DC2626', color: 'white', fontWeight: 700, cursor: 'pointer' }}>Continue</button>
+            </div>
+          </div>
+        </div>
+      )}
       <ConfirmDialog show={confirmState.show} title={confirmState.title} message={confirmState.message} onConfirm={confirmState.onConfirm} onCancel={() => setConfirmState(s => ({ ...s, show: false }))} type={confirmState.type} />
       <AlertDialog show={alertDialog.show} title={alertDialog.title} message={alertDialog.message} type={alertDialog.type} onClose={() => setAlertDialog(prev => ({ ...prev, show: false }))} />
       {editingDoc && <EditKYCModal doc={editingDoc} onClose={() => setEditingDoc(null)} onSave={handleEditSave} C={C} />}

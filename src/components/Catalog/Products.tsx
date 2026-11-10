@@ -9,6 +9,7 @@ import { productApi, productCategoryApi } from '@/lib/api';
 import ConfirmDialog from '@/components/Shared/ConfirmDialog';
 import AlertDialog from '@/components/Shared/AlertDialog';
 import { I } from '@/lib/iconMap';
+import { showAdminAlert } from '@/lib/adminDialog';
 
 const API_ORIGIN = process.env.NEXT_PUBLIC_API_URL!.replace(/\/api\/v1\/?$/, '');
 
@@ -152,7 +153,7 @@ function EditModal({ product, onClose, onSave, onDelete, categories, role, canDe
         return { ...previous, images, image: images[0] ?? '' };
       });
     } catch {
-      alert('Image upload failed. Please try again or use a URL instead.');
+      showAdminAlert('Image upload failed. Please try again or use a URL instead.', { title: 'Upload Failed', type: 'error' });
     } finally {
       e.target.value = '';
       setImageUploading(false);
