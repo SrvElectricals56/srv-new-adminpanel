@@ -143,8 +143,17 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
 
       setProgress(60);
 
-      const codes: any[] = (result as any).codes ?? [];
+      const payload = (result as any)?.data ?? result;
+      const codes: any[] = Array.isArray((payload as any)?.codes) ? (payload as any).codes : [];
       const total = codes.length;
+      if (total !== count) {
+        throw new Error(
+          total === 0
+            ? 'The server did not return the generated QR codes. Please verify the backend deployment and try again.'
+            : `The server returned only ${total} of ${count} requested QR codes. No incomplete batch will be shown.`,
+        );
+      }
+      const generatedPoints = Number((payload as any)?.points ?? product.points ?? 0);
       setQrStats(previous => ({
         total: previous.total + total,
         scanned: previous.scanned,
@@ -175,12 +184,12 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
                 id: codeStr,
                 productId: product.sku || product.id,
                 productName: product.name,
-                points: product.points,
+                points: generatedPoints,
                 qrData,
                 generatedAt: qr.createdAt || new Date().toISOString(),
                 status: 'active' as const,
-                batchId: String((result as any).batchId),
-                batchNo: (result as any).batchNo,
+                batchId: String((payload as any).batchId),
+                batchNo: (payload as any).batchNo,
                 productCategory: product.category,
                 productSubCategory: product.subCategory,
               };
@@ -197,12 +206,12 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
             id: codeStr,
             productId: product.sku || product.id,
             productName: product.name,
-            points: product.points,
+            points: generatedPoints,
             qrData: '', // empty — will be generated on download
             generatedAt: qr.createdAt || new Date().toISOString(),
             status: 'active' as const,
-            batchId: String((result as any).batchId),
-            batchNo: (result as any).batchNo,
+            batchId: String((payload as any).batchId),
+            batchNo: (payload as any).batchNo,
             productCategory: product.category,
             productSubCategory: product.subCategory,
           });
