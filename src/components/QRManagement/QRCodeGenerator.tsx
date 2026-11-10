@@ -21,6 +21,7 @@ interface QRCodeGeneratorProps {
 interface GeneratedQR {
   id: string;
   productId: string;
+  productSku?: string;
   productName: string;
   points: number;
   qrData: string; // base64 image
@@ -31,6 +32,35 @@ interface GeneratedQR {
   productCategory?: string;
   productSubCategory?: string;
 }
+
+interface GeneratedBatch {
+  batchId: string;
+  batchNo: number | string;
+  total: number;
+  productId: string;
+  productSku?: string;
+  productName: string;
+  points: number;
+  generatedAt: string;
+}
+
+const PREVIEW_LIMIT = 40;
+const BATCH_PAGE_SIZE = 500;
+
+const mapStoredQr = (qr: any, batch: GeneratedBatch): GeneratedQR => ({
+  id: String(qr?.code ?? qr?.id ?? ''),
+  productId: String(qr?.productId ?? qr?.product?.id ?? batch.productId ?? ''),
+  productSku: String(qr?.product?.sku ?? batch.productSku ?? ''),
+  productName: String(qr?.productName ?? qr?.product?.name ?? batch.productName ?? 'Product'),
+  points: Number(qr?.points ?? qr?.rewardPoints ?? batch.points ?? 0),
+  qrData: '',
+  generatedAt: String(qr?.createdAt ?? batch.generatedAt ?? new Date().toISOString()),
+  status: qr?.isScanned ? 'used' : 'active',
+  batchId: String(qr?.batchId ?? batch.batchId),
+  batchNo: qr?.batchNo ?? batch.batchNo,
+  productCategory: qr?.product?.category,
+  productSubCategory: qr?.product?.subCategory,
+});
 
 export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
   const C = useThemePalette();
@@ -44,6 +74,8 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
   const productSearchRef = useRef<HTMLDivElement>(null);
   const [qrCount, setQrCount] = useState<string | number>(1);
   const [generatedQRs, setGeneratedQRs] = useState<GeneratedQR[]>([]);
+  const [generatedBatch, setGeneratedBatch] = useState<GeneratedBatch | null>(null);
+  const [restoringBatch, setRestoringBatch] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -51,6 +83,72 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
   const [qrStats, setQrStats] = useState({ total: 0, scanned: 0, active: 0 });
   const [alertDialog, setAlertDialog] = useState<{ show: boolean; title: string; message: string; type: 'error' | 'success' | 'warning' | 'info' }>({ show: false, title: '', message: '', type: 'error' });
   const canGenerateQr = role === 'super_admin' || role === 'admin' || role === 'staff';
+
+  const addPreviewImages = useCallback(async (qrs: GeneratedQR[]) => {
+    if (!qrs.length) return qrs;
+    const QRCodeLib = await loadQrCodeLibrary();
+    const preview = await Promise.all(qrs.slice(0, PREVIEW_LIMIT).map(async qr => ({
+      ...qr,
+      qrData: await QRCodeLib.toDataURL(qr.id, {
+        width: 200,
+        margin: 1,
+        color: { dark: '#000000', light: '#FFFFFF' },
+        errorCorrectionLevel: 'M',
+      }).catch(() => ''),
+    })));
+    return [...preview, ...qrs.slice(PREVIEW_LIMIT)];
+  }, []);
+
+  const loadLatestBatch = useCallback(async (showFailure = false) => {
+    setRestoringBatch(true);
+    try {
+      const hub = await qrCodeApi.getHub({ page: '1', limit: '1' });
+      const latest = Array.isArray(hub?.data) ? hub.data[0] : null;
+      if (!latest?.batchId) {
+        setGeneratedBatch(null);
+        setGeneratedQRs([]);
+        return;
+      }
+
+      const batch: GeneratedBatch = {
+        batchId: String(latest.batchId),
+        batchNo: latest.batchNo ?? latest.batchId,
+        total: Number(latest.qty ?? 0),
+        productId: String(latest.productId ?? ''),
+        productSku: latest.productSku ? String(latest.productSku) : undefined,
+        productName: String(latest.productName ?? 'Product'),
+        points: Number(latest.points ?? 0),
+        generatedAt: String(latest.generatedDate ?? new Date().toISOString()),
+      };
+      const response = await qrCodeApi.getAll({
+        batchId: batch.batchId,
+        page: '1',
+        limit: '100',
+        includeDetails: 'false',
+      });
+      const rows = Array.isArray(response?.data) ? response.data : [];
+      batch.total = Number(response?.total ?? batch.total ?? rows.length);
+      const restored = await addPreviewImages(rows.map(qr => mapStoredQr(qr, batch)).filter(qr => qr.id));
+      setGeneratedBatch(batch);
+      setGeneratedQRs(restored);
+    } catch (error: any) {
+      console.error('Latest QR batch restore failed:', error);
+      if (showFailure) {
+        setAlertDialog({
+          show: true,
+          title: 'QR Batch Load Failed',
+          message: error?.message || 'Unable to restore the latest generated QR batch.',
+          type: 'error',
+        });
+      }
+    } finally {
+      setRestoringBatch(false);
+    }
+  }, [addPreviewImages]);
+
+  useEffect(() => {
+    void loadLatestBatch(false);
+  }, [loadLatestBatch]);
 
   useEffect(() => {
     let mounted = true;
@@ -163,9 +261,14 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
       // For large batches: store only metadata (no QR images yet — generate on demand)
       // Keep the generator responsive: render only small batches immediately.
       // Every code remains available in CSV/Excel/PDF/ZIP downloads.
-      const PREVIEW_LIMIT = 40;
       const BATCH = 50;
       const newQRs: GeneratedQR[] = [];
+
+      const generatedBatchId = String((payload as any)?.batchId ?? '');
+      if (!generatedBatchId) {
+        throw new Error('The server did not return a batch ID for the generated QR codes.');
+      }
+      const generatedBatchNo = (payload as any)?.batchNo ?? generatedBatchId;
 
       if (total <= PREVIEW_LIMIT) {
         const QRCodeLib = await loadQrCodeLibrary();
@@ -182,21 +285,22 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
               }).catch(() => '');
               return {
                 id: codeStr,
-                productId: product.sku || product.id,
+                productId: String(product.id),
+                productSku: product.sku ? String(product.sku) : undefined,
                 productName: product.name,
                 points: generatedPoints,
                 qrData,
                 generatedAt: qr.createdAt || new Date().toISOString(),
                 status: 'active' as const,
-                batchId: String((payload as any).batchId),
-                batchNo: (payload as any).batchNo,
+                batchId: generatedBatchId,
+                batchNo: generatedBatchNo,
                 productCategory: product.category,
                 productSubCategory: product.subCategory,
               };
             })
           );
           newQRs.push(...batch);
-          setProgress(60 + Math.round(((i + BATCH) / total) * 35));
+          setProgress(60 + Math.round((Math.min(i + BATCH, total) / total) * 35));
         }
       } else {
         // Large batch — store codes without images (images generated on download)
@@ -204,14 +308,15 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
           const codeStr = qr.code ?? String(qr.id);
           newQRs.push({
             id: codeStr,
-            productId: product.sku || product.id,
+            productId: String(product.id),
+            productSku: product.sku ? String(product.sku) : undefined,
             productName: product.name,
             points: generatedPoints,
             qrData: '', // empty — will be generated on download
             generatedAt: qr.createdAt || new Date().toISOString(),
             status: 'active' as const,
-            batchId: String((payload as any).batchId),
-            batchNo: (payload as any).batchNo,
+            batchId: generatedBatchId,
+            batchNo: generatedBatchNo,
             productCategory: product.category,
             productSubCategory: product.subCategory,
           });
@@ -219,7 +324,17 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
       }
 
       setProgress(100);
-      setGeneratedQRs(prev => [...newQRs, ...prev]);
+      setGeneratedBatch({
+        batchId: generatedBatchId,
+        batchNo: generatedBatchNo,
+        total,
+        productId: String(product.id),
+        productSku: product.sku ? String(product.sku) : undefined,
+        productName: String(product.name),
+        points: generatedPoints,
+        generatedAt: newQRs[0]?.generatedAt ?? new Date().toISOString(),
+      });
+      setGeneratedQRs(newQRs);
       setAlertDialog({
         show: true,
         title: 'QR Codes Generated',
@@ -241,6 +356,8 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
       await qrCodeApi.recordDownloadHistory({
         productId: first.productId,
         productName: first.productName,
+        batchId: first.batchId,
+        batchNo: first.batchNo,
         quantity: qrs.length,
         downloadType,
       });
@@ -291,6 +408,37 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
     return result;
   };
 
+  const loadCompleteBatch = async (): Promise<GeneratedQR[]> => {
+    if (!generatedBatch || generatedQRs.length >= generatedBatch.total) return generatedQRs;
+
+    const pageCount = Math.ceil(generatedBatch.total / BATCH_PAGE_SIZE);
+    const rows: any[] = [];
+    // Fetch in small groups so a 20,000-code batch does not create 40
+    // simultaneous database requests.
+    for (let start = 1; start <= pageCount; start += 4) {
+      const pageNumbers = Array.from(
+        { length: Math.min(4, pageCount - start + 1) },
+        (_, index) => start + index,
+      );
+      const responses = await Promise.all(pageNumbers.map(page => qrCodeApi.getAll({
+        batchId: generatedBatch.batchId,
+        page: String(page),
+        limit: String(BATCH_PAGE_SIZE),
+        includeDetails: 'false',
+      })));
+      responses.forEach(response => {
+        if (Array.isArray(response?.data)) rows.push(...response.data);
+      });
+    }
+
+    const complete = rows.map(qr => mapStoredQr(qr, generatedBatch)).filter(qr => qr.id);
+    if (complete.length !== generatedBatch.total) {
+      throw new Error(`Only ${complete.length} of ${generatedBatch.total} QR codes could be loaded from this batch.`);
+    }
+    setGeneratedQRs(complete);
+    return complete;
+  };
+
   const appendQrExcelWorksheets = (
     XLSX: typeof import('xlsx'),
     workbook: ReturnType<typeof XLSX.utils.book_new>,
@@ -327,7 +475,7 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   // ── Download All as ZIP (PNG images + Excel) ──────────────────────
@@ -343,7 +491,8 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
       const zip = new JSZipModule();
 
       // Resolve QR images (generate missing ones)
-      const resolved = await resolveAllQrData(generatedQRs);
+      const completeBatch = await loadCompleteBatch();
+      const resolved = await resolveAllQrData(completeBatch);
 
       // 1. Images folder
       const imgFolder = zip.folder('QR_Images')!;
@@ -372,7 +521,7 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      await recordQrDownload(generatedQRs, 'zip');
+      await recordQrDownload(completeBatch, 'zip');
     } catch (err) {
       console.error('ZIP error:', err);
       setAlertDialog({ show: true, title: 'Download Failed', message: 'ZIP download failed. Try fewer QR codes.', type: 'error' });
@@ -381,26 +530,25 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
   };
 
   // ── Download All as CSV ────────────────────────────────────────────
-  const downloadCSV = () => {
+  const downloadCSV = async () => {
     if (!generatedQRs.length) return;
     setDownloading('csv');
-    const escape = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
-    const { headers, rows } = buildQrCsvData(generatedQRs);
-    const csv = '\uFEFF' + [
-      headers.map(escape).join(','),
-      ...rows.map(row => row.map(escape).join(',')),
-    ].join('\r\n'); // BOM for Excel UTF-8
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `QR_Codes_${Date.now()}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    void recordQrDownload(generatedQRs, 'csv');
-    setDownloading(null);
+    try {
+      const completeBatch = await loadCompleteBatch();
+      const escape = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
+      const { headers, rows } = buildQrCsvData(completeBatch);
+      const csv = '\uFEFF' + [
+        headers.map(escape).join(','),
+        ...rows.map(row => row.map(escape).join(',')),
+      ].join('\r\n'); // BOM for Excel UTF-8
+      saveBlob(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), `QR_Codes_${Date.now()}.csv`);
+      await recordQrDownload(completeBatch, 'csv');
+    } catch (err) {
+      console.error('CSV error:', err);
+      setAlertDialog({ show: true, title: 'CSV Download Failed', message: err instanceof Error ? err.message : 'Unable to download all QR codes.', type: 'error' });
+    } finally {
+      setDownloading(null);
+    }
   };
 
   // ── Download All as Excel using xlsx library ───────────────────────
@@ -415,9 +563,10 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
         saveBlob(blob, filename);
         downloadHistoryRecordedByBackend = true;
       } else {
+        const completeBatch = await loadCompleteBatch();
         const XLSX = await import('xlsx');
         const workbook = XLSX.utils.book_new();
-        appendQrExcelWorksheets(XLSX, workbook, generatedQRs);
+        appendQrExcelWorksheets(XLSX, workbook, completeBatch);
         XLSX.writeFile(workbook, `QR_Codes_${Date.now()}.xlsx`);
       }
       if (!downloadHistoryRecordedByBackend) {
@@ -435,9 +584,10 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
     if (!generatedQRs.length) return;
     setDownloading('pdf');
     try {
+      const completeBatch = await loadCompleteBatch();
       const [{ jsPDF }, resolvedQRs] = await Promise.all([
         import('jspdf'),
-        resolveAllQrData(generatedQRs),
+        resolveAllQrData(completeBatch),
       ]);
       if (resolvedQRs.some(qr => !qr.qrData.startsWith('data:image'))) {
         throw new Error('Some QR images could not be generated. Please try the PDF download again.');
@@ -483,7 +633,7 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
       }
 
       doc.save(`QR_Codes_${Date.now()}.pdf`);
-      await recordQrDownload(generatedQRs, 'pdf');
+      await recordQrDownload(completeBatch, 'pdf');
     } catch (err) {
       console.error('PDF error:', err);
       setAlertDialog({ show: true, title: 'PDF Generation Failed', message: err instanceof Error ? err.message : 'PDF generation failed. Please try again.', type: 'error' });
@@ -653,7 +803,7 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
         <div style={{ background: C.card, borderRadius: 16, padding: 24, border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
             <div style={{ fontSize: 18, fontWeight: 800, color: C.text, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Gift size={20} style={{ color: '#10B981' }} /> Generated QR Codes ({generatedQRs.length})
+              <Gift size={20} style={{ color: '#10B981' }} /> Generated QR Codes ({generatedBatch?.total ?? generatedQRs.length})
             </div>
 
             {/* Download All Buttons */}
@@ -670,11 +820,29 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
             )}
           </div>
 
-          {generatedQRs.length === 0 && (
+          {restoringBatch && generatedQRs.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '60px 20px', color: C.muted }}>
+              <RefreshCw size={40} style={{ margin: '0 auto 16px', animation: 'spin 1s linear infinite', opacity: 0.5 }} />
+              <div style={{ fontSize: 14, fontWeight: 600 }}>Restoring latest QR batch...</div>
+            </div>
+          )}
+
+          {!restoringBatch && generatedQRs.length === 0 && (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: C.muted }}>
               <QrCode size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
               <div style={{ fontSize: 14, fontWeight: 600 }}>No QR codes generated yet</div>
               <div style={{ fontSize: 12, marginTop: 4 }}>Select a product and generate your first QR code</div>
+            </div>
+          )}
+
+          {generatedBatch && generatedQRs.length > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 14, padding: '10px 12px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 10, fontSize: 12 }}>
+              <div style={{ color: C.muted }}>
+                Batch <b style={{ color: C.text }}>{generatedBatch.batchNo}</b> · {generatedBatch.productName} · {generatedBatch.total.toLocaleString('en-IN')} codes
+              </div>
+              <button type="button" onClick={() => void loadLatestBatch(true)} disabled={restoringBatch || downloading !== null} style={{ flexShrink: 0, border: `1px solid ${C.border}`, borderRadius: 8, background: C.card, color: C.text, padding: '6px 10px', fontSize: 11, fontWeight: 700, cursor: restoringBatch ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+                <RefreshCw size={12} style={{ animation: restoringBatch ? 'spin 1s linear infinite' : 'none' }} /> Refresh
+              </button>
             </div>
           )}
 
@@ -704,7 +872,7 @@ export default function QRCodeGenerator({ role }: QRCodeGeneratorProps) {
                     </div>
                     <div style={{ display: 'flex', gap: 16, fontSize: 11, color: C.muted, marginBottom: 12 }}>
                       <div><Bolt size={12} style={{ display: 'inline', marginRight: 4 }} />{qr.points} points</div>
-                      <div>SKU: {qr.productId}</div>
+                      <div>SKU: {qr.productSku || 'N/A'}</div>
                       <div>Generated: {formatISTDate(qr.generatedAt)}</div>
                     </div>
                     <div style={{ display: 'flex', gap: 8 }}>
